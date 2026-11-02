@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="ChiefOfStaff.App.Views.TaskDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:ChiefOfStaff.App.ViewModels"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnSave"
+    SecondaryButtonClick="OnMarkDone">
+
+    <ContentDialog.Title>
+        <StackPanel Spacing="8">
+            <Border x:Name="Stripe" Height="6" CornerRadius="3" />
+            <TextBox x:Name="TitleBox" PlaceholderText="What needs to be done?" FontSize="18" TextChanged="TitleBox_TextChanged" />
+        </StackPanel>
+    </ContentDialog.Title>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="560">
+        <StackPanel Spacing="10" Padding="0,0,12,0">
+            <Grid ColumnSpacing="12" RowSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ComboBox x:Name="ProjectBox" Header="Project" HorizontalAlignment="Stretch" DisplayMemberPath="Name" SelectionChanged="ProjectBox_SelectionChanged" />
+                <ComboBox x:Name="RequesterBox" Grid.Column="1" Header="Requested by" HorizontalAlignment="Stretch" DisplayMemberPath="Name" />
+                <ComboBox x:Name="StatusBox" Grid.Row="1" Header="Status" HorizontalAlignment="Stretch" SelectionChanged="StatusBox_SelectionChanged">
+                    <x:String>Open</x:String>
+                    <x:String>In progress</x:String>
+                    <x:String>Waiting on</x:String>
+                    <x:String>Done</x:String>
+                </ComboBox>
+                <CalendarDatePicker x:Name="DueBox" Grid.Row="1" Grid.Column="1" Header="Due" HorizontalAlignment="Stretch" PlaceholderText="No due date" />
+            </Grid>
+
+            <TextBox x:Name="WaitingOnBox" Header="Waiting on" PlaceholderText="Who or what you're waiting for" Visibility="Collapsed" />
+
+            <Border Style="{StaticResource CardStyle}" Padding="12,8">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="ScoreBadge" CornerRadius="4" Padding="8,2" VerticalAlignment="Center" MinWidth="36">
+                        <TextBlock x:Name="ScoreText" FontSize="12" HorizontalAlignment="Center" />
+                    </Border>
+                    <TextBlock x:Name="RationaleText" Grid.Column="1" Style="{StaticResource MutedTextStyle}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                        <CheckBox x:Name="OverrideCheck" Content="Override" MinWidth="0" Checked="OverrideCheck_Changed" Unchecked="OverrideCheck_Changed" />
+                        <NumberBox x:Name="OverrideBox" Minimum="0" Maximum="100" SpinButtonPlacementMode="Compact" Width="110" IsEnabled="False" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <TextBlock Text="Subtasks" Style="{StaticResource BodyStrongTextBlockStyle}" />
+            <ItemsControl x:Name="SubtaskList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SubtaskEdit">
+                        <Grid ColumnSpacing="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <CheckBox IsChecked="{x:Bind IsDone, Mode=TwoWay}" MinWidth="0" />
+                            <TextBox Grid.Column="1" Text="{x:Bind Title, Mode=TwoWay}" BorderThickness="0" Background="Transparent" VerticalAlignment="Center" />
+                            <Button Grid.Column="2" Click="RemoveSubtask_Click" Tag="{x:Bind}" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Remove subtask">
+                                <FontIcon Glyph="&#xE711;" FontSize="12" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="NewSubtaskBox" PlaceholderText="Add a subtask" KeyDown="NewSubtaskBox_KeyDown" />
+                <Button Grid.Column="1" Content="Add" Click="AddSubtask_Click" />
+            </Grid>
+
+            <TextBox x:Name="NotesBox" Header="Notes" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" />
+
+            <Expander Header="Task context brief" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <StackPanel Spacing="8">
+                    <TextBlock Style="{StaticResource MutedTextStyle}" Text="Background the AI should always know about this task. The AI will propose updates as new emails and transcripts arrive." />
+                    <TextBox x:Name="BriefSummaryBox" Header="Summary" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" />
+                    <TextBox x:Name="BriefInstructionsBox" Header="Standing instructions" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="Keep replies formal; customer-facing" />
+                </StackPanel>
+            </Expander>
+
+            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="8" Padding="12,8">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE945;" FontSize="14" />
+                        <TextBlock Text="What the AI knows" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    </StackPanel>
+                    <ItemsControl x:Name="AiKnowsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{x:Bind}" Style="{StaticResource MutedTextStyle}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <HyperlinkButton x:Name="DeleteButton" Content="Delete task" Click="Delete_Click" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Visibility="Collapsed" />
+            <TextBlock x:Name="ErrorText" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Visibility="Collapsed" />
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

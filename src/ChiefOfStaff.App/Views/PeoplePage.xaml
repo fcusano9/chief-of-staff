@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ChiefOfStaff.App.Views.PeoplePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+        <StackPanel Padding="32,24" Spacing="8" MaxWidth="1000">
+            <Grid>
+                <TextBlock Text="People" Style="{StaticResource TitleTextBlockStyle}" />
+                <Button HorizontalAlignment="Right" Style="{StaticResource AccentButtonStyle}" Click="NewPerson_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6"><FontIcon Glyph="&#xE8FA;" FontSize="14" /><TextBlock Text="Add person" /></StackPanel>
+                </Button>
+            </Grid>
+            <TextBlock Style="{StaticResource MutedTextStyle}"
+                       Text="Priority weight raises the urgency of anything these people ask you for. Five stars is your highest priority (for example, your manager or executives)." />
+
+            <ListView x:Name="PeopleList" SelectionMode="Single" SelectionChanged="PeopleList_SelectionChanged" MaxHeight="360">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="0,6" ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <PersonPicture DisplayName="{Binding Name}" Width="32" Height="32" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                            <RatingControl Grid.Column="2" Value="{Binding Weight}" IsReadOnly="True" IsClearEnabled="False" VerticalAlignment="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            <TextBlock x:Name="EmptyText" Style="{StaticResource MutedTextStyle}" Visibility="Collapsed"
+                       Text="Add the people you work with most, starting with your manager and executives." />
+
+            <Border x:Name="DetailCard" Style="{StaticResource CardStyle}" Visibility="Collapsed" Margin="0,8,0,0">
+                <StackPanel Spacing="10">
+                    <Grid ColumnSpacing="12" RowSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition /><ColumnDefinition /><ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="NameBox" Header="Name" />
+                        <TextBox x:Name="RoleBox" Grid.Column="1" Header="Role" PlaceholderText="Director, Product Management" />
+                        <TextBox x:Name="EmailBox" Grid.Column="2" Header="Email" PlaceholderText="name@crestron.com" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="Priority weight" VerticalAlignment="Center" />
+                        <RatingControl x:Name="WeightBox" IsClearEnabled="False" />
+                    </StackPanel>
+
+                    <TextBlock Text="Person brief" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock Style="{StaticResource MutedTextStyle}" Text="How this person likes to work, what they care about, and history worth remembering. The AI reads this whenever a task involves them." />
+                    <TextBox x:Name="BriefSummaryBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" PlaceholderText="Prefers short status updates in Teams. Weekly 1:1 on Thursdays." />
+                    <TextBox x:Name="BriefInstructionsBox" Header="Your standing instructions" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="Always reply to them within the same day." />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Save" Style="{StaticResource AccentButtonStyle}" Click="Save_Click" />
+                        <Button x:Name="DeleteButton" Content="Delete person" Click="Delete_Click" />
+                    </StackPanel>
+                    <TextBlock x:Name="StatusText" Style="{StaticResource MutedTextStyle}" />
+
+                    <TextBlock Text="Open items they asked for" Style="{StaticResource SectionHeaderStyle}" />
+                    <ListView x:Name="PersonTasks" ItemTemplate="{StaticResource TaskRowTemplate}" IsItemClickEnabled="True" ItemClick="Task_ItemClick" SelectionMode="None" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
