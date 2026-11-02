@@ -78,6 +78,29 @@ const MIGRATIONS: string[] = [
     imported_at TEXT NOT NULL
   );
   `,
+  // Milestone 2: AI suggestions awaiting review, and which sources each task came from.
+  `
+  ALTER TABLE source_items ADD COLUMN extracted_at TEXT;
+  ALTER TABLE source_items ADD COLUMN extract_error TEXT;
+  ALTER TABLE source_items ADD COLUMN extracted_by TEXT;
+  CREATE TABLE suggestions (
+    id INTEGER PRIMARY KEY,
+    source_id INTEGER NOT NULL REFERENCES source_items(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    payload TEXT NOT NULL,
+    evidence TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    decided_at TEXT,
+    result_task_id INTEGER
+  );
+  CREATE INDEX ix_suggestions_status ON suggestions(status);
+  CREATE TABLE task_sources (
+    work_item_id INTEGER NOT NULL REFERENCES work_items(id) ON DELETE CASCADE,
+    source_id INTEGER NOT NULL REFERENCES source_items(id) ON DELETE CASCADE,
+    PRIMARY KEY (work_item_id, source_id)
+  );
+  `,
 ]
 
 /** Opens (creating if needed) the database and brings its schema up to date. */
@@ -103,8 +126,28 @@ export function migrate(db: DatabaseSync): void {
   }
 }
 
-/** Runs `fn` inside a transaction. */
+const depth = new WeakMap<DatabaseSync, number>()
+
+/** Runs `fn` inside a transaction. Nested calls join the outer transaction. */
 export function transaction<T>(db: DatabaseSync, fn: () => T): T {
+  const level = depth.get(db) ?? 0
+  if (level > 0) {
+    depth.set(db, level + 1)
+    try {
+      return fn()
+    } finally {
+      depth.set(db, level)
+    }
+  }
+  depth.set(db, 1)
+  try {
+    return runTransaction(db, fn)
+  } finally {
+    depth.set(db, 0)
+  }
+}
+
+function runTransaction<T>(db: DatabaseSync, fn: () => T): T {
   db.exec('BEGIN')
   try {
     const result = fn()

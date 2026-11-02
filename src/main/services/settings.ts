@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { DEFAULT_SETTINGS, type AppSettings } from '@shared/types'
+import { CLAUDE_MODELS, DEFAULT_SETTINGS, type AppSettings } from '@shared/types'
 
 /** JSON settings file next to the database. Unknown or missing fields fall back to defaults. */
 export class SettingsStore {
@@ -23,6 +23,9 @@ export class SettingsStore {
     const clampWeight = (n: number) => Math.min(10, Math.max(0, Math.round(n)))
     this.current = {
       ...settings,
+      userName: settings.userName?.trim() || DEFAULT_SETTINGS.userName,
+      aiProvider: settings.aiProvider === 'claude' ? 'claude' : 'demo',
+      aiModel: CLAUDE_MODELS.some((m) => m.id === settings.aiModel) ? settings.aiModel : DEFAULT_SETTINGS.aiModel,
       priorityWeights: {
         dueDate: clampWeight(settings.priorityWeights.dueDate),
         requester: clampWeight(settings.priorityWeights.requester),

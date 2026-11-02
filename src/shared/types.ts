@@ -76,8 +76,122 @@ export interface Task {
   completedAt: string | null
   subtasks: Subtask[]
   statusUpdates: StatusUpdate[]
+  /** Imported emails, chats, transcripts, or summaries this task came from or was updated by. */
+  linkedSources: SourceRef[]
   project: Project | null
   requester: Person | null
+}
+
+export interface SourceRef {
+  id: number
+  kind: SourceKind
+  title: string
+  occurredAt: string
+}
+
+export const SOURCE_KIND_LABELS: Record<SourceKind, string> = {
+  copilot_summary: 'Copilot summary',
+  email: 'Email',
+  teams_chat: 'Teams chat',
+  meeting_transcript: 'Meeting transcript',
+  note: 'Notes',
+}
+
+export interface SourceItem extends SourceRef {
+  fromName: string | null
+  importedAt: string
+  extractedAt: string | null
+  extractedBy: string | null
+  extractError: string | null
+  /** Characters of content (the content itself is loaded only when needed). */
+  length: number
+  pendingCount: number
+  totalSuggestions: number
+}
+
+export interface ImportRequest {
+  kind: SourceKind
+  title: string
+  content: string
+  fromName?: string | null
+  /** 'YYYY-MM-DD' the content is from; defaults to today. */
+  occurredOn?: string | null
+}
+
+export interface ImportResult {
+  source: SourceItem
+  /** True when identical content was imported before; nothing new was created or sent. */
+  duplicate: boolean
+  suggestionsCreated: number
+  error: string | null
+}
+
+export type SuggestionKind = 'new_task' | 'status_update' | 'mark_done' | 'waiting_on' | 'brief_update'
+export const SUGGESTION_LABELS: Record<SuggestionKind, string> = {
+  new_task: 'New task',
+  status_update: 'Status update',
+  mark_done: 'Looks done',
+  waiting_on: 'Waiting on',
+  brief_update: 'Brief update',
+}
+
+/** What the AI proposed. All references are validated against the database before saving. */
+export interface SuggestionPayload {
+  /** Existing task this is about (status_update, mark_done, waiting_on; optional for brief_update). */
+  taskId: number | null
+  /** Task title for new tasks; a short headline otherwise. */
+  title: string
+  /** Status update text, brief text, or extra detail for a new task. */
+  details: string
+  dueDate: string | null
+  projectId: number | null
+  /** Person id when the requester matched someone in People. */
+  requesterId: number | null
+  /** The requester's name as written in the source (kept even when nobody matched). */
+  requesterName: string | null
+  waitingOn: string | null
+  briefScope: BriefScope | null
+  briefOwnerId: number | null
+}
+
+export interface Suggestion {
+  id: number
+  kind: SuggestionKind
+  status: 'pending' | 'accepted' | 'rejected'
+  payload: SuggestionPayload
+  /** Quote from the source that supports the suggestion. */
+  evidence: string
+  createdAt: string
+  source: SourceRef
+  /** Title of the existing task referenced by payload.taskId, for display. */
+  taskTitle: string | null
+}
+
+export type AiProviderId = 'demo' | 'claude'
+
+export interface AiModelOption {
+  id: string
+  label: string
+  note: string
+}
+
+/** Claude models offered in Settings. Prices are Anthropic list prices per million tokens (input / output). */
+export const CLAUDE_MODELS: AiModelOption[] = [
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', note: 'Most capable · $4 / $20' },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', note: 'Balanced · $2 / $10' },
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', note: 'Fastest, cheapest · $0.10 / $0.50' },
+]
+
+export interface AiStatus {
+  provider: AiProviderId
+  model: string
+  hasKey: boolean
+  /** Whether the OS can encrypt the stored key (Windows DPAPI / macOS Keychain). */
+  encryptionAvailable: boolean
+  /** Short label for the status bar. */
+  label: string
+  /** True when imports will be sent to an outside service. */
+  sendsDataExternally: boolean
 }
 
 /** What the UI sends to create (id 0) or update a task. Subtasks with id 0 are new. */
@@ -125,6 +239,10 @@ export interface PriorityWeights {
 export type ThemeSetting = 'system' | 'light' | 'dark'
 
 export interface AppSettings {
+  /** Used in greetings and so the AI knows whose action items to pick out. */
+  userName: string
+  aiProvider: AiProviderId
+  aiModel: string
   priorityWeights: PriorityWeights
   theme: ThemeSetting
   /** Left pane width of split views, as a percentage. */
@@ -137,6 +255,9 @@ export interface AppSettings {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  userName: 'Frank Cusano',
+  aiProvider: 'demo',
+  aiModel: 'claude-opus-5-5',
   priorityWeights: { dueDate: 8, requester: 7, staleness: 5 },
   theme: 'system',
   splitPercent: 50,

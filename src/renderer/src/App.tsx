@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { AppInfo, AppSettings, PersonSummary, ProjectSummary } from '@shared/types'
+import type { AiStatus, AppInfo, AppSettings, PersonSummary, ProjectSummary } from '@shared/types'
 import { cos, errorMessage } from './api'
 import { CommandPalette, TABS } from './components/CommandPalette'
 import { AppContext, type AppContextValue, type TaskSelection, type View } from './context'
 import { ComingSoonScreen } from './screens/ComingSoonScreen'
+import { ImportScreen } from './screens/ImportScreen'
+import { ReviewScreen } from './screens/ReviewScreen'
 import { PeopleScreen } from './screens/PeopleScreen'
 import { ProjectsScreen } from './screens/ProjectsScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
@@ -13,6 +15,7 @@ import { WaitingScreen } from './screens/WaitingScreen'
 
 const G_KEYS: Record<string, View> = { t: 'today', k: 'tasks', r: 'review', w: 'waiting', p: 'projects', e: 'people' }
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
+const FALLBACK_AI: AiStatus = { provider: 'demo', model: '', hasKey: false, encryptionAvailable: false, label: 'Demo AI', sendsDataExternally: false }
 const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches
 
 export function App() {
@@ -20,6 +23,8 @@ export function App() {
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [people, setPeople] = useState<PersonSummary[]>([])
+  const [ai, setAi] = useState<AiStatus | null>(null)
+  const [reviewCount, setReviewCount] = useState(0)
   const [view, setView] = useState<View>('today')
   const [selection, setSelection] = useState<TaskSelection>(null)
   const [version, setVersion] = useState(0)
@@ -45,6 +50,8 @@ export function App() {
   useEffect(() => {
     void cos['projects.list']().then(setProjects)
     void cos['people.list']().then(setPeople)
+    void cos['suggestions.count']().then(setReviewCount)
+    void cos['ai.status']().then(setAi)
   }, [version])
 
   const dark = settings?.theme === 'dark' || (settings?.theme !== 'light' && osDark)
@@ -66,6 +73,7 @@ export function App() {
         const saved = await cos['settings.save']({ ...settingsRef.current, ...patch })
         setSettings(saved)
         if (patch.priorityWeights) refresh()
+        if (patch.aiProvider || patch.aiModel) setAi(await cos['ai.status']())
       } catch (err) {
         toast(errorMessage(err), true)
       }
@@ -130,9 +138,9 @@ export function App() {
   const ctx = useMemo<AppContextValue | null>(
     () =>
       settings && info
-        ? { view, go, selection, openTask, version, refresh, toast, settings, saveSettings, info, projects, people, dark, toggleTheme }
+        ? { view, go, selection, openTask, version, refresh, toast, settings, saveSettings, info, projects, people, dark, toggleTheme, ai: ai ?? FALLBACK_AI, setAi, reviewCount }
         : null,
-    [view, selection, version, settings, info, projects, people, dark, go, openTask, refresh, toast, saveSettings, toggleTheme],
+    [view, selection, version, settings, info, projects, people, dark, go, openTask, refresh, toast, saveSettings, toggleTheme, ai, reviewCount],
   )
   if (!ctx) return null
 
@@ -143,6 +151,8 @@ export function App() {
     : view === 'projects' ? <ProjectsScreen />
     : view === 'people' ? <PeopleScreen />
     : view === 'settings' ? <SettingsScreen />
+    : view === 'review' ? <ReviewScreen />
+    : view === 'import' ? <ImportScreen />
     : <ComingSoonScreen view={view} />
   const fill = view === 'tasks' || view === 'projects' || view === 'people'
 
@@ -158,6 +168,7 @@ export function App() {
             {TABS.map(([v, label], i) => (
               <button key={v} className={`tab ${view === v ? 'on' : ''}`} title={`Alt+${i + 1}`} onClick={() => setView(v)}>
                 {label}
+                {v === 'review' && reviewCount > 0 && <span className="count">{reviewCount}</span>}
               </button>
             ))}
           </nav>
@@ -193,7 +204,9 @@ export function App() {
           </span>
           <div className="spacer" />
           <span>{settings!.lastBackupAt ? `Backed up ${new Date(settings!.lastBackupAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'Not backed up yet'}</span>
-          <span>AI · not connected</span>
+          <button className="btn ghost" style={{ padding: '0 6px', fontSize: 12, color: 'var(--muted)' }} title="AI settings" onClick={() => setView('settings')}>
+            AI · {ai?.label ?? '…'}
+          </button>
         </footer>
       </div>
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}

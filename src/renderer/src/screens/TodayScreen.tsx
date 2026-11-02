@@ -7,7 +7,7 @@ import { useApp } from '../context'
 const greeting = (h: number) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
 
 export function TodayScreen() {
-  const { openTask, go, version } = useApp()
+  const { openTask, go, version, settings, reviewCount } = useApp()
   const [summary, setSummary] = useState<TodaySummary | null>(null)
   const [focus, setFocus] = useState<Task[]>([])
   const [waiting, setWaiting] = useState<Task[]>([])
@@ -29,7 +29,9 @@ export function TodayScreen() {
   return (
     <div className="page">
       <div className="head">
-        <h1>{greeting(now.getHours())}, Frank</h1>
+        <h1>
+          {greeting(now.getHours())}, {settings.userName.split(' ')[0]}
+        </h1>
         <span className="muted">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
         <div className="spacer" />
         <button className="btn primary" onClick={() => openTask({ id: 'new' })}>
@@ -63,7 +65,19 @@ export function TodayScreen() {
               <b style={{ fontWeight: 500 }}>Briefing</b>
             </div>
             <div className="muted" style={{ lineHeight: 1.6 }}>
-              Your daily AI briefing arrives with the AI features (milestones 2 and 3): what needs you today, what changed, and suggested next steps.
+              {reviewCount > 0
+                ? `${reviewCount} AI suggestion${reviewCount === 1 ? ' is' : 's are'} waiting for your review.`
+                : 'Import a Copilot summary, transcript, or notes and the AI will suggest tasks and updates. A written daily briefing comes in milestone 3.'}
+            </div>
+            <div className="row" style={{ marginTop: 8 }}>
+              {reviewCount > 0 && (
+                <button className="btn" onClick={() => go('review')}>
+                  Review suggestions <span className="kbd">G R</span>
+                </button>
+              )}
+              <button className="btn ghost" onClick={() => go('import')}>
+                Import
+              </button>
             </div>
           </div>
           <div className="card">

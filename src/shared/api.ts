@@ -1,4 +1,10 @@
 import type {
+  AiStatus,
+  ImportRequest,
+  ImportResult,
+  SourceItem,
+  Suggestion,
+  SuggestionPayload,
   AppInfo,
   AppSettings,
   BriefScope,
@@ -41,6 +47,18 @@ export interface Api {
   'backup.openFolder': () => void
   'app.info': () => AppInfo
   'app.setTitleBarTheme': (dark: boolean) => void
+  'sources.importAndExtract': (req: ImportRequest) => ImportResult
+  'sources.extract': (sourceId: number) => ImportResult
+  'sources.list': () => SourceItem[]
+  'sources.delete': (id: number) => void
+  'suggestions.listPending': () => Suggestion[]
+  'suggestions.count': () => number
+  'suggestions.accept': (id: number, edits?: Partial<SuggestionPayload>) => number | null
+  'suggestions.reject': (id: number) => void
+  'ai.status': () => AiStatus
+  /** Stores (or with null, removes) the Anthropic API key. The key is never returned to the UI. */
+  'ai.setKey': (key: string | null) => AiStatus
+  'ai.test': () => string
 }
 
 export type ApiChannel = keyof Api
@@ -68,6 +86,17 @@ export const API_CHANNELS: ApiChannel[] = [
   'backup.openFolder',
   'app.info',
   'app.setTitleBarTheme',
+  'sources.importAndExtract',
+  'sources.extract',
+  'sources.list',
+  'sources.delete',
+  'suggestions.listPending',
+  'suggestions.count',
+  'suggestions.accept',
+  'suggestions.reject',
+  'ai.status',
+  'ai.setKey',
+  'ai.test',
 ]
 
 /** The renderer sees every call as async. */
