@@ -2,11 +2,17 @@ import { appendFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { API_CHANNELS, type Api } from '@shared/api'
-import type { AppSettings } from '@shared/types'
+import { CLAUDE_MODELS, type AiStatus, type AppSettings } from '@shared/types'
+import { ClaudeProvider } from './ai/claude'
+import { DemoProvider } from './ai/demo'
+import { AiError, type AiProvider } from './ai/provider'
 import { openDatabase } from './db'
 import { createBackup } from './services/backup'
 import { BriefService, PersonService, ProjectService } from './services/directory'
+import { KeyStore } from './services/secrets'
 import { SettingsStore } from './services/settings'
+import { SourceService } from './services/sources'
+import { SuggestionService } from './services/suggestions'
 import { TaskService } from './services/tasks'
 
 // COS_DATA_DIR points the app at a separate data folder (used for testing without touching real data).
@@ -33,10 +39,37 @@ process.on('unhandledRejection', logCrash)
 
 const db = openDatabase(databasePath)
 const settings = new SettingsStore(join(dataFolder, 'settings.json'))
+const keys = new KeyStore(join(dataFolder, 'secrets.json'))
 const tasks = new TaskService(db, () => settings.current.priorityWeights)
 const projects = new ProjectService(db)
 const people = new PersonService(db)
 const briefs = new BriefService(db)
+const suggestions = new SuggestionService(db, tasks, briefs)
+
+/** The AI that reads imports. Claude only when chosen in Settings and a key is stored. */
+function currentProvider(): AiProvider {
+  const key = keys.get()
+  if (settings.current.aiProvider === 'claude') {
+    if (!key) throw new AiError('Claude is selected but no API key is set. Add one in Settings, or switch to the demo AI.')
+    return new ClaudeProvider(key, settings.current.aiModel)
+  }
+  return new DemoProvider()
+}
+const sources = new SourceService(db, currentProvider, () => settings.current.userName)
+
+function aiStatus(): AiStatus {
+  const { aiProvider, aiModel } = settings.current
+  const hasKey = !!keys.get()
+  const modelLabel = CLAUDE_MODELS.find((m) => m.id === aiModel)?.label ?? aiModel
+  return {
+    provider: aiProvider,
+    model: aiModel,
+    hasKey,
+    encryptionAvailable: keys.encryptionAvailable,
+    label: aiProvider === 'demo' ? 'Demo AI (on this PC)' : hasKey ? modelLabel : 'Claude · no API key',
+    sendsDataExternally: aiProvider === 'claude',
+  }
+}
 
 let mainWindow: BrowserWindow | null = null
 const isMac = process.platform === 'darwin'
@@ -97,6 +130,20 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'app.setTitleBarTheme': (dark) => {
     if (!isMac) mainWindow?.setTitleBarOverlay({ ...titleBarColors(dark), height: 44 })
   },
+  'sources.importAndExtract': (req) => sources.importAndExtract(req),
+  'sources.extract': (sourceId) => sources.extract(sourceId),
+  'sources.list': () => sources.list(),
+  'sources.delete': (id) => sources.delete(id),
+  'suggestions.listPending': () => suggestions.listPending(),
+  'suggestions.count': () => suggestions.pendingCount(),
+  'suggestions.accept': (id, edits) => suggestions.accept(id, edits),
+  'suggestions.reject': (id) => suggestions.reject(id),
+  'ai.status': () => aiStatus(),
+  'ai.setKey': (key) => {
+    keys.set(key)
+    return aiStatus()
+  },
+  'ai.test': () => currentProvider().test(),
 }
 
 function registerIpc(): void {

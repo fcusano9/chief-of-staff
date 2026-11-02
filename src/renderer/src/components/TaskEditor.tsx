@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ContextBrief, Subtask, Task, TaskInput, TaskStatus } from '@shared/types'
-import { effectivePriority, NO_PROJECT_COLOR, STATUS_LABELS } from '@shared/types'
+import { effectivePriority, NO_PROJECT_COLOR, SOURCE_KIND_LABELS, STATUS_LABELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
 import { ConfirmButton, scoreClass } from './bits'
@@ -170,7 +170,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, onClose, onSaved, 
     [!!(form.brief.summary || form.brief.standingInstructions), 'Task brief'],
     [!!(personBrief?.summary || personBrief?.standingInstructions), requesterId ? 'Person brief' : 'Person brief (nobody)'],
     [!!(form.input.notes || form.input.subtasks.length), 'Notes and subtasks'],
-    [false, 'Linked sources (none yet)'],
+    [!!task?.linkedSources.length, task?.linkedSources.length ? `${task.linkedSources.length} linked source${task.linkedSources.length === 1 ? '' : 's'}` : 'Linked sources (none yet)'],
   ]
 
   return (
@@ -198,7 +198,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, onClose, onSaved, 
           <div>
             <div className="ai" style={{ marginBottom: 12, color: 'var(--muted)' }}>
               <div style={{ fontSize: 12, color: 'var(--accent)', marginBottom: 2 }}>✦ Suggested next action</div>
-              Suggestions arrive with the AI features (milestone 2). The AI will only suggest; you decide.
+              Per-task next-action suggestions arrive in milestone 3. Until then, import notes or summaries and review what the AI proposes.
             </div>
 
             <div className="label" style={{ marginBottom: 4 }}>Subtasks</div>
@@ -243,6 +243,11 @@ export function TaskEditor({ taskId, defaultProjectId = null, onClose, onSaved, 
                 <div key={u.id}>
                   {new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {u.isAiGenerated ? '✦ ' : ''}
                   {u.text}
+                </div>
+              ))}
+              {task?.linkedSources.map((s) => (
+                <div key={`src-${s.id}`}>
+                  {new Date(s.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · From {SOURCE_KIND_LABELS[s.kind].toLowerCase()}: {s.title}
                 </div>
               ))}
               {task ? <div>{new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · Created</div> : 'Not saved yet'}

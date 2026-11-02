@@ -6,6 +6,7 @@ import {
   type Person,
   type PriorityWeights,
   type Project,
+  type SourceKind,
   type StatusUpdate,
   type Subtask,
   type Task,
@@ -56,6 +57,7 @@ function toTask(row: Row): Task {
     completedAt: (row.completed_at as string) ?? null,
     subtasks: [],
     statusUpdates: [],
+    linkedSources: [],
     project,
     requester,
   }
@@ -228,6 +230,15 @@ export class TaskService {
     for (const u of this.db.prepare(`SELECT * FROM status_updates WHERE work_item_id IN (${ids}) ORDER BY created_at DESC`).all() as Row[]) {
       const update: StatusUpdate = { id: Number(u.id), text: String(u.text), isAiGenerated: Number(u.is_ai_generated) === 1, createdAt: String(u.created_at) }
       byId.get(Number(u.work_item_id))?.statusUpdates.push(update)
+    }
+    const links = this.db
+      .prepare(
+        `SELECT ts.work_item_id, s.id, s.kind, s.title, s.occurred_at FROM task_sources ts
+         JOIN source_items s ON s.id = ts.source_id WHERE ts.work_item_id IN (${ids}) ORDER BY s.occurred_at DESC`,
+      )
+      .all() as Row[]
+    for (const l of links) {
+      byId.get(Number(l.work_item_id))?.linkedSources.push({ id: Number(l.id), kind: l.kind as SourceKind, title: String(l.title), occurredAt: String(l.occurred_at) })
     }
     return tasks
   }

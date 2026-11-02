@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { PriorityWeights, ThemeSetting } from '@shared/types'
 import { cos, errorMessage } from '../api'
+import { AiSettings } from '../components/AiSettings'
 import { useApp } from '../context'
 
 export const SHORTCUTS: [string, string][] = [
@@ -40,18 +41,7 @@ export function SettingsScreen() {
         <h1>Settings</h1>
       </div>
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-        <div className="card">
-          <div style={{ fontWeight: 500, marginBottom: 8 }}>AI provider</div>
-          <label className="field">
-            <span>Provider</span>
-            <select className="inp" disabled>
-              <option>Claude (Anthropic)</option>
-            </select>
-          </label>
-          <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
-            Connecting Claude comes in milestone 2. Your API key will be stored in the system keychain, never in a plain file. Microsoft 365 Copilot needs IT approval first.
-          </p>
-        </div>
+        <AiSettings />
 
         <div className="card">
           <div style={{ fontWeight: 500, marginBottom: 8 }}>Appearance</div>

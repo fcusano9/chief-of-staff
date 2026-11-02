@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { AppInfo, AppSettings, PersonSummary, ProjectSummary } from '@shared/types'
+import type { AiStatus, AppInfo, AppSettings, PersonSummary, ProjectSummary } from '@shared/types'
 
 export type View = 'today' | 'tasks' | 'review' | 'waiting' | 'projects' | 'people' | 'prep' | 'weekly' | 'archive' | 'import' | 'settings'
 
@@ -23,6 +23,10 @@ export interface AppContextValue {
   people: PersonSummary[]
   dark: boolean
   toggleTheme: () => void
+  ai: AiStatus
+  setAi: (status: AiStatus) => void
+  /** Suggestions waiting in the review queue. */
+  reviewCount: number
 }
 
 export const AppContext = createContext<AppContextValue | null>(null)
