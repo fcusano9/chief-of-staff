@@ -39,3 +39,7 @@ npm run package:mac   # Mac .dmg (run on a Mac)
 - **Database and settings:** `%APPDATA%\Chief of Staff` on Windows, `~/Library/Application Support/Chief of Staff` on Mac.
 - **Backups:** a daily snapshot goes to `OneDrive\Chief of Staff Backups` (configurable), keeping the last 30.
 - **Test data folder:** set `COS_DATA_DIR` to run against a separate folder.
+
+## For AI assistants and new contributors
+
+Start with [AGENTS.md](AGENTS.md), which covers the rules, architecture, conventions and how to make common changes. Then read [docs/ROADMAP.md](docs/ROADMAP.md) for what's built and what's next, and [docs/DECISIONS.md](docs/DECISIONS.md) for why. End-to-end tests are described in [e2e/README.md](e2e/README.md).

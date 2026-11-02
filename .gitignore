@@ -5,3 +5,4 @@ release/
 *.db-*
 .claude/settings.local.json
 .DS_Store
+e2e/shots/
