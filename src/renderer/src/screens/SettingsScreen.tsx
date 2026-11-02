@@ -1,0 +1,164 @@
+import { useState } from 'react'
+import type { PriorityWeights, ThemeSetting } from '@shared/types'
+import { cos, errorMessage } from '../api'
+import { useApp } from '../context'
+
+export const SHORTCUTS: [string, string][] = [
+  ['Ctrl K', 'Command palette'],
+  ['N', 'New task'],
+  ['J / K', 'Move down / up (Tasks)'],
+  ['Enter', 'Open task, then edit title'],
+  ['E', 'Mark done (Tasks)'],
+  ['Ctrl Enter', 'Save task'],
+  ['Esc', 'Close task'],
+  ['/', 'Filter tasks'],
+  ['G then T', 'Go to Today'],
+  ['G then K', 'Go to Tasks'],
+  ['G then W', 'Go to Waiting on'],
+  ['G then P', 'Go to Projects'],
+  ['G then E', 'Go to People'],
+  ['Alt 1–9', 'Switch tabs'],
+  ['Shift D', 'Toggle light / dark'],
+]
+
+export function SettingsScreen() {
+  const { settings, saveSettings, info, toast } = useApp()
+  const [weights, setWeights] = useState<PriorityWeights>(settings.priorityWeights)
+  const [backupFolder, setBackupFolder] = useState(settings.backupFolder ?? '')
+  const [keep, setKeep] = useState(settings.backupsToKeep)
+  const [busy, setBusy] = useState(false)
+
+  const weightRows: [keyof PriorityWeights, string][] = [
+    ['dueDate', 'Due date'],
+    ['requester', 'Who is asking'],
+    ['staleness', 'Staleness and follow-ups'],
+  ]
+
+  return (
+    <div className="page">
+      <div className="head">
+        <h1>Settings</h1>
+      </div>
+      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <div className="card">
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>AI provider</div>
+          <label className="field">
+            <span>Provider</span>
+            <select className="inp" disabled>
+              <option>Claude (Anthropic)</option>
+            </select>
+          </label>
+          <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
+            Connecting Claude comes in milestone 2. Your API key will be stored in the system keychain, never in a plain file. Microsoft 365 Copilot needs IT approval first.
+          </p>
+        </div>
+
+        <div className="card">
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>Appearance</div>
+          <label className="field">
+            <span>Theme</span>
+            <select className="inp" value={settings.theme} onChange={(e) => void saveSettings({ theme: e.target.value as ThemeSetting })}>
+              <option value="system">Follow system</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <div className="field">
+            <span>Split view</span>
+            <span className="row">
+              <span className="mono">{Math.round(settings.splitPercent)}%</span>
+              <button className="btn ghost" onClick={() => void saveSettings({ splitPercent: 50 })}>
+                Reset to 50/50
+              </button>
+            </span>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>Priority weights</div>
+          {weightRows.map(([key, label]) => (
+            <label key={key} className="field" style={{ gridTemplateColumns: '150px 1fr 24px' }}>
+              <span>{label}</span>
+              <input type="range" min={0} max={10} step={1} value={weights[key]} onChange={(e) => setWeights({ ...weights, [key]: Number(e.target.value) })} />
+              <span className="mono">{weights[key]}</span>
+            </label>
+          ))}
+          <div className="row" style={{ marginTop: 8 }}>
+            <span className="faint" style={{ fontSize: 12 }}>How much each signal counts toward the 0–100 score.</span>
+            <div className="spacer" />
+            <button
+              className="btn"
+              onClick={() =>
+                void saveSettings({ priorityWeights: weights }).then(() => {
+                  toast('Weights saved. Priorities recalculated.')
+                })
+              }
+            >
+              Save weights
+            </button>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>Backup</div>
+          <label className="field">
+            <span>Folder</span>
+            <input className="inp" value={backupFolder} placeholder={info.defaultBackupFolder} onChange={(e) => setBackupFolder(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Keep</span>
+            <span className="row">
+              <input className="inp" type="number" min={1} style={{ width: 80 }} value={keep} onChange={(e) => setKeep(Number(e.target.value) || 1)} />
+              <span className="muted">daily snapshots</span>
+            </span>
+          </label>
+          <div className="muted" style={{ fontSize: 12, margin: '6px 0 8px' }}>
+            Last backup: {settings.lastBackupAt ? new Date(settings.lastBackupAt).toLocaleString() : 'never'}
+          </div>
+          <div className="row">
+            <button className="btn" onClick={() => void saveSettings({ backupFolder: backupFolder || null, backupsToKeep: keep }).then(() => toast('Backup settings saved'))}>
+              Save
+            </button>
+            <button
+              className="btn"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true)
+                cos['backup.now']()
+                  .then((path) => toast(`Backed up to ${path}`))
+                  .catch((err) => toast(errorMessage(err), true))
+                  .finally(() => setBusy(false))
+              }}
+            >
+              {busy ? 'Backing up…' : 'Back up now'}
+            </button>
+            <button className="btn ghost" onClick={() => void cos['backup.openFolder']()}>
+              Open folder
+            </button>
+          </div>
+        </div>
+
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>Keyboard shortcuts</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 22px' }}>
+            {SHORTCUTS.map(([keys, label]) => (
+              <div key={label} className="row" style={{ justifyContent: 'space-between' }}>
+                <span>{label}</span>
+                <span className="row" style={{ gap: 3 }}>
+                  {keys.split(' ').map((k, i) => (k === 'then' || (k === '/' && keys !== '/') ?<span key={i} className="faint">{k}</span> : <span key={i} className="kbd">{k}</span>))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
+          <div style={{ fontWeight: 500, marginBottom: 4 }}>About</div>
+          <div className="muted" style={{ fontSize: 12, lineHeight: 1.8 }}>
+            Chief of Staff {info.version} · data stored at <span className="mono">{info.databasePath}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
