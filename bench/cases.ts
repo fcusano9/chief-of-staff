@@ -17,9 +17,9 @@ export const CONTEXT: ExtractionContext = {
     { id: 6, title: 'Customer advisory board agenda', status: 'open', dueDate: null, project: 'Roadmap 2027', requester: 'Dana Lee', waitingOn: null },
   ],
   projects: [
-    { id: 1, name: 'Roadmap 2027', brief: 'Three-year product roadmap for the exec team. Dana Lee owns the review.', instructions: 'Keep decks short.' },
-    { id: 2, name: 'Partner portal', brief: 'New dealer and partner portal. Marcus Webb leads UX.', instructions: '' },
-    { id: 3, name: 'Pricing refresh', brief: 'New dealer pricing tiers for 2027. Finance (Priya Shah) owns the margin model.', instructions: '' },
+    { id: 1, name: 'Roadmap 2027', overview: 'Three-year product roadmap for the exec team. Dana Lee owns the review.', brief: '', instructions: 'Keep decks short.' },
+    { id: 2, name: 'Partner portal', overview: 'New dealer and partner portal. Marcus Webb leads UX.', brief: '', instructions: '' },
+    { id: 3, name: 'Pricing refresh', overview: 'New dealer pricing tiers for 2027. Finance (Priya Shah) owns the margin model.', brief: '', instructions: '' },
   ],
   people: [
     { id: 1, name: 'Dana Lee', role: 'VP, Product (Frank’s manager)', company: null, brief: '' },

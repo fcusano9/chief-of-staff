@@ -35,6 +35,9 @@ class LoggingFake implements AiProvider {
   async writePersonBrief() {
     return ''
   }
+  async writeProjectBrief() {
+    return ''
+  }
   async test() {
     return 'ok'
   }

@@ -1,4 +1,4 @@
-import type { PersonBriefInput } from './brief'
+import type { PersonBriefInput, ProjectBriefInput } from './brief'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { RawSuggestion } from './schema'
 
@@ -15,6 +15,8 @@ export interface AiProvider {
   extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawSuggestion[]>
   /** One or two sentences on who a person is and what they do. Proposed only; the caller saves it if kept. */
   writePersonBrief(input: PersonBriefInput): Promise<string>
+  /** A short status brief for a project, from its history and open tasks. Proposed only; the caller saves it if kept. */
+  writeProjectBrief(input: ProjectBriefInput): Promise<string>
   /** Cheap check that the provider is reachable and configured. Throws a readable error if not. */
   test(): Promise<string>
 }

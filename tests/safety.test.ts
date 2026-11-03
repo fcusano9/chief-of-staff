@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { openDatabase, SCHEMA_VERSION, schemaVersion } from '../src/main/db'
+import { MIGRATIONS, openDatabase, SCHEMA_VERSION, schemaVersion } from '../src/main/db'
 import { chooseDataLocation } from '../src/main/paths'
 import { applyPendingRestore, createBackup, inspectBackup, listBackups, pruneBackups, requestRestore, SAFETY_COPIES_KEPT, snapshotNow } from '../src/main/services/backup'
 import { TaskService } from '../src/main/services/tasks'
@@ -64,6 +64,35 @@ describe('data safety', () => {
     ).toThrow('OneDrive unavailable')
     const db = new DatabaseSync(path, { readOnly: true })
     expect(schemaVersion(db)).toBe(1)
+    db.close()
+  })
+
+  it('upgrades a database that got the AI log as version 5 (parallel branches), keeping its data', () => {
+    const path = join(folder, 'dev-v5.db')
+    // What the AI log development build created: migrations 1-4, then the AI log tables as version 5.
+    const devBuild = [...MIGRATIONS.slice(0, 4), MIGRATIONS[5]!]
+    const old = openDatabase(path, { migrations: devBuild })
+    expect(schemaVersion(old)).toBe(5)
+    old.exec(`INSERT INTO source_items (kind, title, occurred_at, content, content_hash, imported_at) VALUES ('note', 'n', 'x', 'c', 'h', 'x')`)
+    old.exec(`INSERT INTO extraction_runs (source_id, provider, started_at) VALUES (1, 'Demo AI', 'x')`)
+    old.exec(`INSERT INTO projects (name, color, created_at) VALUES ('Roadmap', '#7F77DD', 'x')`)
+    old.close()
+
+    const db = openDatabase(path)
+    expect(schemaVersion(db)).toBe(SCHEMA_VERSION)
+    const projectColumns = (db.prepare('PRAGMA table_info(projects)').all() as { name: string }[]).map((c) => c.name)
+    expect(projectColumns).toEqual(expect.arrayContaining(['overview', 'brief', 'brief_by', 'brief_at', 'brief_context']))
+    expect(db.prepare('SELECT provider FROM extraction_runs').get()).toEqual({ provider: 'Demo AI' })
+    expect(db.prepare('SELECT name, overview FROM projects').get()).toEqual({ name: 'Roadmap', overview: null })
+    db.close()
+  })
+
+  it('upgrades a main-branch version 5 database (project columns) to the AI log', () => {
+    const path = join(folder, 'main-v5.db')
+    openDatabase(path, { migrations: MIGRATIONS.slice(0, 5) }).close()
+    const db = openDatabase(path)
+    expect(schemaVersion(db)).toBe(SCHEMA_VERSION)
+    expect(db.prepare(`SELECT name FROM sqlite_master WHERE name = 'ai_calls'`).get()).toEqual({ name: 'ai_calls' })
     db.close()
   })
 

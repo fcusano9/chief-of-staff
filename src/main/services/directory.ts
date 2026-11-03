@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import type { BriefScope, ContextBrief, Person, PersonInput, PersonSummary, Project, ProjectSummary } from '@shared/types'
+import type { BriefScope, ContextBrief, Person, PersonInput, PersonSummary, Project, ProjectInput, ProjectSummary } from '@shared/types'
 import { ACTIVE_STATUSES } from '@shared/types'
 import { nowIso, transaction } from '../db'
 
@@ -8,18 +8,53 @@ const ACTIVE_IN = `(${ACTIVE_STATUSES.map((s) => `'${s}'`).join(', ')})`
 export class ProjectService {
   constructor(private readonly db: DatabaseSync) {}
 
-  /** Non-archived projects by name, with their open-task counts. */
+  /**
+   * Non-archived projects by name, with their open-task counts and how many history notes arrived
+   * since their brief was written.
+   */
   list(): ProjectSummary[] {
     const rows = this.db
       .prepare(
-        `SELECT p.*, (SELECT COUNT(*) FROM work_items w WHERE w.project_id = p.id AND w.status IN ${ACTIVE_IN}) AS open_count
-         FROM projects p WHERE p.status <> 'archived' ORDER BY p.name COLLATE NOCASE`,
+        `SELECT p.*, IFNULL(b.summary, '') AS history,
+           (SELECT COUNT(*) FROM work_items w WHERE w.project_id = p.id AND w.status IN ${ACTIVE_IN}) AS open_count
+         FROM projects p LEFT JOIN context_briefs b ON b.scope = 'project' AND b.owner_id = p.id
+         WHERE p.status <> 'archived' ORDER BY p.name COLLATE NOCASE`,
       )
       .all() as Record<string, unknown>[]
-    return rows.map((r) => ({ ...toProject(r), openCount: Number(r.open_count) }))
+    return rows.map((r) => ({
+      ...toProject(r),
+      openCount: Number(r.open_count),
+      newNotes: r.brief ? countNewNotes(String(r.history), String(r.brief_context ?? '')) : 0,
+    }))
   }
 
-  save(project: Pick<Project, 'id' | 'name' | 'color' | 'status'>): Project {
+  get(id: number): Project | null {
+    const row = this.db.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Record<string, unknown> | undefined
+    return row ? toProject(row) : null
+  }
+
+  /** Sets the hand-written overview; empty text clears it. */
+  saveOverview(id: number, text: string): Project {
+    const overview = text.replace(/\s+/g, ' ').trim().slice(0, 600) || null
+    if (!this.db.prepare('UPDATE projects SET overview = ? WHERE id = ?').run(overview, id).changes) throw new Error('That project no longer exists.')
+    return this.get(id)!
+  }
+
+  /**
+   * Sets the status brief (empty text clears it) and remembers the history it was written from,
+   * so later notes show as new. Line breaks are kept; runs of blank lines are not.
+   */
+  saveBrief(id: number, text: string, by: 'ai' | 'user'): Project {
+    const brief = tidyBrief(text) || null
+    const history = (this.db.prepare(`SELECT summary FROM context_briefs WHERE scope = 'project' AND owner_id = ?`).get(id) as { summary: string } | undefined)?.summary ?? ''
+    const changed = this.db
+      .prepare('UPDATE projects SET brief = ?, brief_by = ?, brief_at = ?, brief_context = ? WHERE id = ?')
+      .run(brief, brief ? by : null, brief ? nowIso() : null, brief ? history : null, id).changes
+    if (!changed) throw new Error('That project no longer exists.')
+    return this.get(id)!
+  }
+
+  save(project: ProjectInput): Project {
     const name = project.name.trim()
     if (!name) throw new Error('A project needs a name.')
     let id = project.id
@@ -136,7 +171,28 @@ export class BriefService {
 }
 
 function toProject(r: Record<string, unknown>): Project {
-  return { id: Number(r.id), name: String(r.name), color: String(r.color), status: r.status as Project['status'], createdAt: String(r.created_at) }
+  return {
+    id: Number(r.id),
+    name: String(r.name),
+    color: String(r.color),
+    status: r.status as Project['status'],
+    createdAt: String(r.created_at),
+    overview: (r.overview as string) ?? null,
+    brief: (r.brief as string) ?? null,
+    briefBy: (r.brief_by as Project['briefBy']) ?? null,
+    briefAt: (r.brief_at as string) ?? null,
+  }
+}
+
+/** Trims each line and collapses blank lines, keeping the line breaks a status brief uses. */
+export function tidyBrief(text: string): string {
+  return text
+    .split('\n')
+    .map((l) => l.replace(/\s+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+    .slice(0, 2000)
 }
 
 function toPerson(r: Record<string, unknown>): Person {

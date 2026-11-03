@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { CLAUDE_MODELS } from '@shared/types'
-import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
+import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
 import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
@@ -35,6 +35,20 @@ export function buildBriefRequest(model: string, input: PersonBriefInput) {
     max_tokens: 4000,
     // Low effort: summarizing a few notes needs little reasoning.
     output_config: { effort: 'low' as const, format: betaZodOutputFormat(PersonBriefSchema) },
+    system,
+    messages: [{ role: 'user' as const, content: user }],
+    ...fallbackFor(model),
+  }
+}
+
+/** The request for a project's status brief. */
+export function buildProjectBriefRequest(model: string, input: ProjectBriefInput) {
+  const { system, user } = buildProjectBriefPrompt(input)
+  return {
+    model,
+    max_tokens: 6000,
+    // Low effort: condensing notes into a few lines needs little reasoning.
+    output_config: { effort: 'low' as const, format: betaZodOutputFormat(ProjectBriefSchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -84,6 +98,18 @@ export class ClaudeProvider implements AiProvider {
   async writePersonBrief(input: PersonBriefInput): Promise<string> {
     try {
       const response = await this.client.beta.messages.parse(buildBriefRequest(this.model, input))
+      if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this brief. Nothing was changed.')
+      if (response.stop_reason === 'max_tokens') throw new AiError('The brief was cut off. Try again.')
+      if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
+      return response.parsed_output.brief
+    } catch (err) {
+      throw toAiError(err)
+    }
+  }
+
+  async writeProjectBrief(input: ProjectBriefInput): Promise<string> {
+    try {
+      const response = await this.client.beta.messages.parse(buildProjectBriefRequest(this.model, input))
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this brief. Nothing was changed.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The brief was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")

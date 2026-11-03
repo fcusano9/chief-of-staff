@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Projects: overview, brief and history</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; display: grid; grid-template-rows: 44px minmax(0, 1fr); }
+button, input, select, textarea { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; min-height: 28px; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+.label { font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: .5; cursor: default; }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 8px; width: 100%; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { resize: vertical; line-height: 1.5; }
+select.inp { width: auto; padding: 3px 8px; }
+.title-inp { font-size: 16px; font-weight: 500; border-color: transparent; background: none; padding-left: 0; }
+.field { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px; padding: 3px 0; }
+.field > span { color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; flex: none; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.stars { font-family: var(--mono); color: var(--warn); letter-spacing: 1px; white-space: nowrap; }
+.stars .off { color: var(--faint); }
+.stars button { border: 0; background: none; padding: 0 1px; cursor: pointer; color: inherit; font-size: 15px; }
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.r { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto 22px; gap: 10px; align-items: center; padding: 7px 12px 7px 10px; border-top: 1px solid var(--border); cursor: pointer; }
+.r:first-child { border-top: 0; }
+.r:hover { background: var(--hover); }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.empty { color: var(--muted); padding: 18px 14px; text-align: center; }
+.note { background: var(--accent-bg); color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.ai { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 45%, transparent); border-radius: 8px; padding: 10px 12px; }
+.split { display: grid; grid-template-columns: minmax(360px, 50%) 7px minmax(360px, 1fr); min-height: 0; }
+.pane { overflow: auto; min-width: 0; }
+.pane.left { padding: 22px 18px 40px 28px; }
+.pane.right { background: var(--surface); }
+.divider { position: relative; } .divider::before { content: ''; position: absolute; inset: 0 3px; background: var(--border); }
+.editor { padding: 16px 22px 28px; }
+.sec { margin-top: 14px; }
+.sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; min-height: 26px; }
+.brief { margin: 2px 0 14px 38px; }
+.brief-text { font-size: 14px; }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.btn.primary .kbd { background: none; color: inherit; border-color: currentColor; }
+.taskrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 7px 12px; border-top: 1px solid var(--border); }
+.taskrow:first-child { border-top: 0; }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+@media (max-width: 760px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .divider { display: none; }
+  .pane.left { padding: 16px; }
+}
+.r.p { grid-template-columns: 3px minmax(0, 1fr) auto 26px; padding-left: 0; }
+.stripe { align-self: stretch; border-radius: 2px; }
+.editor-stripe { height: 3px; }
+.swatches { display: flex; gap: 6px; }
+.swatch { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.swatch.on { border-color: var(--text); }
+.ov { margin: 0 0 14px; }
+.title-inp.big { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.ov-line { display: flex; align-items: flex-start; gap: 6px; color: var(--muted); font-size: 14px; }
+.ov-line .t { cursor: text; }
+.pencil { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 2px 4px; border-radius: 4px; line-height: 0; flex: none; }
+.pencil:hover { color: var(--text); background: var(--hover); }
+.brief-box { white-space: pre-wrap; font-size: 13px; line-height: 1.55; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--bg); }
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .35); display: grid; place-items: center; z-index: 10; }
+.dialog { width: min(680px, calc(100vw - 40px)); max-height: calc(100vh - 80px); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 12px 40px rgb(0 0 0 / .25); }
+.dialog-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.dialog-body { overflow: auto; padding: 4px 16px 12px; }
+.dialog-foot { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
+.hist { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.hist:first-child { border-top: 0; }
+.hist .src { font-size: 11px; color: var(--faint); }
+.hist.new .d::after { content: ' new'; color: var(--accent); font-size: 10px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button><button class="tab">Tasks</button><button class="tab">Review</button>
+  <button class="tab">Waiting</button><button class="tab on">Projects</button><button class="tab">People</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="reset">Reset mockup</button>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="split">
+  <div class="pane left">
+    <div class="head">
+      <h1>Projects</h1>
+      <span class="muted" id="count"></span>
+      <div class="spacer"></div>
+      <button class="btn primary" onclick="toast('New project works as it does today')">New project</button>
+    </div>
+    <div class="list" id="list"></div>
+
+    <div class="notes">
+      <h3>Mockup notes (not part of the app)</h3>
+      <ul>
+        <li><b>Overview</b> is one sentence on what the project is (two at most), in a softer color right under the name, and under each name in the list. You write it yourself: click the pencil (or the empty line) to edit, Ctrl+Enter saves, Esc cancels. The AI doesn't write it. The project name is a little bigger so the two don't look alike.</li>
+        <li><b>Project brief</b> is now a short, high-level status: where the project stands, recent decisions, what's next and what's open. The AI writes it from the full history, the project's open tasks and the standing instructions.</li>
+        <li>The brief works like the People brief: <b>Regenerate</b> shows a suggestion with Keep, Discard and Try again, <b>Edit</b> lets you write it yourself, and nothing is saved until you keep it. A tag shows how many history notes arrived since it was written. Try Dealer training.</li>
+        <li><b>History</b> holds every dated note from imports (each accepted "Project context" suggestion in Review) plus anything you add. It's no longer on the page: the History button opens it, newest first, with new notes marked. You can add a note or edit it there.</li>
+        <li><b>Existing projects:</b> what's in today's brief box moves into History unchanged. The overview starts empty until you write one, and the brief until you click Write brief. Try Partner portal refresh.</li>
+        <li><b>What the AI reads</b> on each import: each project's name, overview, brief and standing instructions. When a project has no brief yet, it reads the newest history notes instead. Today it reads the first 400 characters of the brief box, which are the oldest notes.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="pane right" id="right"></div>
+</div>
+<div id="modal"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const initial = () => [
+  { id: 1, name: 'Spring pricing launch', color: '#7F77DD', status: 'active', open: 3,
+    ov: { text: 'Moving dealers to a four-tier pricing model for the spring launch; pricing is approved and the dealer pilot starts with Northwind AV.', by: 'ai', at: 'Nov 3', seen: 6 },
+    brief: { text: `Pricing is approved: Dana Lee signed off on the four-tier model on Oct 28, and EMEA will use the same tiers in euros. Northwind AV pilots the new tiers from Dec 1.
+Next: Finance reviews Priya's margin model before the distributor deck goes out (due Nov 14). Launch is in March.
+Open: nothing recorded.`, by: 'ai', at: 'Nov 3', seen: 6 },
+    history: [
+      ['Oct 14, 2026', 'Kickoff: replace the dealer price list with a tiered model by the spring launch.', 'Pricing sync'],
+      ['Oct 20, 2026', 'Priya Shah is building the margin model for the new tiers.', 'Pricing sync'],
+      ['Oct 28, 2026', 'Dana Lee approved the four-tier model.', 'Copilot summary, week of Oct 26'],
+      ['Nov 1, 2026', 'Northwind AV agreed to pilot the new tiers from Dec 1.', 'Dealer call'],
+      ['Nov 2, 2026', 'Finance wants the margin model reviewed before anything goes to distributors.', 'Pricing sync'],
+      ['Nov 3, 2026', 'EMEA will use the same four tiers, priced in euros.', 'EMEA distributor call'],
+    ],
+    instructions: 'Always cc Priya on anything with margins.',
+    tasks: [['Send pricing deck to EMEA distributors', 'Fri'], ['Review margin model with Priya', 'Nov 10'], ['Send pilot pricing sheet to Northwind', 'Nov 9']],
+    ovVariants: ['A four-tier dealer pricing model for the March launch; pricing is approved, EMEA matches it in euros, and Northwind AV pilots it from Dec 1.'],
+    briefVariants: [`Pricing is approved (Dana Lee, Oct 28) and EMEA will use the same four tiers in euros. Northwind AV pilots the tiers from Dec 1.
+Next: Finance reviews the margin model before the distributor deck (due Nov 14); launch in March.
+Open: nothing recorded.`] },
+  { id: 2, name: 'Dealer training', color: '#1D9E75', status: 'active', open: 2,
+    ov: { text: 'A new online training program for dealers, run with Alex Rivera.', by: 'ai', at: 'Nov 1', seen: 1 },
+    brief: { text: 'Kicked off Nov 1 with Alex Rivera. The goal is online certification courses for dealers.', by: 'ai', at: 'Nov 1', seen: 1 },
+    history: [
+      ['Nov 1, 2026', 'Kickoff with Alex Rivera; goal is online certification courses for dealers.', 'Dealer training kickoff'],
+      ['Nov 2, 2026', 'Courses launch with the new pricing tiers in Q2.', 'Dealer training kickoff'],
+      ['Nov 2, 2026', 'Marcus Webb owns the portal Training tile.', 'Dealer training kickoff'],
+      ['Nov 2, 2026', 'Alex is getting quotes from two training platforms.', 'Dealer training kickoff'],
+    ],
+    instructions: '',
+    tasks: [['Send course outline to Alex', 'Fri'], ['Review Training tile design', 'Nov 12']],
+    ovVariants: ['Online certification courses for dealers, launching with the new pricing tiers in Q2; Alex Rivera runs the program and Marcus Webb builds the portal tile.'],
+    briefVariants: [`Kicked off Nov 1. Courses launch with the new pricing tiers in Q2; Alex Rivera runs the program and Marcus Webb owns the portal Training tile.
+Next: Frank sends Alex the course outline (Fri); Training tile design review on Nov 12.
+Open: which training platform to use. Alex is getting two quotes.`] },
+  { id: 3, name: 'Partner portal refresh', color: '#378ADD', status: 'on_hold', open: 1,
+    ov: null, brief: null,
+    history: [
+      ['Sep 22, 2026', 'Dealers asked for faster order status and a training area in the portal.', 'Dealer advisory council notes'],
+      ['Oct 27, 2026', 'Wireframes approved; build paused until after the spring launch.', 'Copilot summary, week of Oct 26'],
+    ],
+    instructions: '', tasks: [['Collect dealer feedback on wireframes', 'Dec 1']],
+    ovVariants: ['A redesign of the partner portal; the wireframes are approved and the build is on hold until after the spring launch.'],
+    briefVariants: [`On hold. Wireframes were approved Oct 27; the build waits until after the spring launch. Dealers asked for faster order status and a training area.
+Next: collect dealer feedback on the wireframes (Dec 1).
+Open: nothing recorded.`] },
+  { id: 4, name: 'Q1 roadmap', color: '#D85A30', status: 'active', open: 0,
+    ov: null, brief: null, history: [], instructions: '', tasks: [], ovVariants: [], briefVariants: [] },
+]
+const STATUS = { active: 'Active', on_hold: 'On hold', completed: 'Completed', archived: 'Archived (hidden)' }
+const COLORS = ['#7F77DD', '#1D9E75', '#D85A30', '#D4537E', '#378ADD', '#639922', '#BA7517', '#E24B4A']
+
+let projects, selected, ui, modal
+function reset() { projects = initial(); selected = 1; clearUi(); render() }
+function clearUi() { ui = { ov: { preview: null, writing: false, editing: false }, brief: { preview: null, writing: false, editing: false } }; modal = null; renderModal() }
+
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+function toast(text) { const t = document.getElementById('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2000) }
+const today = () => 'Nov 3, 2026'
+
+function renderLeft() {
+  document.getElementById('count').textContent = projects.length
+  document.getElementById('list').innerHTML = projects.map((p) => `<div class="r p ${p.id === selected ? 'sel' : ''}" data-id="${p.id}">
+      <div class="stripe" style="background:${p.color}"></div>
+      <div class="ttl">${esc(p.name)}${p.ov ? `<div class="faint ttl" style="font-size:11px">${esc(p.ov.text)}</div>` : ''}</div>
+      <span class="faint" style="font-size:12px">${p.status === 'active' ? '' : STATUS[p.status]}</span>
+      <span class="mono muted" title="Open tasks" style="text-align:right">${p.open}</span>
+    </div>`).join('')
+}
+
+// One AI-written field (overview or brief): text, byline, new-notes tag, Edit, Regenerate, suggestion.
+function field(p, key, cfg) {
+  const s = ui[key], v = p[key], hasHistory = p.history.length > 0
+  const newNotes = v ? p.history.length - v.seen : 0
+  const byline = v ? `${v.by === 'ai' ? 'Written by AI' : 'Edited by you'} on ${v.at}` : ''
+  if (s.editing) return `<textarea class="inp" id="${key}Inp" rows="${cfg.rows}" style="min-height:${cfg.rows * 22}px; font-size:${cfg.size}px" placeholder="${cfg.placeholder}">${esc(v?.text)}</textarea>
+    <div class="row" style="margin-top:6px">
+      <button class="btn primary" data-act="${key}:save">Save <span class="kbd">Ctrl ↵</span></button>
+      <button class="btn ghost" data-act="${key}:cancel">Cancel <span class="kbd">Esc</span></button>
+    </div>`
+  return `<div class="${cfg.boxClass}" style="font-size:${cfg.size}px">${v ? esc(v.text) : `<span class="faint">No ${cfg.noun} yet.${hasHistory ? ` Click Write ${cfg.noun}, or Edit to write one yourself.` : ' Imports add history here as you accept them in Review. You can also Edit to write one yourself.'}</span>`}</div>
+    <div class="row" style="margin-top:4px; flex-wrap:wrap">
+      ${byline ? `<span class="faint" style="font-size:11px">${byline}</span>` : ''}
+      ${newNotes > 0 ? `<span class="note">${newNotes} new note${newNotes === 1 ? '' : 's'} since this ${cfg.noun}</span>` : ''}
+      <div class="spacer"></div>
+      <button class="btn ghost sm" data-act="${key}:edit">Edit</button>
+      ${hasHistory ? `<button class="btn sm" data-act="${key}:write" ${s.writing ? 'disabled' : ''}>${s.writing ? 'Writing…' : v ? '✦ Regenerate' : `✦ Write ${cfg.noun}`}</button>` : ''}
+    </div>
+    ${s.preview ? `<div class="ai" style="margin-top:8px">
+        <div class="row" style="margin-bottom:4px"><span class="label">Suggested ${cfg.noun}</span><div class="spacer"></div><span class="faint" style="font-size:11px">Demo AI</span></div>
+        <div style="white-space:pre-wrap; font-size:${cfg.size}px">${esc(s.preview)}</div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn primary" data-act="${key}:keep">Keep</button>
+          <button class="btn ghost" data-act="${key}:discard">Discard</button>
+          <div class="spacer"></div>
+          <button class="btn ghost" data-act="${key}:write">Try again</button>
+        </div>
+      </div>` : ''}`
+}
+
+function renderRight() {
+  const p = projects.find((x) => x.id === selected)
+  const right = document.getElementById('right')
+  if (!p) { right.innerHTML = '<div class="empty" style="margin-top:80px">Select a project, or create one.</div>'; return }
+  const newest = Math.min(p.ov ? p.history.length - p.ov.seen : 0, p.brief ? p.history.length - p.brief.seen : 0)
+  right.innerHTML = `<div class="editor-stripe" style="background:${p.color}"></div><div class="editor">
+    <input class="inp title-inp big" data-f="name" value="${esc(p.name)}" placeholder="Project name" />
+    <div class="ov">${ui.ov.editing
+      ? `<textarea class="inp" id="ovInp" rows="2" style="min-height:52px; font-size:14px" placeholder="One sentence on what this project is">${esc(p.ov?.text)}</textarea>
+         <div class="row" style="margin-top:6px">
+           <button class="btn primary" data-act="ov:save">Save <span class="kbd">Ctrl ↵</span></button>
+           <button class="btn ghost" data-act="ov:cancel">Cancel <span class="kbd">Esc</span></button>
+         </div>`
+      : `<div class="ov-line">
+           <span class="t" data-act="ov:edit">${p.ov ? esc(p.ov.text) : '<span class="faint">Add a one-line overview</span>'}</span>
+           <button class="pencil" data-act="ov:edit" title="Edit overview" aria-label="Edit overview"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M11.2 2.3l2.5 2.5-8.4 8.4-3.2.7.7-3.2 8.4-8.4z"/><path d="M9.8 3.7l2.5 2.5"/></svg></button>
+         </div>`}</div>
+
+    <div class="row" style="gap:16px; margin-bottom:14px; flex-wrap:wrap">
+      <label class="row"><span class="muted">Status</span><select class="inp">${Object.entries(STATUS).map(([s, l]) => `<option ${s === p.status ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <div class="swatches">${COLORS.map((c) => `<button class="swatch ${c === p.color ? 'on' : ''}" style="background:${c}" data-c="${c}"></button>`).join('')}</div>
+    </div>
+
+    <div class="sec-head">
+      <span class="label">Project brief</span>
+      <div class="spacer"></div>
+      <button class="btn sm" data-act="history">History <span class="mono muted">${p.history.length}</span></button>
+    </div>
+    <div style="margin-bottom:14px">${field(p, 'brief', { noun: 'brief', rows: 6, size: 13, boxClass: 'brief-box', placeholder: 'Where the project stands, recent decisions, what is next, what is open' })}</div>
+
+    <div class="label">Standing instructions</div>
+    <textarea class="inp" data-f="instructions" style="margin:4px 0 12px; min-height:44px" placeholder="e.g. Always cc Marcus on engineering dates">${esc(p.instructions)}</textarea>
+
+    <div class="row" style="margin-bottom:18px">
+      <button class="btn danger ghost" onclick="toast('Delete works as it does today')">Delete project</button>
+      <div class="spacer"></div>
+      <button class="btn" onclick="toast('Opens a new task in this project, as today')">New task in this project</button>
+      <button class="btn primary" onclick="toast('Project saved')">Save</button>
+    </div>
+    <div class="label" style="margin-bottom:4px">Open tasks</div>
+    <div class="list">${p.tasks.length ? p.tasks.map(([t, d]) => `<div class="taskrow"><span class="ttl">${esc(t)}</span><span class="muted" style="font-size:12px">${esc(d)}</span></div>`).join('') : '<div class="empty">No open tasks in this project.</div>'}</div>
+  </div>`
+
+  right.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('input', () => { p[el.dataset.f] = el.value; if (el.dataset.f === 'name') renderLeft() }))
+  right.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { p.color = b.dataset.c; render() }))
+  right.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => act(p, b.dataset.act)))
+  for (const key of ['ov', 'brief']) {
+    const inp = document.getElementById(`${key}Inp`)
+    if (inp) inp.onkeydown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); act(p, `${key}:save`) }
+      else if (e.key === 'Escape') act(p, `${key}:cancel`)
+    }
+  }
+}
+
+function act(p, action) {
+  if (action === 'history') { modal = { editing: false, adding: '' }; return renderModal() }
+  const [key, verb] = action.split(':'), s = ui[key], noun = key === 'ov' ? 'Overview' : 'Brief'
+  if (verb === 'edit') { s.editing = true; s.preview = null; renderRight(); const i = document.getElementById(`${key}Inp`); i.focus(); i.setSelectionRange(i.value.length, i.value.length) }
+  if (verb === 'cancel') { s.editing = false; renderRight() }
+  if (verb === 'save') {
+    const text = document.getElementById(`${key}Inp`).value.trim()
+    p[key] = text ? { text, by: 'you', at: 'Nov 3', seen: p.history.length } : null
+    s.editing = false; render(); toast(`${noun} updated`)
+  }
+  if (verb === 'keep') { p[key] = { text: s.preview, by: 'ai', at: 'Nov 3', seen: p.history.length }; s.preview = null; render(); toast(`${noun} updated`) }
+  if (verb === 'discard') { s.preview = null; renderRight() }
+  if (verb === 'write') {
+    s.writing = true; s.preview = null; s.editing = false; renderRight()
+    setTimeout(() => {
+      const variants = key === 'ov' ? p.ovVariants : p.briefVariants
+      s._v = ((s._v ?? -1) + 1) % Math.max(1, variants.length)
+      s.writing = false; s.preview = variants[s._v] ?? p.name; renderRight()
+    }, key === 'ov' ? 900 : 1300)
+  }
+}
+
+function renderModal() {
+  const root = document.getElementById('modal')
+  const p = projects?.find((x) => x.id === selected)
+  if (!modal || !p) { root.innerHTML = ''; return }
+  const seen = Math.min(p.ov?.seen ?? p.history.length, p.brief?.seen ?? p.history.length)
+  const asText = () => p.history.map(([d, t, src]) => `${d}: ${t}${src ? ` (from “${src}”)` : ''}`).join('\n')
+  root.innerHTML = `<div class="scrim" id="scrim"><div class="dialog" role="dialog" aria-label="Project history">
+    <div class="dialog-head">
+      <span class="stripe" style="width:3px; height:18px; background:${p.color}"></span>
+      <b>${esc(p.name)}</b><span class="muted">history · ${p.history.length} note${p.history.length === 1 ? '' : 's'}</span>
+      <div class="spacer"></div>
+      ${modal.editing ? '' : '<button class="btn ghost sm" id="hEdit">Edit</button>'}
+      <button class="btn ghost sm" id="hClose">Close <span class="kbd">Esc</span></button>
+    </div>
+    <div class="dialog-body">
+      ${modal.editing
+        ? `<textarea class="inp" id="hText" style="min-height:320px; margin-top:10px; font-size:12px">${esc(asText())}</textarea>`
+        : `<div class="row" style="margin:10px 0 6px">
+             <input class="inp" id="hAdd" placeholder="Add a note, e.g. Launch moved to April" value="${esc(modal.adding)}" />
+             <button class="btn" id="hAddBtn">Add</button>
+           </div>
+           ${p.history.length ? p.history.map((h, i) => [h, i]).reverse().map(([[d, t, src], i]) => `<div class="hist ${i >= seen ? 'new' : ''}">
+               <span class="muted mono d" style="font-size:11px; padding-top:2px">${esc(d.replace(', 2026', ''))}</span>
+               <div>${esc(t)}${src ? `<div class="src">from “${esc(src)}”</div>` : '<div class="src">added by you</div>'}</div>
+             </div>`).join('') : '<div class="empty">No history yet. Accepted "Project context" suggestions from imports land here, newest first.</div>'}`}
+    </div>
+    ${modal.editing ? `<div class="dialog-foot">
+        <span class="faint" style="font-size:12px">One note per line. The AI reads this when it writes the overview and brief.</span>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="hCancel">Cancel</button>
+        <button class="btn primary" id="hSave">Save <span class="kbd">Ctrl ↵</span></button>
+      </div>` : ''}
+  </div></div>`
+  const close = () => { modal = null; renderModal(); renderRight() }
+  const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn }
+  on('hClose', close)
+  on('scrim', (e) => { if (e.target.id === 'scrim') close() })
+  on('hEdit', () => { modal.editing = true; renderModal(); document.getElementById('hText').focus() })
+  on('hCancel', () => { modal.editing = false; renderModal() })
+  const save = () => {
+    p.history = document.getElementById('hText').value.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+      const m = l.match(/^([A-Z][a-z]{2} \d{1,2}, \d{4}): (.*?)(?: \(from “(.*)”\))?$/)
+      return m ? [m[1], m[2], m[3] ?? ''] : [today(), l, '']
+    })
+    modal.editing = false; renderModal(); renderRight(); toast('History saved')
+  }
+  on('hSave', save)
+  const add = () => {
+    const v = document.getElementById('hAdd').value.trim(); if (!v) return
+    p.history.push([today(), v, '']); modal.adding = ''; renderModal(); renderRight(); toast('Note added')
+  }
+  on('hAddBtn', add)
+  const addInp = document.getElementById('hAdd')
+  if (addInp) { addInp.oninput = () => { modal.adding = addInp.value }; addInp.onkeydown = (e) => { if (e.key === 'Enter') add() } }
+  const ta = document.getElementById('hText')
+  if (ta) ta.onkeydown = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); save() } }
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal) { modal = null; renderModal(); renderRight() } })
+
+function render() { renderLeft(); renderRight() }
+
+document.getElementById('list').addEventListener('click', (e) => {
+  const r = e.target.closest('.r'); if (!r) return
+  selected = Number(r.dataset.id); clearUi(); render()
+})
+document.getElementById('reset').onclick = reset
+document.getElementById('theme').onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark'
+}
+reset()
+</script>
+</body>
+</html>

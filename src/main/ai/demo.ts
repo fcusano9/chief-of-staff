@@ -1,4 +1,4 @@
-import type { PersonBriefInput } from './brief'
+import type { PersonBriefInput, ProjectBriefInput } from './brief'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { AiCallLog, AiProvider } from './provider'
 import type { RawSuggestion } from './schema'
@@ -106,6 +106,15 @@ export class DemoProvider implements AiProvider {
     // Notes from Review look like 'Nov 2, 2026: text (from “Title”)'.
     const fact = newest.replace(/^[^:]{0,24}\d{4}:\s*/, '').replace(/\s*\(from “[^”]*”\)$/, '').replace(/[.!]*$/, '')
     return `${input.name}${who ? `, ${who}` : ''}.${fact ? ` ${fact[0]!.toUpperCase()}${fact.slice(1)}.` : ''}`
+  }
+
+  /** The two newest history notes, then the first open tasks as next steps. */
+  async writeProjectBrief(input: ProjectBriefInput): Promise<string> {
+    const notes = input.history.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('(older notes'))
+    // Notes from Review look like 'Nov 2, 2026: text (from “Title”)'.
+    const facts = notes.slice(-2).map((l) => l.replace(/\s*\(from “[^”]*”\)$/, '').replace(/[.!]*$/, '.'))
+    const next = input.tasks.slice(0, 2).map((t) => t.replace(/ \([^)]*\)$/, ''))
+    return [facts.join(' '), `Next: ${next.length ? next.join('; ') : 'nothing recorded'}.`, 'Open: nothing recorded.'].join('\n')
   }
 
   async test(): Promise<string> {

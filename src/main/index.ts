@@ -4,7 +4,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { API_CHANNELS, type Api } from '@shared/api'
 import { CLAUDE_MODELS, type AiStatus, type AppSettings } from '@shared/types'
-import { buildPersonBriefInput, cleanBrief } from './ai/brief'
+import { buildPersonBriefInput, buildProjectBriefInput, cleanBrief, cleanProjectBrief } from './ai/brief'
 import { ClaudeProvider } from './ai/claude'
 import { DemoProvider } from './ai/demo'
 import { isLoopbackUrl, OllamaProvider } from './ai/ollama'
@@ -147,6 +147,13 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'tasks.summary': () => tasks.summary(),
   'projects.list': () => projects.list(),
   'projects.save': (project) => projects.save(project),
+  'projects.saveOverview': (id, text) => projects.saveOverview(id, text),
+  'projects.suggestBrief': async (id) => {
+    const input = buildProjectBriefInput(db, id, settings.current.userName)
+    const provider = currentProvider()
+    return { text: cleanProjectBrief(await provider.writeProjectBrief(input)), writtenBy: provider.label }
+  },
+  'projects.saveBrief': (id, text, by) => projects.saveBrief(id, text, by),
   'projects.delete': (id) => projects.delete(id),
   'people.list': () => people.list(),
   'people.save': (person) => {
