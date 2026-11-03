@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
 let failed = false
-for (const suite of ['m1-core.mjs', 'm2-ai.mjs', 'm2-projects-people.mjs', 'm2-people.mjs', 'm2-project-brief.mjs']) {
+for (const suite of ['m1-core.mjs', 'm2-ai.mjs', 'm2-projects-people.mjs', 'm2-people.mjs', 'm2-project-brief.mjs', 'data-safety.mjs']) {
   console.log(`\n== ${suite}`)
   const r = spawnSync(process.execPath, [join(import.meta.dirname, suite)], { stdio: 'inherit' })
   if (r.status !== 0) failed = true

@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain, Menu, nativeTheme, shell } from 'electron'
+import type { DatabaseSync } from 'node:sqlite'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { API_CHANNELS, type Api } from '@shared/api'
 import { CLAUDE_MODELS, type AiStatus, type AppSettings } from '@shared/types'
 import { buildPersonBriefInput, buildProjectBriefInput, cleanBrief, cleanProjectBrief } from './ai/brief'
@@ -8,8 +9,9 @@ import { ClaudeProvider } from './ai/claude'
 import { DemoProvider } from './ai/demo'
 import { isLoopbackUrl, OllamaProvider } from './ai/ollama'
 import { AiError, type AiProvider } from './ai/provider'
-import { openDatabase } from './db'
-import { createBackup } from './services/backup'
+import { openDatabase, SCHEMA_VERSION } from './db'
+import { chooseDataLocation } from './paths'
+import { applyPendingRestore, createBackup, listBackups, requestRestore, snapshotNow } from './services/backup'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { KeyStore } from './services/secrets'
 import { SettingsStore } from './services/settings'
@@ -17,17 +19,25 @@ import { SourceService } from './services/sources'
 import { SuggestionService } from './services/suggestions'
 import { TaskService } from './services/tasks'
 
-// COS_DATA_DIR points the app at a separate data folder (used for testing without touching real data).
-if (process.env.COS_DATA_DIR) app.setPath('userData', process.env.COS_DATA_DIR)
-const dataFolder = app.getPath('userData')
+// Only the installed app touches real data; dev runs and tests get their own folder (see paths.ts).
+const location = chooseDataLocation({
+  isPackaged: app.isPackaged,
+  envDataDir: process.env.COS_DATA_DIR,
+  appDataFolder: app.getPath('appData'),
+  defaultUserData: app.getPath('userData'),
+  oneDrive: process.env.OneDriveCommercial ?? process.env.OneDrive,
+  documents: app.getPath('documents'),
+})
+app.setPath('userData', location.dataFolder)
+const { dataFolder, defaultBackupFolder, isSeparateData } = location
 mkdirSync(dataFolder, { recursive: true })
 const databasePath = join(dataFolder, 'chiefofstaff.db')
 
-/** OneDrive for Business if present, else personal OneDrive, else Documents. */
-const defaultBackupFolder = join(
-  process.env.OneDriveCommercial ?? process.env.OneDrive ?? app.getPath('documents'),
-  'Chief of Staff Backups',
-)
+// A second copy of the app must quit before it opens (or restores) the database.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+  process.exit(0)
+}
 
 function logCrash(error: unknown): void {
   try {
@@ -39,8 +49,41 @@ function logCrash(error: unknown): void {
 process.on('uncaughtException', logCrash)
 process.on('unhandledRejection', logCrash)
 
-const db = openDatabase(databasePath)
 const settings = new SettingsStore(join(dataFolder, 'settings.json'))
+const backupFolder = () => settings.current.backupFolder ?? defaultBackupFolder
+/** Kept next to the database, used when the backup folder (e.g. OneDrive) isn't available. */
+const localBackupFolder = join(dataFolder, 'backups')
+
+/** Opens the database, finishing a requested restore and taking a safety copy before any upgrade. */
+function startDatabase(): { db: DatabaseSync; restoredFrom: string | null } {
+  const restoredFrom = applyPendingRestore(dataFolder, databasePath)
+  const db = openDatabase(databasePath, {
+    beforeUpgrade: (d, from, to) => {
+      try {
+        snapshotNow(d, backupFolder(), 'before-upgrade', from)
+      } catch (err) {
+        logCrash(err)
+        snapshotNow(d, localBackupFolder, 'before-upgrade', from) // if this also fails, the upgrade doesn't run
+      }
+    },
+  })
+  return { db, restoredFrom }
+}
+
+let started: ReturnType<typeof startDatabase>
+try {
+  started = startDatabase()
+} catch (err) {
+  logCrash(err)
+  dialog.showErrorBox(
+    'Chief of Staff could not start',
+    `${err instanceof Error ? err.message : String(err)}\n\nYour data has not been changed. Details are in ${join(dataFolder, 'crash.log')}.`,
+  )
+  app.exit(1)
+  throw err
+}
+const db = started.db
+let restoredFrom = started.restoredFrom
 const keys = new KeyStore(join(dataFolder, 'secrets.json'))
 const tasks = new TaskService(db, () => settings.current.priorityWeights)
 const projects = new ProjectService(db)
@@ -81,7 +124,7 @@ const isMac = process.platform === 'darwin'
 const titleBarColors = (dark: boolean) => (dark ? { color: '#131317', symbolColor: '#ececf0' } : { color: '#ffffff', symbolColor: '#18181b' })
 
 async function backupNow(): Promise<string> {
-  const target = await createBackup(db, settings.current.backupFolder ?? defaultBackupFolder, settings.current.backupsToKeep)
+  const target = await createBackup(db, backupFolder(), settings.current.backupsToKeep)
   settings.save({ ...settings.current, lastBackupAt: new Date().toISOString() })
   return target
 }
@@ -140,11 +183,33 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   },
   'backup.now': () => backupNow(),
   'backup.openFolder': () => {
-    const folder = settings.current.backupFolder ?? defaultBackupFolder
+    const folder = backupFolder()
     mkdirSync(folder, { recursive: true })
     void shell.openPath(folder)
   },
-  'app.info': () => ({ version: app.getVersion(), databasePath, defaultBackupFolder, platform: process.platform }),
+  'backup.list': () => listBackups([backupFolder(), localBackupFolder], SCHEMA_VERSION),
+  'backup.restore': (path) => {
+    // Only a backup the app itself listed (and judged usable) can be restored; never an arbitrary path.
+    const chosen = listBackups([backupFolder(), localBackupFolder], SCHEMA_VERSION).find((b) => b.path === path)
+    if (!chosen) throw new Error('That backup is no longer there. Refresh the list and try again.')
+    if (!chosen.compatible) throw new Error(`That backup can't be restored: ${chosen.reason}.`)
+    // Current data is saved first, so a restore can always be undone by restoring this copy.
+    try {
+      snapshotNow(db, backupFolder(), 'before-restore')
+    } catch {
+      snapshotNow(db, localBackupFolder, 'before-restore')
+    }
+    requestRestore(dataFolder, chosen.path)
+    setTimeout(() => {
+      app.relaunch()
+      app.exit(0)
+    }, 300)
+  },
+  'app.info': () => {
+    const info = { version: app.getVersion(), databasePath, dataFolder, defaultBackupFolder, platform: process.platform, isSeparateData, restoredFrom }
+    restoredFrom = null // reported once
+    return info
+  },
   'app.setTitleBarTheme': (dark) => {
     if (!isMac) mainWindow?.setTitleBarOverlay({ ...titleBarColors(dark), height: 44 })
   },
@@ -203,31 +268,27 @@ function createWindow(): void {
   else void mainWindow.loadFile(join(import.meta.dirname, '../renderer/index.html'))
 }
 
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
-} else {
-  app.on('second-instance', () => {
-    if (mainWindow?.isMinimized()) mainWindow.restore()
-    mainWindow?.focus()
-  })
+app.on('second-instance', () => {
+  if (mainWindow?.isMinimized()) mainWindow.restore()
+  mainWindow?.focus()
+})
 
-  void app.whenReady().then(() => {
-    if (!isMac) Menu.setApplicationMenu(null)
-    tasks.recomputeAll()
-    registerIpc()
-    createWindow()
+void app.whenReady().then(() => {
+  if (!isMac) Menu.setApplicationMenu(null)
+  tasks.recomputeAll()
+  registerIpc()
+  createWindow()
+  backupIfDue()
+  setInterval(() => {
+    tasks.recomputeAll() // due dates and staleness change as time passes
     backupIfDue()
-    setInterval(() => {
-      tasks.recomputeAll() // due dates and staleness change as time passes
-      backupIfDue()
-    }, 30 * 60_000)
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
-    })
+  }, 30 * 60_000)
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
 
-  app.on('window-all-closed', () => {
-    if (!isMac) app.quit()
-  })
-  app.on('will-quit', () => db.close())
-}
+app.on('window-all-closed', () => {
+  if (!isMac) app.quit()
+})
+app.on('will-quit', () => db.close())

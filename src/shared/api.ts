@@ -6,6 +6,7 @@ import type {
   Suggestion,
   SuggestionPayload,
   AppInfo,
+  BackupInfo,
   AppSettings,
   BriefScope,
   BriefSuggestion,
@@ -55,6 +56,10 @@ export interface Api {
   'settings.save': (settings: AppSettings) => AppSettings
   'backup.now': () => string
   'backup.openFolder': () => void
+  /** Backups in the backup folder and the local fallback folder, newest first. */
+  'backup.list': () => BackupInfo[]
+  /** Saves current data as a safety copy, then restarts the app with the chosen backup. */
+  'backup.restore': (path: string) => void
   'app.info': () => AppInfo
   'app.setTitleBarTheme': (dark: boolean) => void
   'sources.importAndExtract': (req: ImportRequest) => ImportResult
@@ -101,6 +106,8 @@ export const API_CHANNELS: ApiChannel[] = [
   'settings.save',
   'backup.now',
   'backup.openFolder',
+  'backup.list',
+  'backup.restore',
   'app.info',
   'app.setTitleBarTheme',
   'sources.importAndExtract',

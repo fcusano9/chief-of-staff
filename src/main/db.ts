@@ -127,20 +127,41 @@ const MIGRATIONS: string[] = [
   `,
 ]
 
+/** The schema version this build of the app writes. Backups newer than this can't be restored. */
+export const SCHEMA_VERSION = MIGRATIONS.length
+
+export interface MigrateOptions {
+  /** Defaults to the app's migrations; tests pass their own. */
+  migrations?: string[]
+  /**
+   * Runs before an existing database is upgraded (never for a brand-new one). Used to take a
+   * safety copy. If it throws, nothing is migrated and the error is passed on.
+   */
+  beforeUpgrade?: (db: DatabaseSync, from: number, to: number) => void
+}
+
 /** Opens (creating if needed) the database and brings its schema up to date. */
-export function openDatabase(path: string): DatabaseSync {
+export function openDatabase(path: string, options: MigrateOptions = {}): DatabaseSync {
   const db = new DatabaseSync(path)
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;')
-  migrate(db)
+  try {
+    db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;')
+    migrate(db, options)
+  } catch (err) {
+    db.close()
+    throw err
+  }
   return db
 }
 
-export function migrate(db: DatabaseSync): void {
-  const current = Number((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version)
-  for (let i = current; i < MIGRATIONS.length; i++) {
+export const schemaVersion = (db: DatabaseSync): number => Number((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version)
+
+export function migrate(db: DatabaseSync, { migrations = MIGRATIONS, beforeUpgrade }: MigrateOptions = {}): void {
+  const current = schemaVersion(db)
+  if (current > 0 && current < migrations.length) beforeUpgrade?.(db, current, migrations.length)
+  for (let i = current; i < migrations.length; i++) {
     db.exec('BEGIN')
     try {
-      db.exec(MIGRATIONS[i]!)
+      db.exec(migrations[i]!)
       db.exec(`PRAGMA user_version = ${i + 1}`)
       db.exec('COMMIT')
     } catch (err) {

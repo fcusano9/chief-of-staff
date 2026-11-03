@@ -40,6 +40,7 @@ export function App() {
       setSettings(s)
       setInfo(i)
       document.body.classList.add(`platform-${i.platform}`)
+      if (i.restoredFrom) toast(`Restored from backup ${i.restoredFrom.split(/[\\/]/).pop()}`)
     })
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = () => setOsDark(mq.matches)
@@ -190,6 +191,11 @@ export function App() {
         </header>
         <main className={fill ? 'fill' : ''}>{screen}</main>
         <footer className="statusbar">
+          {info?.isSeparateData && (
+            <span className="note" style={{ background: "color-mix(in srgb, var(--warn) 18%, transparent)", color: "var(--warn)" }} title={info.dataFolder}>
+              Test data
+            </span>
+          )}
           <span>
             <span className="kbd">Ctrl K</span> commands
           </span>

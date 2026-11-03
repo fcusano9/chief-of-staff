@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { PriorityWeights, ThemeSetting } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { AiSettings } from '../components/AiSettings'
+import { RestoreBackups } from '../components/RestoreBackups'
 import { useApp } from '../context'
 
 export const SHORTCUTS: [string, string][] = [
@@ -128,6 +129,8 @@ export function SettingsScreen() {
           </div>
         </div>
 
+        <RestoreBackups />
+
         <div className="card" style={{ gridColumn: '1 / -1' }}>
           <div style={{ fontWeight: 500, marginBottom: 8 }}>Keyboard shortcuts</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 22px' }}>
@@ -146,6 +149,7 @@ export function SettingsScreen() {
           <div style={{ fontWeight: 500, marginBottom: 4 }}>About</div>
           <div className="muted" style={{ fontSize: 12, lineHeight: 1.8 }}>
             Chief of Staff {info.version} · data stored at <span className="mono">{info.databasePath}</span>
+            {info.isSeparateData && <div style={{ color: 'var(--warn)' }}>This is a development or test copy of the app. It uses its own data and backups, separate from your real ones.</div>}
           </div>
         </div>
       </div>
