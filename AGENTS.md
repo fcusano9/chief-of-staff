@@ -87,7 +87,7 @@ Before telling Frank something is done, run `npm test`, `npm run typecheck` and 
 - **Keyboard shortcuts:**
   - Global: N new task, G-then-letter to go to a screen, Alt+1–9 for tabs, Shift+D for theme.
   - Tasks: J/K, Enter, E, Esc, Ctrl+Enter.
-  - Review: J/K, A, R, Enter.
+  - Review: J/K, A, R, E or Enter to edit. While editing, Ctrl+Enter accepts and Esc cancels.
   - Global shortcuts run in the capture phase and consume their keys.
 - **Project colors:** tasks are themed with their project's color. Tasks with no project get no label and a neutral stripe.
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".

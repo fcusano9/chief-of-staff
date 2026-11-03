@@ -72,7 +72,16 @@ export function ReviewScreen() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (document.querySelector('.scrim') || isTyping() || e.ctrlKey || e.metaKey || e.altKey) return
+      if (document.querySelector('.scrim')) return
+      // While editing, Ctrl+Enter accepts the edits and Esc cancels, even from inside a field.
+      const edited = items.find((x) => x.id === editing)
+      if (edited && draft && (e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        void accept(edited, draft)
+        return
+      }
+      if (e.key === 'Escape') return setEditing(null)
+      if (isTyping() || e.ctrlKey || e.metaKey || e.altKey) return
       const s = items[cursor]
       if (e.key === 'j' || e.key === 'ArrowDown') {
         e.preventDefault()
@@ -84,11 +93,9 @@ export function ReviewScreen() {
         void accept(s, editing === s.id && draft ? draft : undefined)
       } else if (s && e.key === 'r') {
         void reject(s)
-      } else if (s && e.key === 'Enter') {
-        e.preventDefault()
+      } else if (s && (e.key === 'e' || e.key === 'Enter')) {
+        e.preventDefault() // keeps the "e" out of the field the editor focuses
         startEdit(s)
-      } else if (e.key === 'Escape') {
-        setEditing(null)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -181,15 +188,15 @@ export function ReviewScreen() {
                   </div>
                   <div className="row" style={{ gap: 4 }}>
                     <button className="btn" onClick={() => void accept(s, isEditing ? draft! : undefined)}>
-                      Accept <span className="kbd">A</span>
+                      Accept <span className="kbd">{isEditing ? 'Ctrl ↵' : 'A'}</span>
                     </button>
                     {isEditing ? (
                       <button className="btn ghost" onClick={() => setEditing(null)}>
-                        Cancel
+                        Cancel <span className="kbd">Esc</span>
                       </button>
                     ) : (
                       <button className="btn ghost" onClick={() => startEdit(s)}>
-                        Edit
+                        Edit <span className="kbd">E</span>
                       </button>
                     )}
                     <button className="btn ghost" onClick={() => void reject(s)}>
