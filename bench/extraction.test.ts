@@ -1,11 +1,12 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { it } from 'vitest'
 import { ClaudeProvider } from '../src/main/ai/claude'
 import { buildSystemPrompt, buildUserPrompt } from '../src/main/ai/context'
 import { DemoProvider } from '../src/main/ai/demo'
-import { buildOllamaRequest, thinkSetting } from '../src/main/ai/ollama'
-import { ExtractionSchema, validateSuggestions, type RawSuggestion } from '../src/main/ai/schema'
+import { OllamaProvider, thinkSetting, type OllamaOptions, type Reasoning } from '../src/main/ai/ollama'
+import { validateSuggestions, type RawSuggestion } from '../src/main/ai/schema'
 import { CASES, CONTEXT } from './cases'
 import { scoreCase, type CaseScore } from './score'
 
@@ -14,9 +15,34 @@ import { scoreCase, type CaseScore } from './score'
  *
  *   npm run bench:ai                                   demo, every installed Ollama model, Claude if a key is set
  *   BENCH_MODELS=gpt-oss:20b,claude-haiku-5-5 npm run bench:ai
+ *   BENCH_MODELS=gpt-oss:20b@medium+split npm run bench:ai   local model with more reasoning and split passes
  *
- * Claude needs ANTHROPIC_API_KEY in the environment. Only these made-up cases are sent.
+ * Claude needs ANTHROPIC_API_KEY in the environment, or on a Mac a Keychain item named
+ * "chief-of-staff-bench" (security add-generic-password -s chief-of-staff-bench -a anthropic -w).
+ * Only these made-up cases are sent.
+ *
+ *   BENCH_RESCORE=bench/results/a.json,bench/results/b.json npm run bench:ai
+ * re-scores saved answers with the current cases and scoring, without calling any model, and
+ * combines them into one report.
  */
+function anthropicKey(): string {
+  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY
+  try {
+    return execFileSync('security', ['find-generic-password', '-s', 'chief-of-staff-bench', '-w'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return ''
+  }
+}
+
+/** "gpt-oss:20b@medium+split" → the model plus its options. */
+function parseSpec(spec: string): { model: string; options: OllamaOptions } {
+  const [model, variant = ''] = spec.split('@') as [string, string?]
+  const parts = variant.split('+').filter(Boolean)
+  return {
+    model,
+    options: { reasoning: (parts.find((p) => ['low', 'medium', 'high'].includes(p)) as Reasoning | undefined) ?? 'low', passes: parts.includes('split') ? 'split' : 'single' },
+  }
+}
 const OLLAMA = process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434'
 const CLAUDE = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5']
 
@@ -62,29 +88,13 @@ async function warmUp(model: string): Promise<ModelInfo> {
   return { loadSeconds, memoryGb: size ? size / 1e9 : undefined }
 }
 
-async function extractWithOllama(model: string, c: (typeof CASES)[number]) {
-  const request = buildOllamaRequest(model, CONTEXT, c.source)
-  const body = await ollama<{
-    message: { content: string }
-    prompt_eval_count: number
-    prompt_eval_duration: number
-    eval_count: number
-    eval_duration: number
-  }>('/api/chat', request)
-  return {
-    raw: ExtractionSchema.parse(JSON.parse(body.message.content)).suggestions,
-    promptTokens: body.prompt_eval_count,
-    outputTokens: body.eval_count,
-    promptPerSecond: body.prompt_eval_count / (body.prompt_eval_duration / 1e9),
-    outputPerSecond: body.eval_count / (body.eval_duration / 1e9),
-  }
-}
-
-async function benchModel(model: string): Promise<{ runs: Run[]; info: ModelInfo; rawOutputs: Record<string, RawSuggestion[]> }> {
+async function benchModel(spec: string): Promise<{ runs: Run[]; info: ModelInfo; rawOutputs: Record<string, RawSuggestion[]> }> {
+  const { model, options } = parseSpec(spec)
   const isClaude = CLAUDE.includes(model)
   const isDemo = model === 'demo'
   const info = isClaude || isDemo ? {} : await warmUp(model)
-  const claude = isClaude ? new ClaudeProvider(process.env.ANTHROPIC_API_KEY ?? '', model) : null
+  const claude = isClaude ? new ClaudeProvider(anthropicKey(), model) : null
+  const local = !isClaude && !isDemo ? new OllamaProvider(OLLAMA, model, options) : null
   const runs: Run[] = []
   const rawOutputs: Record<string, RawSuggestion[]> = {}
 
@@ -95,17 +105,21 @@ async function benchModel(model: string): Promise<{ runs: Run[]; info: ModelInfo
       let stats: Partial<Run> = {}
       if (isDemo) raw = await new DemoProvider().extract(CONTEXT, c.source)
       else if (claude) raw = await claude.extract(CONTEXT, c.source)
-      else ({ raw, ...stats } = await extractWithOllama(model, c))
+      else {
+        raw = await local!.extract(CONTEXT, c.source)
+        const s = local!.lastStats!
+        stats = { promptTokens: s.promptTokens, outputTokens: s.outputTokens, promptPerSecond: s.promptTokens / s.promptSeconds, outputPerSecond: s.outputTokens / s.outputSeconds }
+      }
       const seconds = (performance.now() - start) / 1000
       rawOutputs[c.name] = raw
-      runs.push({ model, case: c.name, seconds, score: scoreCase(c, validateSuggestions(raw, CONTEXT)), error: null, ...stats })
+      runs.push({ model: spec, case: c.name, seconds, score: scoreCase(c, validateSuggestions(raw, CONTEXT)), error: null, ...stats })
     } catch (err) {
-      runs.push({ model, case: c.name, seconds: (performance.now() - start) / 1000, score: null, error: err instanceof Error ? err.message : String(err) })
+      runs.push({ model: spec, case: c.name, seconds: (performance.now() - start) / 1000, score: null, error: err instanceof Error ? err.message : String(err) })
     }
-    console.log(`${model.padEnd(20)} ${c.name.padEnd(38)} ${runs.at(-1)!.seconds.toFixed(1).padStart(6)}s ${runs.at(-1)!.error ?? ''}`)
+    console.log(`${spec.padEnd(26)} ${c.name.padEnd(38)} ${runs.at(-1)!.seconds.toFixed(1).padStart(6)}s ${runs.at(-1)!.error ?? ''}`)
   }
   // Free the memory before the next model loads.
-  if (!isClaude && !isDemo) await ollama('/api/generate', { model, keep_alive: 0 }).catch(() => {})
+  if (local) await ollama('/api/generate', { model, keep_alive: 0 }).catch(() => {})
   return { runs, info, rawOutputs }
 }
 
@@ -167,9 +181,34 @@ function report(results: { model: string; runs: Run[]; info: ModelInfo }[]): str
   return lines.join('\n')
 }
 
+/** Saved runs re-scored against the current cases; timings are kept as they were measured. */
+function rescore(files: string[]) {
+  const results: { model: string; runs: Run[]; info: ModelInfo }[] = []
+  const raw: Record<string, Record<string, RawSuggestion[]>> = {}
+  for (const file of files) {
+    const saved = JSON.parse(readFileSync(file, 'utf8')) as { results: { model: string; runs: Run[]; info: ModelInfo }[]; raw: Record<string, Record<string, RawSuggestion[]>> }
+    for (const result of saved.results) {
+      const answers = saved.raw[result.model] ?? {}
+      const runs = CASES.map((c) => {
+        const old = result.runs.find((x) => x.case === c.name)
+        const out = answers[c.name]
+        if (!old) return { model: result.model, case: c.name, seconds: 0, score: null, error: 'not in this run' }
+        return { ...old, score: out ? scoreCase(c, validateSuggestions(out, CONTEXT)) : null }
+      })
+      results.push({ model: result.model, runs, info: result.info })
+      raw[result.model] = answers
+    }
+  }
+  return { results, raw }
+}
+
 it('benchmarks extraction', { timeout: 0 }, async () => {
+  if (process.env.BENCH_RESCORE) {
+    const { results, raw } = rescore(process.env.BENCH_RESCORE.split(',').map((f) => f.trim()))
+    return save(results, raw)
+  }
   const requested = process.env.BENCH_MODELS?.split(',').map((m) => m.trim()).filter(Boolean)
-  const models = requested ?? ['demo', ...(await installedOllamaModels()), ...(process.env.ANTHROPIC_API_KEY ? CLAUDE : [])]
+  const models = requested ?? ['demo', ...(await installedOllamaModels()), ...(anthropicKey() ? CLAUDE : [])]
   const results: { model: string; runs: Run[]; info: ModelInfo }[] = []
   const raw: Record<string, Record<string, RawSuggestion[]>> = {}
   for (const model of models) {
@@ -177,6 +216,10 @@ it('benchmarks extraction', { timeout: 0 }, async () => {
     results.push({ model, runs, info })
     raw[model] = rawOutputs
   }
+  save(results, raw)
+})
+
+function save(results: { model: string; runs: Run[]; info: ModelInfo }[], raw: Record<string, Record<string, RawSuggestion[]>>) {
   const folder = join(import.meta.dirname, 'results')
   mkdirSync(folder, { recursive: true })
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
@@ -184,4 +227,4 @@ it('benchmarks extraction', { timeout: 0 }, async () => {
   writeFileSync(join(folder, `${stamp}.md`), markdown)
   writeFileSync(join(folder, `${stamp}.json`), JSON.stringify({ results, raw }, null, 2))
   console.log(`\n${markdown}\n\nSaved to bench/results/${stamp}.md`)
-})
+}

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ExtractionContext, SourceForExtraction } from '../src/main/ai/context'
+import { buildSystemPrompt, calendar, type ExtractionContext, type SourceForExtraction } from '../src/main/ai/context'
 import { buildOllamaRequest, contextSizeFor, extractionJsonSchema, isLoopbackUrl, OllamaProvider } from '../src/main/ai/ollama'
 import { SettingsStore } from '../src/main/services/settings'
 import { DEFAULT_SETTINGS } from '@shared/types'
@@ -39,7 +39,7 @@ describe('local AI through Ollama', () => {
     expect(contextSizeFor(20000)).toBe(32768)
     expect(buildOllamaRequest('m', ctx, source('short')).options.num_ctx).toBe(8192)
     expect(buildOllamaRequest('m', ctx, source('word '.repeat(12000))).options.num_ctx).toBe(32768)
-    expect(() => buildOllamaRequest('m', ctx, source('word '.repeat(30000)))).toThrow(/too long for the local model/)
+    expect(() => buildOllamaRequest('m', ctx, source('word '.repeat(60000)))).toThrow(/too long for the local model/)
   })
 
   it('asks for the extraction schema as constrained JSON, with as little thinking as the model allows', () => {
@@ -53,10 +53,53 @@ describe('local AI through Ollama', () => {
     expect(schema).not.toMatch(/minimum|maximum|\$schema/)
   })
 
+  it('gives the model a calendar so relative dates are looked up, not counted', () => {
+    const cal = calendar('2026-11-02')
+    expect(cal).toContain('Today is Monday 2026-11-02')
+    expect(cal).toContain('Tuesday 2026-11-03 (tomorrow)')
+    expect(cal).toContain('Friday 2026-11-06')
+    expect(cal).toContain('Sunday 2026-11-22')
+    expect(buildSystemPrompt(ctx)).toContain('Friday 2026-11-06')
+  })
+
+  it('asks for more thinking, with more room for it, at higher reasoning levels', () => {
+    expect(buildOllamaRequest('gpt-oss:20b', ctx, source('x'), 'medium').think).toBe('medium')
+    expect(buildOllamaRequest('qwen3:30b', ctx, source('x'), 'medium').think).toBe(true)
+    expect(contextSizeFor(6000, 'high')).toBe(32768)
+    expect(contextSizeFor(6000, 'low')).toBe(16384)
+  })
+
+  it('can limit a pass to some kinds of suggestion', () => {
+    const req = buildOllamaRequest('m', ctx, source('x'), 'low', ['new_project', 'new_person'])
+    expect(JSON.stringify(req.format)).toContain('"enum":["new_project","new_person"]')
+    expect(req.messages[0]!.content).toContain('- new_project:')
+    expect(req.messages[0]!.content).not.toContain('- new_task:')
+  })
+
+  it('split passes find tasks and projects separately, then link them', async () => {
+    const base = { task_id: null, details: '', due_date: null, project_id: null, project_name: null, requester_name: null, waiting_on: null, brief_scope: null, brief_owner_id: null, role: null, email: null, evidence: 'q' }
+    const sent = fakeOllama((_path, body) => {
+      const system = (body as { messages: { content: string }[] }).messages[0]!.content
+      const reply = system.startsWith('You link')
+        ? { links: [{ task: 0, project_name: 'Dealer training', requester_name: 'Alex Rivera' }, { task: 1, project_name: 'Made up', requester_name: null }] }
+        : system.includes('- new_task:')
+          ? { suggestions: [{ ...base, kind: 'new_task', title: 'Send outline' }, { ...base, kind: 'new_task', title: 'Pick dealers' }] }
+          : { suggestions: [{ ...base, kind: 'new_project', title: 'Dealer training' }, { ...base, kind: 'new_person', title: 'Alex Rivera' }] }
+      return { body: { message: { content: JSON.stringify(reply) }, done_reason: 'stop', prompt_eval_count: 100, eval_count: 50 } }
+    })
+    const provider = new OllamaProvider('http://127.0.0.1:11434', 'gpt-oss:20b', { passes: 'split', reasoning: 'medium' })
+    const out = await provider.extract(ctx, source('kickoff'))
+    expect(sent).toHaveLength(3)
+    expect(out.map((s) => s.kind)).toEqual(['new_project', 'new_person', 'new_task', 'new_task'])
+    expect(out[2]).toMatchObject({ project_name: 'Dealer training', requester_name: 'Alex Rivera' })
+    expect(out[3]!.project_name).toBeNull() // names that weren't proposed are ignored
+    expect(provider.lastStats).toMatchObject({ requests: 3, promptTokens: 300, outputTokens: 150 })
+  })
+
   it('returns parsed suggestions from the model', async () => {
     const suggestion = { kind: 'new_task', task_id: null, title: 'Send the deck', details: '', due_date: null, project_id: null, requester_name: null, waiting_on: null, brief_scope: null, brief_owner_id: null, project_name: null, role: null, email: null, evidence: 'Frank to send the deck' }
     const sent = fakeOllama(() => ({ body: { message: { content: JSON.stringify({ suggestions: [suggestion] }) }, done_reason: 'stop', prompt_eval_count: 900 } }))
-    const out = await new OllamaProvider('http://127.0.0.1:11434', 'qwen3:8b').extract(ctx, source('Frank to send the deck'))
+    const out = await new OllamaProvider('http://127.0.0.1:11434', 'qwen3:8b', { passes: 'single' }).extract(ctx, source('Frank to send the deck'))
     expect(out).toEqual([suggestion])
     expect(sent[0]!.path).toBe('/api/chat')
   })

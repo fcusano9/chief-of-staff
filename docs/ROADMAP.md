@@ -64,5 +64,6 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 - A Mac build and test.
 - A signed installer.
 - Manually added status updates on a task.
-- Run `npm run bench:ai` with Claude (needs a key) and on the Windows PC, and try qwen3:30b with thinking on.
+- Run `npm run bench:ai` on the Windows PC, and try qwen3:30b with thinking on.
+- Maybe a "Thorough" local setting in Settings (split passes plus medium reasoning: 89% vs 84%, about three times slower).
 - Grow the benchmark cases from real imports that went wrong.

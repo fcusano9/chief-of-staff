@@ -2,6 +2,20 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-02 · Local model: split passes and a calendar; Claude Opus as the yardstick
+Frank asked for better local results even if slower. Benchmarked on the M5 MacBook Pro against Claude Opus 5.5 (8 cases, 19 expected suggestions, same scoring):
+
+| Setup | Found | Dates right | Typical item | Long transcript |
+|---|---|---|---|---|
+| gpt-oss:20b before | 68% | 29% | 17 s | 42 s |
+| + calendar in the prompt | 68% | 57% | 24 s | 37 s |
+| + medium reasoning | 84% | 71% | 95 s | 137 s |
+| **+ split passes (default)** | **84%** | **86%** | **40 s** | **67 s** |
+| + split passes and medium reasoning | 89% | 86% | 124 s | 173 s |
+| Claude Opus 5.5 | 100% | 100% | 7 s | 18 s |
+
+**Decided:** every prompt includes a three-week calendar (helps Claude too), and the local provider defaults to split passes at low reasoning: tasks, then projects/people/context, then a short pass that links new tasks to new projects and people. Medium reasoning is available (`OllamaOptions`) but not worth three times the wait. No local setup broke a rule. "Must not" benchmark checks now look at titles only, because Opus's details mentioned other people's work and were wrongly flagged.
+
 ### 2026-11-02 · AI proposes new projects and people, and links tasks to them (Frank)
 Two new suggestion kinds, `new_project` and `new_person`, plus clearer instructions for context (brief) updates, which Review now labels "Project context" and "Person context". **Frank's choices:** projects only for named initiatives with their own goal or several pieces of work; people only if they ask Frank for something, he's waiting on them, or they own work he cares about; new people always start at 3 stars (the AI never guesses weight); and a task linked to a new project or person creates it when accepted, while rejecting the project or person just removes the link. Anything already in Projects or People, and Frank himself, is never proposed. Links are stored as suggestion ids (`projectSuggestionId`, `requesterSuggestionId`, `waitingOnSuggestionId`) and swapped for real ids when decided. **Benchmark (gpt-oss:20b):** finds new projects and people, but rarely links tasks to them on its own; Frank can link them in Edit. Moving the prompt-injection rule to the top was needed to keep it ignoring injected instructions with the longer prompt.
 

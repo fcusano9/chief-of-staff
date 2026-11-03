@@ -64,7 +64,7 @@ npm run bench:ai     # score demo, local and Claude models on sample imports (se
 npm run install:win  # package to %LOCALAPPDATA%\Programs\Chief of Staff (build) (Start-menu shortcut points here)
 ```
 
-Before telling Frank something is done, run `npm test`, `npm run typecheck` and `npm run e2e`. After changing the extraction prompt or a provider, also run `npm run bench:ai`. If the packaged app is running, close it before `install:win`.
+Before telling Frank something is done, run `npm test` and `npm run typecheck`. Ask Frank before running `npm run e2e`, because it takes a long time. When asking, say which suites cover the change. After changing the extraction prompt or a provider, also run `npm run bench:ai`. If the packaged app is running, close it before `install:win`.
 
 ## How to do common changes
 
@@ -87,7 +87,7 @@ Before telling Frank something is done, run `npm test`, `npm run typecheck` and 
 - **Keyboard shortcuts:**
   - Global: N new task, G-then-letter to go to a screen, Alt+1–9 for tabs, Shift+D for theme.
   - Tasks: J/K, Enter, E, Esc, Ctrl+Enter.
-  - Review: J/K, A, R, Enter.
+  - Review: J/K, A, R, E or Enter to edit. While editing, Ctrl+Enter accepts and Esc cancels.
   - Global shortcuts run in the capture phase and consume their keys.
 - **Project colors:** tasks are themed with their project's color. Tasks with no project get no label and a neutral stripe.
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".

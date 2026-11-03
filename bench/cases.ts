@@ -146,6 +146,7 @@ Dana`,
       { kinds: ['new_task'], text: /announcement/i, due: ['2026-11-20'] },
     ],
     ok: [
+      { kinds: ['new_task'], text: /written down|document|record/i },
       { kinds: ['waiting_on'], waitingOn: /tom/i },
       { kinds: ['status_update'], taskId: 2 },
       { kinds: ['brief_update'] },
