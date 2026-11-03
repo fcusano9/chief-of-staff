@@ -166,7 +166,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, onClose, onSaved, 
   }
 
   const knows: [boolean, string][] = [
-    [!!(projectBrief?.summary || projectBrief?.standingInstructions), project ? `Project brief (${project.name})` : 'Project brief (no project)'],
+    [!!(project?.overview || project?.brief || projectBrief?.summary || projectBrief?.standingInstructions), project ? `Project brief (${project.name})` : 'Project brief (no project)'],
     [!!(form.brief.summary || form.brief.standingInstructions), 'Task brief'],
     [!!(personBrief?.summary || personBrief?.standingInstructions), requesterId ? 'Person brief' : 'Person brief (nobody)'],
     [!!(form.input.notes || form.input.subtasks.length), 'Notes and subtasks'],
