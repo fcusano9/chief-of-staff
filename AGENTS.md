@@ -49,7 +49,7 @@ src/renderer/    React UI: App.tsx (shell, shortcuts), screens/, components/
 tests/           Vitest: priority, data services, AI and review queue
 e2e/             Drives the real app over CDP against a throwaway data folder
 design/          Approved clickable prototype (direction B)
-docs/            ROADMAP.md, DECISIONS.md
+docs/            ROADMAP.md, DECISIONS.md, COPILOT-PROMPTS.md (Teams chat and meeting prompts for import)
 ```
 
 ## Commands
