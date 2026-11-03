@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>People: company, filters, brief</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; display: grid; grid-template-rows: 44px minmax(0, 1fr); }
+button, input, select, textarea { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; min-height: 28px; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+.label { font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: .5; cursor: default; }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 8px; width: 100%; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { resize: vertical; line-height: 1.5; }
+select.inp { width: auto; padding: 3px 8px; }
+.title-inp { font-size: 16px; font-weight: 500; border-color: transparent; background: none; padding-left: 0; }
+.field { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px; padding: 3px 0; }
+.field > span { color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; flex: none; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.stars { font-family: var(--mono); color: var(--warn); letter-spacing: 1px; white-space: nowrap; }
+.stars .off { color: var(--faint); }
+.stars button { border: 0; background: none; padding: 0 1px; cursor: pointer; color: inherit; font-size: 15px; }
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.r { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto 22px; gap: 10px; align-items: center; padding: 7px 12px 7px 10px; border-top: 1px solid var(--border); cursor: pointer; }
+.r:first-child { border-top: 0; }
+.r:hover { background: var(--hover); }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.empty { color: var(--muted); padding: 18px 14px; text-align: center; }
+.note { background: var(--accent-bg); color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.ai { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 45%, transparent); border-radius: 8px; padding: 10px 12px; }
+.split { display: grid; grid-template-columns: minmax(360px, 50%) 7px minmax(360px, 1fr); min-height: 0; }
+.pane { overflow: auto; min-width: 0; }
+.pane.left { padding: 22px 18px 40px 28px; }
+.pane.right { background: var(--surface); }
+.divider { position: relative; } .divider::before { content: ''; position: absolute; inset: 0 3px; background: var(--border); }
+.editor { padding: 16px 22px 28px; }
+.sec { margin-top: 14px; }
+.sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; min-height: 26px; }
+.brief { margin: 2px 0 14px 38px; }
+.brief-text { font-size: 14px; }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.btn.primary .kbd { background: none; color: inherit; border-color: currentColor; }
+.taskrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 7px 12px; border-top: 1px solid var(--border); }
+.taskrow:first-child { border-top: 0; }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+@media (max-width: 760px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .divider { display: none; }
+  .pane.left { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button><button class="tab">Tasks</button><button class="tab">Review</button>
+  <button class="tab">Waiting</button><button class="tab">Projects</button><button class="tab on">People</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="reset">Reset mockup</button>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="split">
+  <div class="pane left">
+    <div class="head">
+      <h1>People</h1>
+      <span class="muted">most important first</span>
+      <div class="spacer"></div>
+      <button class="btn primary" onclick="toast('Add person works as it does today, with a Company field')">Add person</button>
+    </div>
+    <div class="row" style="margin-bottom:10px; flex-wrap:wrap">
+      <select class="inp" id="company" aria-label="Company"></select>
+      <button class="pill" id="open" title="People with open tasks they asked you for, or tasks you're waiting on them for">Open asks</button>
+      <span class="faint" id="shown" style="font-size:12px"></span>
+      <button class="btn ghost" id="clear" style="font-size:12px; padding:2px 6px">Clear</button>
+    </div>
+    <div class="list" id="list"></div>
+
+    <div class="notes">
+      <h3>Mockup notes (not part of the app)</h3>
+      <ul>
+        <li><b>Company</b> is a new field, above Role. It shows under each name next to the role and suggests companies you've already used as you type. When an import says what company a new person is from, the New person suggestion in Review fills it in. It's never guessed.</li>
+        <li><b>Filters:</b> pick a company, or "No company". <b>Open asks</b> shows people with open tasks they asked you for, or tasks you're waiting on them for. The number on each row counts both. Filters are remembered.</li>
+        <li><b>Brief</b> is one sentence about who the person is and what they do (two at most), shown as plain text right under their name. <b>Regenerate</b> asks the AI for a new one, which shows as a suggestion you keep or discard. <b>Edit</b> lets you rewrite it yourself; it saves on its own, separate from the Save button below.</li>
+        <li><b>"New notes since this brief"</b> appears when context has been added since the brief was written, so you know when it's worth regenerating. Try Alex Rivera.</li>
+        <li><b>Context history</b> is what used to be the brief box: every dated note from Review, plus anything you type. Nothing is lost. Existing briefs move here, and people start with no brief until you click Write brief.</li>
+        <li><b>What the AI reads</b> on each import: the person's name, role, company and one-line brief. Today it reads the first 200 characters of the history box, which are the oldest notes.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="pane right" id="right"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const initial = () => [
+  { id: 1, name: 'Dana Lee', role: 'VP, Product', company: 'Crestron', email: 'dlee@crestron.com', w: 5, asks: 2, waiting: 0,
+    brief: "Dana Lee is Frank's VP of Product at Crestron and signs off on pricing and roadmap decisions.", briefBy: 'ai', briefAt: 'Oct 30', newNotes: 0,
+    instructions: 'Lead with the ask; keep updates to three bullets.',
+    history: 'Oct 14, 2026: Wants pricing changes reviewed with Finance before they go to distributors. (from “Pricing sync”)\nOct 28, 2026: Approved the four-tier pricing model for the spring launch. (from “Copilot summary, week of Oct 26”)',
+    tasks: [['Send pricing deck to EMEA distributors', 'Fri'], ['Draft spring launch roadmap slide', 'Nov 12']],
+    variants: ["Dana Lee is Crestron's VP of Product and Frank's manager; she approves pricing and roadmap decisions, including the four-tier spring pricing."] },
+  { id: 2, name: 'Marcus Webb', role: 'Web platform manager', company: 'Crestron', email: '', w: 4, asks: 1, waiting: 0,
+    brief: "Marcus Webb manages Crestron's partner portal and also owns the portal side of dealer training.", briefBy: 'ai', briefAt: 'Nov 2', newNotes: 0,
+    instructions: '',
+    history: 'Oct 27, 2026: Confirmed the partner portal wireframes are approved. (from “Copilot summary, week of Oct 26”)\nNov 2, 2026: Now also owns the portal side of dealer training. (from “Dealer training kickoff”)',
+    tasks: [['Review Training tile design', 'Nov 12']],
+    variants: ["Marcus Webb runs Crestron's partner portal, including the new Training tile for dealer courses."] },
+  { id: 3, name: 'Alex Rivera', role: 'Training manager', company: 'Crestron', email: '', w: 3, asks: 1, waiting: 1,
+    brief: 'Alex Rivera is a training manager at Crestron.', briefBy: 'ai', briefAt: 'Nov 2', newNotes: 2,
+    instructions: '',
+    history: 'Nov 2, 2026: Runs dealer training. Prefers a short weekly sync on Thursdays. (from “Dealer training kickoff”)\nNov 2, 2026: Getting quotes from two training platforms. (from “Dealer training kickoff”)\nNov 2, 2026: Owns the online certification courses launching with the new tiers in Q2. (from “Dealer training kickoff”)',
+    tasks: [['Send course outline to Alex', 'Fri']],
+    variants: ["Alex Rivera is Crestron's training manager and runs the dealer training program, including the online certification courses launching in Q2.",
+               "Alex Rivera runs dealer training at Crestron and is choosing the platform for the Q2 certification courses."] },
+  { id: 4, name: 'Priya Shah', role: 'Finance analyst', company: 'Crestron', email: '', w: 3, asks: 0, waiting: 1,
+    brief: 'Priya Shah is a finance analyst at Crestron who builds the margin models for product pricing.', briefBy: 'you', briefAt: 'Oct 20', newNotes: 0,
+    instructions: '', history: 'Oct 20, 2026: Building the margin model for the new pricing tiers. (from “Pricing sync”)', tasks: [],
+    variants: ['Priya Shah is a Crestron finance analyst building the margin model for the new pricing tiers.'] },
+  { id: 5, name: 'Jordan Kim', role: 'Account manager', company: 'Northwind AV', email: 'jordan@northwind-av.example', w: 3, asks: 1, waiting: 0,
+    brief: 'Jordan Kim is the account manager at Northwind AV, a dealer piloting the new pricing tiers.', briefBy: 'ai', briefAt: 'Oct 29', newNotes: 0,
+    instructions: 'Copy their sales lead on anything about pricing.', history: 'Oct 29, 2026: Northwind AV agreed to pilot the new tiers. (from “Dealer call”)',
+    tasks: [['Send pilot pricing sheet to Northwind', 'Nov 9']],
+    variants: ['Jordan Kim manages the Northwind AV account, one of the dealers piloting the new pricing tiers.'] },
+  { id: 6, name: 'Sam Ortiz', role: 'Purchasing lead', company: 'Contoso Integration', email: '', w: 2, asks: 0, waiting: 0,
+    brief: '', briefBy: null, briefAt: null, newNotes: 0,
+    instructions: '', history: 'Sep 30, 2026: Asked for volume discounts on control processors. (from “Dealer email”)', tasks: [],
+    variants: ['Sam Ortiz leads purchasing at Contoso Integration and has asked about volume discounts on control processors.'] },
+  { id: 7, name: 'Taylor Brooks', role: '', company: '', email: '', w: 1, asks: 0, waiting: 0,
+    brief: '', briefBy: null, briefAt: null, newNotes: 0, instructions: '', history: '', tasks: [], variants: [] },
+]
+
+let people, filter, selected, preview, writing, editingBrief
+function reset() { people = initial(); filter = { company: '', open: false }; selected = 1; preview = null; writing = false; editingBrief = false; render() }
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+const initials = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?'
+const stars = (v, edit) => `<span class="stars">${[1, 2, 3, 4, 5].map((n) => edit ? `<button data-w="${n}" class="${n <= v ? '' : 'off'}">★</button>` : `<span class="${n <= v ? '' : 'off'}">★</span>`).join('')}</span>`
+function toast(text) { const t = document.getElementById('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1800) }
+
+function visible() {
+  return people.filter((p) =>
+    (!filter.company || (filter.company === '(none)' ? !p.company : p.company === filter.company)) &&
+    (!filter.open || p.asks + p.waiting > 0))
+}
+
+function renderLeft() {
+  const companies = [...new Set(people.map((p) => p.company).filter(Boolean))].sort()
+  const sel = document.getElementById('company')
+  sel.innerHTML = `<option value="">All companies</option>${companies.map((c) => `<option ${filter.company === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}<option value="(none)" ${filter.company === '(none)' ? 'selected' : ''}>No company</option>`
+  document.getElementById('open').classList.toggle('on', filter.open)
+  const shown = visible()
+  const active = filter.company || filter.open
+  document.getElementById('shown').textContent = active ? `${shown.length} of ${people.length}` : ''
+  document.getElementById('clear').style.display = active ? '' : 'none'
+  document.getElementById('list').innerHTML = shown.length
+    ? shown.map((p) => `<div class="r ${p.id === selected ? 'sel' : ''}" data-id="${p.id}">
+        <span class="av">${initials(p.name)}</span>
+        <div class="ttl">${esc(p.name)}<div class="faint" style="font-size:11px">${esc([p.role, p.company].filter(Boolean).join(' · '))}</div></div>
+        ${stars(p.w)}
+        <span class="mono muted" title="Open asks and waiting on" style="text-align:right">${p.asks + p.waiting}</span>
+      </div>`).join('')
+    : `<div class="empty">Nobody matches these filters. <button class="btn ghost" onclick="clearFilters()">Clear filters</button></div>`
+}
+
+function renderRight() {
+  const p = people.find((x) => x.id === selected)
+  const right = document.getElementById('right')
+  if (!p) { right.innerHTML = '<div class="empty" style="margin-top:80px">Select a person, or add one.</div>'; return }
+  const companies = [...new Set(people.map((x) => x.company).filter(Boolean))].sort()
+  const byline = p.briefBy === 'ai' ? `Written by AI on ${p.briefAt}` : p.briefBy === 'you' ? `Edited by you on ${p.briefAt}` : ''
+  const hasContext = !!p.history.trim()
+  right.innerHTML = `<div class="editor">
+    <div class="row" style="gap:10px">
+      <span class="av">${initials(p.name)}</span>
+      <input class="inp title-inp" data-f="name" value="${esc(p.name)}" placeholder="Name" />
+    </div>
+    <div class="brief">
+      ${editingBrief
+        ? `<textarea class="inp brief-text" id="briefInp" rows="3" style="min-height:74px" placeholder="One sentence about who they are and what they do">${esc(p.brief)}</textarea>
+           <div class="row" style="margin-top:6px">
+             <button class="btn primary" id="saveBrief">Save <span class="kbd">Ctrl ↵</span></button>
+             <button class="btn ghost" id="cancelBrief">Cancel <span class="kbd">Esc</span></button>
+           </div>`
+        : `<div class="brief-text">${p.brief ? esc(p.brief) : `<span class="faint">No brief yet.${hasContext ? ' Click Write brief, or Edit to write one yourself.' : ' Add some context below, or Edit to write one yourself.'}</span>`}</div>
+           <div class="row" style="margin-top:4px; flex-wrap:wrap">
+             ${byline ? `<span class="faint" style="font-size:11px">${byline}</span>` : ''}
+             ${p.newNotes && p.brief ? `<span class="note">${p.newNotes} new note${p.newNotes === 1 ? '' : 's'} since this brief</span>` : ''}
+             <div class="spacer"></div>
+             <button class="btn ghost sm" id="editBrief">Edit</button>
+             ${hasContext ? `<button class="btn sm" id="regen" ${writing ? 'disabled' : ''}>${writing ? 'Writing…' : p.brief ? '✦ Regenerate' : '✦ Write brief'}</button>` : ''}
+           </div>`}
+      ${preview ? `<div class="ai" style="margin-top:8px">
+          <div class="row" style="margin-bottom:4px"><span class="label">Suggested brief</span><div class="spacer"></div><span class="faint" style="font-size:11px">Demo AI</span></div>
+          <div class="brief-text">${esc(preview)}</div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn primary" id="keep">Keep</button>
+            <button class="btn ghost" id="discard">Discard</button>
+            <div class="spacer"></div>
+            <button class="btn ghost" id="again">Try again</button>
+          </div>
+        </div>` : ''}
+    </div>
+
+    <label class="field"><span>Company</span><input class="inp" data-f="company" list="companies" value="${esc(p.company)}" placeholder="e.g. Crestron" /></label>
+    <datalist id="companies">${companies.map((c) => `<option value="${esc(c)}"></option>`).join('')}</datalist>
+    <label class="field"><span>Role</span><input class="inp" data-f="role" value="${esc(p.role)}" placeholder="e.g. VP, Product" /></label>
+    <label class="field"><span>Email</span><input class="inp" data-f="email" value="${esc(p.email)}" placeholder="name@company.com" /></label>
+    <div class="field"><span>Weight</span><span class="row">${stars(p.w, true)}<span class="faint" style="font-size:12px">Higher weight raises the priority of their requests</span></span></div>
+
+    <div class="sec">
+      <div class="sec-head"><span class="label">Standing instructions</span></div>
+      <textarea class="inp" data-f="instructions" style="min-height:44px" placeholder="e.g. Lead with the ask; keep it to three bullets">${esc(p.instructions)}</textarea>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head"><span class="label">Context history · everything the AI has learned about them</span></div>
+      <textarea class="inp" data-f="history" style="min-height:110px; font-size:12px" placeholder="Dated notes from imports appear here when you accept them in Review. You can add your own.">${esc(p.history)}</textarea>
+    </div>
+
+    <div class="row" style="margin:14px 0 18px">
+      <button class="btn danger ghost" onclick="toast('Delete works as it does today')">Delete person</button>
+      <div class="spacer"></div>
+      <button class="btn primary" onclick="toast('Saved. Priorities updated.')">Save</button>
+    </div>
+    <div class="label" style="margin-bottom:4px">Their open asks</div>
+    <div class="list">${p.tasks.length ? p.tasks.map(([t, d]) => `<div class="taskrow"><span class="ttl">${esc(t)}</span><span class="muted" style="font-size:12px">${esc(d)}</span></div>`).join('') : '<div class="empty">Nothing open for them.</div>'}</div>
+  </div>`
+
+  right.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('input', () => {
+    p[el.dataset.f] = el.value
+    if (['name', 'role', 'company'].includes(el.dataset.f)) renderLeft()
+  }))
+  right.querySelectorAll('[data-w]').forEach((b) => b.addEventListener('click', () => { p.w = Number(b.dataset.w); render() }))
+  const regen = document.getElementById('regen')
+  if (regen) regen.onclick = () => write(p)
+  const editBrief = document.getElementById('editBrief')
+  if (editBrief) editBrief.onclick = () => { editingBrief = true; preview = null; renderRight(); const i = document.getElementById('briefInp'); i.focus(); i.setSelectionRange(i.value.length, i.value.length) }
+  if (editingBrief) {
+    const inp = document.getElementById('briefInp')
+    const saveBrief = () => { p.brief = inp.value.trim(); p.briefBy = p.brief ? 'you' : null; p.briefAt = 'Nov 3'; p.newNotes = 0; editingBrief = false; renderRight(); toast('Brief updated') }
+    const cancelBrief = () => { editingBrief = false; renderRight() }
+    document.getElementById('saveBrief').onclick = saveBrief
+    document.getElementById('cancelBrief').onclick = cancelBrief
+    inp.onkeydown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); saveBrief() }
+      else if (e.key === 'Escape') cancelBrief()
+    }
+  }
+  if (preview) {
+    document.getElementById('keep').onclick = () => { p.brief = preview; p.briefBy = 'ai'; p.briefAt = 'Nov 3'; p.newNotes = 0; preview = null; render(); toast('Brief updated') }
+    document.getElementById('discard').onclick = () => { preview = null; render() }
+    document.getElementById('again').onclick = () => write(p)
+  }
+}
+
+function write(p) {
+  writing = true; preview = null; editingBrief = false; renderRight()
+  setTimeout(() => {
+    writing = false
+    p._v = ((p._v ?? -1) + 1) % Math.max(1, p.variants.length)
+    preview = p.variants[p._v] ?? `${p.name} is ${p.role ? `a ${p.role.toLowerCase()}` : 'someone'}${p.company ? ` at ${p.company}` : ''}.`
+    renderRight()
+  }, 900)
+}
+
+function render() { renderLeft(); renderRight() }
+function clearFilters() { filter = { company: '', open: false }; render() }
+
+document.getElementById('list').addEventListener('click', (e) => {
+  const r = e.target.closest('.r'); if (!r) return
+  selected = Number(r.dataset.id); preview = null; writing = false; editingBrief = false; render()
+})
+document.getElementById('company').onchange = (e) => { filter.company = e.target.value; renderLeft() }
+document.getElementById('open').onclick = () => { filter.open = !filter.open; renderLeft() }
+document.getElementById('clear').onclick = clearFilters
+document.getElementById('reset').onclick = reset
+document.getElementById('theme').onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark'
+}
+reset()
+</script>
+</body>
+</html>

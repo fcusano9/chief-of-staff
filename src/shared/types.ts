@@ -32,13 +32,33 @@ export interface Person {
   id: number
   name: string
   role: string | null
+  company: string | null
   email: string | null
   /** 1 (low) to 5 (highest). Requests from higher-weight people rank higher. */
   priorityWeight: number
+  /** One or two sentences on who they are and what they do, written by the AI on request or by hand. */
+  brief: string | null
+  briefBy: 'ai' | 'user' | null
+  briefAt: string | null
 }
 
+/** What the UI sends to create (id 0) or update a person. The brief is saved separately. */
+export type PersonInput = Pick<Person, 'id' | 'name' | 'role' | 'company' | 'email' | 'priorityWeight'>
+
 export interface PersonSummary extends Person {
+  /** Open tasks they asked for. */
   openCount: number
+  /** Open tasks waiting on them (matched by name) that they didn't also ask for. */
+  waitingCount: number
+  /** Lines added to their context history since the brief was written. */
+  newNotes: number
+}
+
+/** A brief the AI proposed. Nothing is saved until the user keeps it. */
+export interface BriefSuggestion {
+  text: string
+  /** The AI that wrote it, e.g. "Demo AI" or "Claude Opus 5.5". */
+  writtenBy: string
 }
 
 export interface Subtask {
@@ -162,6 +182,7 @@ export interface SuggestionPayload {
   color?: string | null
   /** new_person: as written in the source. New people always start at 3 stars. */
   role?: string | null
+  company?: string | null
   email?: string | null
   /**
    * Links to a new_project or new_person suggestion from the same import that isn't decided yet.
@@ -257,6 +278,14 @@ export interface PriorityWeights {
 export type ThemeSetting = 'system' | 'light' | 'dark'
 export type LocalThoroughness = 'standard' | 'thorough'
 
+export interface PeopleFilter {
+  /** A company name, NO_COMPANY for people with none, or '' for everyone. */
+  company: string
+  /** Only people with open asks or tasks waiting on them. */
+  openOnly: boolean
+}
+export const NO_COMPANY = '(none)'
+
 export interface AppSettings {
   /** Used in greetings and so the AI knows whose action items to pick out. */
   userName: string
@@ -272,6 +301,8 @@ export interface AppSettings {
   theme: ThemeSetting
   /** Left pane width of split views, as a percentage. */
   splitPercent: number
+  /** People list filters, remembered between visits. */
+  peopleFilter: PeopleFilter
   dailyBriefingTime: string
   /** Null means the default OneDrive backup folder. */
   backupFolder: string | null
@@ -289,6 +320,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   priorityWeights: { dueDate: 8, requester: 7, staleness: 5 },
   theme: 'system',
   splitPercent: 50,
+  peopleFilter: { company: '', openOnly: false },
   dailyBriefingTime: '07:30',
   backupFolder: null,
   backupsToKeep: 30,

@@ -35,6 +35,7 @@ export class SettingsStore {
         staleness: clampWeight(settings.priorityWeights.staleness),
       },
       splitPercent: Math.min(90, Math.max(10, settings.splitPercent)),
+      peopleFilter: { company: String(settings.peopleFilter?.company ?? ''), openOnly: !!settings.peopleFilter?.openOnly },
       backupsToKeep: Math.max(1, Math.round(settings.backupsToKeep)),
       backupFolder: settings.backupFolder?.trim() || null,
     }

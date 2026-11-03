@@ -22,11 +22,11 @@ export const CONTEXT: ExtractionContext = {
     { id: 3, name: 'Pricing refresh', brief: 'New dealer pricing tiers for 2027. Finance (Priya Shah) owns the margin model.', instructions: '' },
   ],
   people: [
-    { id: 1, name: 'Dana Lee', role: 'VP, Product (Frank’s manager)', brief: '' },
-    { id: 2, name: 'Marcus Webb', role: 'UX lead', brief: '' },
-    { id: 3, name: 'Priya Shah', role: 'Finance', brief: '' },
-    { id: 4, name: 'Tom Alvarez', role: 'Sales, EMEA', brief: '' },
-    { id: 5, name: 'Kenji Mori', role: 'Firmware engineering lead', brief: '' },
+    { id: 1, name: 'Dana Lee', role: 'VP, Product (Frank’s manager)', company: null, brief: '' },
+    { id: 2, name: 'Marcus Webb', role: 'UX lead', company: null, brief: '' },
+    { id: 3, name: 'Priya Shah', role: 'Finance', company: null, brief: '' },
+    { id: 4, name: 'Tom Alvarez', role: 'Sales, EMEA', company: null, brief: '' },
+    { id: 5, name: 'Kenji Mori', role: 'Firmware engineering lead', company: null, brief: '' },
   ],
 }
 
@@ -40,6 +40,8 @@ export interface Expect {
   waitingOn?: RegExp
   /** For tasks: the new project (proposed in the same answer) it should link to. */
   linksProject?: RegExp
+  /** For new people: the company they work for. */
+  company?: RegExp
 }
 
 /** Something the model must not propose (a task owned by someone else, an injected instruction). */
@@ -247,6 +249,27 @@ Marcus Webb: Sounds good. By the way, Jordan from catering says lunch is in the 
       { kinds: ['new_person'], text: /jordan/i, why: 'only mentioned in passing' },
       { kinds: ['new_project'], text: /portal/i, why: 'duplicates an existing project' },
     ],
+  },
+  {
+    name: 'Dealer email that names their company',
+    source: {
+      kind: 'email',
+      title: 'Pilot pricing',
+      fromName: 'Jordan Kim',
+      occurredAt: at,
+      content: `Hi Frank,
+
+Good to meet you at the dealer summit. We'd like to be one of the pilot dealers for the new pricing tiers. Could you send me the pilot pricing sheet by Friday so I can walk our owners through it?
+
+Thanks,
+Jordan Kim
+Account Manager, Northwind AV`,
+    },
+    expect: [
+      { kinds: ['new_task'], text: /pricing sheet|pilot pricing/i, due: ['2026-11-06'] },
+      { kinds: ['new_person'], text: /jordan kim/i, company: /northwind/i },
+    ],
+    ok: [{ kinds: ['brief_update'] }],
   },
 ]
 

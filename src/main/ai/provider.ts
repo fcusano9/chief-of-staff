@@ -1,3 +1,4 @@
+import type { PersonBriefInput } from './brief'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { RawSuggestion } from './schema'
 
@@ -11,6 +12,8 @@ export interface AiProvider {
   /** True when calling extract() sends content off this computer. */
   readonly sendsDataExternally: boolean
   extract(ctx: ExtractionContext, source: SourceForExtraction): Promise<RawSuggestion[]>
+  /** One or two sentences on who a person is and what they do. Proposed only; the caller saves it if kept. */
+  writePersonBrief(input: PersonBriefInput): Promise<string>
   /** Cheap check that the provider is reachable and configured. Throws a readable error if not. */
   test(): Promise<string>
 }

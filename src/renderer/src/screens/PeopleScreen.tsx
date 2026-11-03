@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import type { Task } from '@shared/types'
+import { useEffect, useRef, useState } from 'react'
+import type { BriefSuggestion, PeopleFilter, PersonSummary, Task } from '@shared/types'
+import { NO_COMPANY } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { Avatar, ConfirmButton, Stars, TaskRow } from '../components/bits'
 import { SplitView } from '../components/SplitView'
@@ -9,44 +10,71 @@ interface Draft {
   id: number
   name: string
   role: string
+  company: string
   email: string
   priorityWeight: number
+  /** The context history (the person's brief summary in the database). */
   summary: string
   standingInstructions: string
 }
 
+const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+
 export function PeopleScreen() {
-  const { people, openTask, refresh, toast, version } = useApp()
+  const { people, openTask, refresh, toast, version, settings, saveSettings } = useApp()
   const [selected, setSelected] = useState<number | 'new' | null>(people[0]?.id ?? null)
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [savedHistory, setSavedHistory] = useState('')
   const [tasks, setTasks] = useState<Task[]>([])
+  // The person the draft was loaded for, so a refresh (e.g. after keeping a brief) keeps unsaved edits.
+  const loadedFor = useRef<number | null>(null)
+  const filter = settings.peopleFilter
+  const setFilter = (patch: Partial<PeopleFilter>) => void saveSettings({ peopleFilter: { ...filter, ...patch } })
 
   useEffect(() => {
-    if (selected === null) return setDraft(null)
+    if (selected === null) {
+      loadedFor.current = null
+      return setDraft(null)
+    }
     if (selected === 'new') {
+      loadedFor.current = null
       setTasks([])
-      return setDraft({ id: 0, name: '', role: '', email: '', priorityWeight: 3, summary: '', standingInstructions: '' })
+      setSavedHistory('')
+      return setDraft({ id: 0, name: '', role: '', company: '', email: '', priorityWeight: 3, summary: '', standingInstructions: '' })
     }
     const p = people.find((x) => x.id === selected)
     if (!p) return setDraft(null) // just created: wait for the refreshed list
-    void cos['briefs.get']('person', p.id).then((b) =>
-      setDraft({ id: p.id, name: p.name, role: p.role ?? '', email: p.email ?? '', priorityWeight: p.priorityWeight, summary: b.summary, standingInstructions: b.standingInstructions }),
-    )
     void cos['tasks.listForPerson'](p.id).then(setTasks)
+    if (loadedFor.current === p.id) return
+    loadedFor.current = p.id
+    void cos['briefs.get']('person', p.id).then((b) => {
+      setSavedHistory(b.summary)
+      setDraft({ id: p.id, name: p.name, role: p.role ?? '', company: p.company ?? '', email: p.email ?? '', priorityWeight: p.priorityWeight, summary: b.summary, standingInstructions: b.standingInstructions })
+    })
   }, [selected, people, version])
 
   const save = async () => {
     if (!draft) return
     try {
-      const saved = await cos['people.save']({ id: draft.id, name: draft.name, role: draft.role, email: draft.email, priorityWeight: draft.priorityWeight })
+      const saved = await cos['people.save']({ id: draft.id, name: draft.name, role: draft.role, company: draft.company, email: draft.email, priorityWeight: draft.priorityWeight })
       await cos['briefs.save']({ scope: 'person', ownerId: saved.id, summary: draft.summary, standingInstructions: draft.standingInstructions, updatedAt: null })
       toast('Saved. Priorities updated.')
-      setSelected(saved.id)
+      setSavedHistory(draft.summary)
+      if (draft.id === 0) setSelected(saved.id)
       refresh()
     } catch (err) {
       toast(errorMessage(err), true)
     }
   }
+
+  const companies = [...new Set(people.map((p) => p.company).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b))
+  const shown = people.filter(
+    (p) =>
+      (!filter.company || (filter.company === NO_COMPANY ? !p.company : p.company === filter.company)) &&
+      (!filter.openOnly || p.openCount + p.waitingCount > 0),
+  )
+  const filtering = !!filter.company || filter.openOnly
+  const clearFilters = () => setFilter({ company: '', openOnly: false })
 
   const left = (
     <>
@@ -58,29 +86,81 @@ export function PeopleScreen() {
           Add person
         </button>
       </div>
+      {people.length > 0 && (
+        <div className="row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
+          <select className="inp" style={{ width: 'auto', padding: '3px 8px' }} aria-label="Company" value={filter.company} onChange={(e) => setFilter({ company: e.target.value })}>
+            <option value="">All companies</option>
+            {[...companies, ...(filter.company && filter.company !== NO_COMPANY && !companies.includes(filter.company) ? [filter.company] : [])].map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            <option value={NO_COMPANY}>No company</option>
+          </select>
+          <button
+            className={`pill ${filter.openOnly ? 'on' : ''}`}
+            title="People with open tasks they asked you for, or tasks you're waiting on them for"
+            aria-pressed={filter.openOnly}
+            onClick={() => setFilter({ openOnly: !filter.openOnly })}
+          >
+            Open asks
+          </button>
+          {filtering && (
+            <>
+              <span className="faint" style={{ fontSize: 12 }}>
+                {shown.length} of {people.length}
+              </span>
+              <button className="btn ghost" style={{ fontSize: 12, padding: '2px 6px' }} onClick={clearFilters}>
+                Clear
+              </button>
+            </>
+          )}
+        </div>
+      )}
       <div className="list">
-        {people.map((p) => (
+        {shown.map((p) => (
           <div key={p.id} className={`r ${selected === p.id ? 'sel' : ''}`} style={{ gridTemplateColumns: '40px minmax(0, 1fr) auto auto', paddingLeft: 10 }} onClick={() => setSelected(p.id)}>
             <Avatar person={p} />
             <div className="ttl">
               {p.name}
-              <div className="faint" style={{ fontSize: 11 }}>{p.role}</div>
+              <div className="faint" style={{ fontSize: 11 }}>{[p.role, p.company].filter(Boolean).join(' · ')}</div>
             </div>
             <Stars value={p.priorityWeight} />
-            <span className="mono muted" title="Open asks" style={{ width: 22, textAlign: 'right' }}>{p.openCount}</span>
+            <span className="mono muted" title="Open asks and waiting on" style={{ width: 22, textAlign: 'right' }}>
+              {p.openCount + p.waitingCount}
+            </span>
           </div>
         ))}
         {people.length === 0 && <div className="empty">Add the people who ask you for things. Their weight raises the priority of their requests.</div>}
+        {people.length > 0 && shown.length === 0 && (
+          <div className="empty">
+            Nobody matches these filters.{' '}
+            <button className="btn ghost" onClick={clearFilters}>
+              Clear filters
+            </button>
+          </div>
+        )}
       </div>
     </>
   )
 
+  const person = typeof selected === 'number' ? (people.find((p) => p.id === selected) ?? null) : null
   const right = draft ? (
     <div className="editor">
-      <div className="row" style={{ gap: 10, marginBottom: 12 }}>
+      <div className="row" style={{ gap: 10, marginBottom: person && draft.id !== 0 ? 0 : 12 }}>
         <Avatar person={{ name: draft.name || '?' }} />
         <input className="inp title-inp" value={draft.name} placeholder="Name" autoFocus={draft.id === 0} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
       </div>
+      {person && draft.id !== 0 && <PersonBrief key={person.id} person={person} hasContext={!!savedHistory.trim()} />}
+      <label className="field">
+        <span>Company</span>
+        <input className="inp" list="company-options" value={draft.company} placeholder="e.g. Crestron" onChange={(e) => setDraft({ ...draft, company: e.target.value })} />
+      </label>
+      <datalist id="company-options">
+        {companies.map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
       <label className="field">
         <span>Role</span>
         <input className="inp" value={draft.role} placeholder="e.g. VP, Product" onChange={(e) => setDraft({ ...draft, role: e.target.value })} />
@@ -96,10 +176,16 @@ export function PeopleScreen() {
           <span className="faint" style={{ fontSize: 12 }}>Higher weight raises the priority of their requests</span>
         </span>
       </div>
-      <div className="label" style={{ marginTop: 12 }}>Person brief · what the AI knows about them</div>
-      <textarea className="inp" style={{ margin: '4px 0 10px', minHeight: 80 }} value={draft.summary} placeholder="How they like to work, what they care about, history" onChange={(e) => setDraft({ ...draft, summary: e.target.value })} />
-      <div className="label">Standing instructions</div>
-      <textarea className="inp" style={{ margin: '4px 0 12px', minHeight: 44 }} value={draft.standingInstructions} placeholder="e.g. Lead with the ask; keep it to three bullets" onChange={(e) => setDraft({ ...draft, standingInstructions: e.target.value })} />
+      <div className="label" style={{ marginTop: 12 }}>Standing instructions</div>
+      <textarea className="inp" style={{ margin: '4px 0 10px', minHeight: 44 }} value={draft.standingInstructions} placeholder="e.g. Lead with the ask; keep it to three bullets" onChange={(e) => setDraft({ ...draft, standingInstructions: e.target.value })} />
+      <div className="label">Context history · everything the AI has learned about them</div>
+      <textarea
+        className="inp"
+        style={{ margin: '4px 0 12px', minHeight: 110, fontSize: 12 }}
+        value={draft.summary}
+        placeholder="Dated notes from imports appear here when you accept them in Review. You can add your own."
+        onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
+      />
       <div className="row" style={{ marginBottom: 18 }}>
         {draft.id !== 0 && (
           <ConfirmButton
@@ -136,4 +222,130 @@ export function PeopleScreen() {
   )
 
   return <SplitView left={left} right={right} />
+}
+
+/**
+ * The one-line brief under a person's name. Regenerate asks the AI for a new one, shown as a
+ * suggestion to keep or discard; Edit rewrites it by hand. Either saves on its own, apart from
+ * the person's Save button.
+ */
+function PersonBrief({ person, hasContext }: { person: PersonSummary; hasContext: boolean }) {
+  const { refresh, toast } = useApp()
+  const [editing, setEditing] = useState<string | null>(null)
+  const [suggestion, setSuggestion] = useState<BriefSuggestion | null>(null)
+  const [writing, setWriting] = useState(false)
+
+  const write = async () => {
+    setWriting(true)
+    setSuggestion(null)
+    setEditing(null)
+    try {
+      setSuggestion(await cos['people.suggestBrief'](person.id))
+    } catch (err) {
+      toast(errorMessage(err), true)
+    } finally {
+      setWriting(false)
+    }
+  }
+  const keep = async (text: string, by: 'ai' | 'user') => {
+    try {
+      await cos['people.saveBrief'](person.id, text, by)
+      setEditing(null)
+      setSuggestion(null)
+      toast('Brief updated')
+      refresh()
+    } catch (err) {
+      toast(errorMessage(err), true)
+    }
+  }
+  const byline = person.brief && person.briefAt ? `${person.briefBy === 'ai' ? 'Written by AI' : 'Edited by you'} on ${dayLabel(person.briefAt)}` : null
+
+  return (
+    <div style={{ margin: '2px 0 14px 38px' }}>
+      {editing !== null ? (
+        <>
+          <textarea
+            className="inp"
+            aria-label="Brief"
+            autoFocus
+            rows={3}
+            style={{ fontSize: 14, minHeight: 74 }}
+            value={editing}
+            placeholder="One sentence about who they are and what they do"
+            onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)}
+            onChange={(e) => setEditing(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault()
+                void keep(editing, 'user')
+              } else if (e.key === 'Escape') {
+                setEditing(null)
+              }
+            }}
+          />
+          <div className="row" style={{ marginTop: 6 }}>
+            <button className="btn primary" onClick={() => void keep(editing, 'user')}>
+              Save <span className="kbd">Ctrl ↵</span>
+            </button>
+            <button className="btn ghost" onClick={() => setEditing(null)}>
+              Cancel <span className="kbd">Esc</span>
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div data-brief style={{ fontSize: 14 }}>
+            {person.brief ?? (
+              <span className="faint">No brief yet. {hasContext ? 'Click Write brief, or Edit to write one yourself.' : 'Add some context below, or Edit to write one yourself.'}</span>
+            )}
+          </div>
+          <div className="row" style={{ marginTop: 4, flexWrap: 'wrap' }}>
+            {byline && <span className="faint" style={{ fontSize: 11 }}>{byline}</span>}
+            {person.brief && person.newNotes > 0 && (
+              <span className="note">
+                {person.newNotes} new note{person.newNotes === 1 ? '' : 's'} since this brief
+              </span>
+            )}
+            <div className="spacer" />
+            <button
+              className="btn ghost sm"
+              onClick={() => {
+                setSuggestion(null)
+                setEditing(person.brief ?? '')
+              }}
+            >
+              Edit
+            </button>
+            {hasContext && (
+              <button className="btn sm" disabled={writing} onClick={() => void write()}>
+                {writing ? 'Writing…' : person.brief ? '✦ Regenerate' : '✦ Write brief'}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {suggestion && (
+        <div className="ai" style={{ marginTop: 8 }}>
+          <div className="row" style={{ marginBottom: 4 }}>
+            <span className="label">Suggested brief</span>
+            <div className="spacer" />
+            <span className="faint" style={{ fontSize: 11 }}>{suggestion.writtenBy}</span>
+          </div>
+          <div style={{ fontSize: 14 }}>{suggestion.text}</div>
+          <div className="row" style={{ marginTop: 8 }}>
+            <button className="btn primary" onClick={() => void keep(suggestion.text, 'ai')}>
+              Keep
+            </button>
+            <button className="btn ghost" onClick={() => setSuggestion(null)}>
+              Discard
+            </button>
+            <div className="spacer" />
+            <button className="btn ghost" disabled={writing} onClick={() => void write()}>
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

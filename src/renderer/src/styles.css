@@ -62,6 +62,7 @@ h2 { font-size: 12px; font-weight: 500; color: var(--muted); margin: 22px 0 6px;
 .btn.ghost { border-color: transparent; background: none; }
 .btn.ghost:hover { background: var(--hover); }
 .btn.danger { color: var(--danger); }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 8px; width: 100%; outline: 0; }
 .inp:focus { border-color: var(--accent); }

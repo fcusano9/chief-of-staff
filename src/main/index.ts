@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { API_CHANNELS, type Api } from '@shared/api'
 import { CLAUDE_MODELS, type AiStatus, type AppSettings } from '@shared/types'
+import { buildPersonBriefInput, cleanBrief } from './ai/brief'
 import { ClaudeProvider } from './ai/claude'
 import { DemoProvider } from './ai/demo'
 import { isLoopbackUrl, OllamaProvider } from './ai/ollama'
@@ -114,6 +115,12 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
     people.delete(id)
     tasks.recomputeAll()
   },
+  'people.suggestBrief': async (id) => {
+    const input = buildPersonBriefInput(db, id, settings.current.userName)
+    const provider = currentProvider()
+    return { text: cleanBrief(await provider.writePersonBrief(input)), writtenBy: provider.label }
+  },
+  'people.saveBrief': (id, text, by) => people.saveBrief(id, text, by),
   'briefs.get': (scope, ownerId) => briefs.get(scope, ownerId),
   'briefs.save': (brief) => briefs.save(brief),
   'settings.get': () => settings.current,

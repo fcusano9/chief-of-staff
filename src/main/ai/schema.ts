@@ -16,6 +16,7 @@ export const RawSuggestionSchema = z.object({
   brief_scope: z.enum(['project', 'task', 'person']).nullable().describe('For brief_update: which kind of brief'),
   brief_owner_id: z.number().int().nullable().describe('For brief_update: ID of the project, task, or person'),
   role: z.string().nullable().describe("For new_person: their job title or role as stated in the source, else null"),
+  company: z.string().nullable().describe('For new_person: the company or organization they work for, as stated in the source, else null'),
   email: z.string().nullable().describe('For new_person: their email address if it appears in the source, else null'),
   evidence: z.string().describe('A short verbatim quote from the source that supports this suggestion'),
 })
@@ -93,7 +94,7 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
           waitingOn: null, briefScope: null, briefOwnerId: null,
           ...(r.kind === 'new_project'
             ? { color: PROJECT_COLORS[colorIndex++ % PROJECT_COLORS.length] }
-            : { role: clean(r.role, 120) || null, email: EMAIL.test(email) ? email : null }),
+            : { role: clean(r.role, 120) || null, company: clean(r.company, 120) || null, email: EMAIL.test(email) ? email : null }),
         },
       })
       continue

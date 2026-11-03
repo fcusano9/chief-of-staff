@@ -262,7 +262,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <Avatar person={{ name: p.title, color: 'var(--k-person)' }} />
           <span style={{ fontWeight: 500 }}>{p.title}</span>
-          <span className="muted">{[p.role || 'No role', p.email].filter(Boolean).join(' · ')}</span>
+          <span className="muted">{[p.role || 'No role', p.company, p.email].filter(Boolean).join(' · ')}</span>
         </div>
         {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
         <div className="muted row" style={{ fontSize: 12, marginTop: 2, gap: 4, flexWrap: 'wrap' }}>
@@ -333,7 +333,10 @@ function Editor({ kind, draft, setDraft, pending }: { kind: Suggestion['kind']; 
           <input className="inp" autoFocus value={draft.title} placeholder="Name" onChange={(e) => set({ title: e.target.value })} />
           <input className="inp" value={draft.role ?? ''} placeholder="Role" onChange={(e) => set({ role: e.target.value || null })} />
         </div>
-        <input className="inp" value={draft.email ?? ''} placeholder="Email (optional)" onChange={(e) => set({ email: e.target.value || null })} />
+        <div className="row">
+          <input className="inp" value={draft.company ?? ''} placeholder="Company" onChange={(e) => set({ company: e.target.value || null })} />
+          <input className="inp" value={draft.email ?? ''} placeholder="Email (optional)" onChange={(e) => set({ email: e.target.value || null })} />
+        </div>
         <textarea className="inp" style={{ minHeight: 48 }} value={draft.details} placeholder="What to remember about them" onChange={(e) => set({ details: e.target.value })} />
       </div>
     )

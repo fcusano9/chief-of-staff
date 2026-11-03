@@ -8,8 +8,10 @@ import type {
   AppInfo,
   AppSettings,
   BriefScope,
+  BriefSuggestion,
   ContextBrief,
   Person,
+  PersonInput,
   PersonSummary,
   Project,
   ProjectSummary,
@@ -37,8 +39,11 @@ export interface Api {
   'projects.save': (project: Pick<Project, 'id' | 'name' | 'color' | 'status'>) => Project
   'projects.delete': (id: number) => void
   'people.list': () => PersonSummary[]
-  'people.save': (person: Omit<Person, 'id'> & { id: number }) => Person
+  'people.save': (person: PersonInput) => Person
   'people.delete': (id: number) => void
+  /** Asks the AI for a new one-line brief. Changes nothing; the UI saves it with people.saveBrief if kept. */
+  'people.suggestBrief': (id: number) => BriefSuggestion
+  'people.saveBrief': (id: number, text: string, by: 'ai' | 'user') => Person
   'briefs.get': (scope: BriefScope, ownerId: number) => ContextBrief
   'briefs.save': (brief: ContextBrief) => ContextBrief
   'settings.get': () => AppSettings
@@ -80,6 +85,8 @@ export const API_CHANNELS: ApiChannel[] = [
   'people.list',
   'people.save',
   'people.delete',
+  'people.suggestBrief',
+  'people.saveBrief',
   'briefs.get',
   'briefs.save',
   'settings.get',
