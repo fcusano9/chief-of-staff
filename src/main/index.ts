@@ -210,6 +210,7 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'sources.extract': (sourceId) => sources.extract(sourceId),
   'sources.list': () => sources.list(),
   'sources.delete': (id) => sources.delete(id),
+  'sources.aiRuns': (sourceId) => sources.aiRuns(sourceId),
   'suggestions.listPending': () => suggestions.listPending(),
   'suggestions.count': () => suggestions.pendingCount(),
   'suggestions.accept': (id, edits) => suggestions.accept(id, edits),

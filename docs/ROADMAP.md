@@ -23,6 +23,7 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 | 2.2 | AI-proposed projects and people, linked tasks, clearer context suggestions | ✅ Built. Benchmarked with gpt-oss:20b only |
 | 2.3 | People: company, Company and Open asks filters, one-line AI brief with Regenerate | ✅ Built. Benchmark not rerun yet |
 | 2.4 | Data safety: safety copy before upgrades, separate dev/test data, Restore from backup | ✅ Built (`data-safety` e2e suite) |
+| 2.5 | AI log: the exact requests and responses for each import, plus why suggestions were dropped | ✅ Built (`ai-log` e2e suite). Not yet seen with a real Claude or Ollama run |
 | 3 | Priorities and briefings | Next |
 | 4 | Outlook | Planned |
 | 5 | Knowledge archive and meeting prep | Planned |

@@ -4,6 +4,7 @@ import { cos, errorMessage } from './api'
 import { CommandPalette, TABS } from './components/CommandPalette'
 import { AppContext, type AppContextValue, type TaskSelection, type View } from './context'
 import { ComingSoonScreen } from './screens/ComingSoonScreen'
+import { AiLogScreen } from './screens/AiLogScreen'
 import { ImportScreen } from './screens/ImportScreen'
 import { ReviewScreen } from './screens/ReviewScreen'
 import { PeopleScreen } from './screens/PeopleScreen'
@@ -26,6 +27,7 @@ export function App() {
   const [ai, setAi] = useState<AiStatus | null>(null)
   const [reviewCount, setReviewCount] = useState(0)
   const [view, setView] = useState<View>('today')
+  const [aiLog, setAiLog] = useState<{ sourceId: number; from: View } | null>(null)
   const [selection, setSelection] = useState<TaskSelection>(null)
   const [version, setVersion] = useState(0)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -82,6 +84,10 @@ export function App() {
     [refresh, toast],
   )
   const go = useCallback((v: View) => setView(v), [])
+  const openAiLog = useCallback((sourceId: number, from: View) => {
+    setAiLog({ sourceId, from })
+    setView('ailog')
+  }, [])
   const openTask = useCallback((s: TaskSelection) => {
     setSelection(s)
     if (s) setView('tasks')
@@ -139,9 +145,9 @@ export function App() {
   const ctx = useMemo<AppContextValue | null>(
     () =>
       settings && info
-        ? { view, go, selection, openTask, version, refresh, toast, settings, saveSettings, info, projects, people, dark, toggleTheme, ai: ai ?? FALLBACK_AI, setAi, reviewCount }
+        ? { view, go, selection, openTask, version, refresh, toast, settings, saveSettings, info, projects, people, dark, toggleTheme, ai: ai ?? FALLBACK_AI, setAi, reviewCount, openAiLog, aiLog }
         : null,
-    [view, selection, version, settings, info, projects, people, dark, go, openTask, refresh, toast, saveSettings, toggleTheme, ai, reviewCount],
+    [view, selection, version, settings, info, projects, people, dark, go, openTask, refresh, toast, saveSettings, toggleTheme, ai, reviewCount, openAiLog, aiLog],
   )
   if (!ctx) return null
 
@@ -154,6 +160,7 @@ export function App() {
     : view === 'settings' ? <SettingsScreen />
     : view === 'review' ? <ReviewScreen />
     : view === 'import' ? <ImportScreen />
+    : view === 'ailog' ? <AiLogScreen />
     : <ComingSoonScreen view={view} />
   const fill = view === 'tasks' || view === 'projects' || view === 'people'
 
@@ -167,7 +174,7 @@ export function App() {
           </div>
           <nav className="tabs">
             {TABS.map(([v, label], i) => (
-              <button key={v} className={`tab ${view === v ? 'on' : ''}`} title={`Alt+${i + 1}`} onClick={() => setView(v)}>
+              <button key={v} className={`tab ${view === v || (view === 'ailog' && aiLog?.from === v) ? 'on' : ''}`} title={`Alt+${i + 1}`} onClick={() => setView(v)}>
                 {label}
                 {v === 'review' && reviewCount > 0 && <span className="count">{reviewCount}</span>}
               </button>

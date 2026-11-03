@@ -2,6 +2,12 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-03 · AI log per import (Frank)
+Frank wants to see the exact prompts sent to the AI and the exact responses, so he can debug imports.
+- **Storage:** every request is recorded as sent, and every response as received. The SDK-added `parsed_output` is stripped, and helper functions drop out as they do on the wire. Records are tied to the import's extraction run, along with the app's keep/drop decisions and reasons.
+- **Retention:** the newest 5 runs are kept per import, locally only.
+- **Where it's shown:** an "AI log" page, opened from Import and Review, with tabs for Instructions, Message, Answer form, Response and Full request. The design was approved from a mockup.
+
 ### 2026-11-03 · Data safety before full-time use (Frank)
 Frank asked whether updates could lose his data before moving his work into the app. Three safeguards were added:
 1. **Automatic safety copy before every schema upgrade.** If no copy can be made, the upgrade is refused.

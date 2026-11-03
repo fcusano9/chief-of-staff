@@ -138,3 +138,9 @@ body.resizing { cursor: col-resize; user-select: none; }
 .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; z-index: 20; }
 .toast.err { background: var(--danger); color: #fff; }
 input[type='range'] { width: 100%; accent-color: var(--accent); }
+
+/* AI log */
+.subtab { border: 0; border-bottom: 2px solid transparent; background: none; padding: 7px 10px; color: var(--muted); cursor: pointer; font-size: 12px; }
+.subtab:hover { color: var(--text); }
+.subtab.on { color: var(--text); border-bottom-color: var(--text); }
+.code-block { margin: 0; padding: 10px 12px; font: 11.5px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 440px; overflow: auto; background: var(--bg); color: var(--text); user-select: text; }

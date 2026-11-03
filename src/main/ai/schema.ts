@@ -45,11 +45,20 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/
 const validDate = (d: string | null) => (d && DATE.test(d) && !Number.isNaN(Date.parse(d)) ? d : null)
 const clean = (s: string | null | undefined, max = 2000) => (s ?? '').replace(/\s+\n/g, '\n').trim().slice(0, max)
 
+/** A suggestion the AI proposed that didn't reach Review, and why (shown in the AI log). */
+export interface DroppedSuggestion {
+  kind: string
+  title: string
+  reason: string
+}
+
 /**
  * Turns raw AI output into safe drafts: every id must exist, dates must be real dates, and
- * suggestions that can't be applied are dropped rather than guessed at.
+ * suggestions that can't be applied are dropped rather than guessed at. Pass `dropped` to
+ * collect what was left out and why.
  */
-export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext): SuggestionDraft[] {
+export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext, dropped?: DroppedSuggestion[]): SuggestionDraft[] {
+  const drop = (r: RawSuggestion, reason: string) => dropped?.push({ kind: r.kind, title: clean(r.title, 200) || '(no title)', reason })
   const taskIds = new Set(ctx.tasks.map((t) => t.id))
   const projectIds = new Set(ctx.projects.map((p) => p.id))
   const personByName = new Map(ctx.people.map((p) => [p.name.toLowerCase(), p.id]))
@@ -81,9 +90,21 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
   for (const r of raw) {
     if (r.kind === 'new_project' || r.kind === 'new_person') {
       const name = clean(r.title, 120)
-      if (!(r.kind === 'new_project' ? newProjects : newPeople).has(lower(name))) continue
+      if (!(r.kind === 'new_project' ? newProjects : newPeople).has(lower(name))) {
+        drop(
+          r,
+          !name ? 'No name given'
+          : r.kind === 'new_project' ? `"${name}" is already a project`
+          : lower(name) === lower(ctx.userName) ? "That's you"
+          : `"${name}" is already in People`,
+        )
+        continue
+      }
       const key = `${r.kind}|${lower(name)}`
-      if (seen.has(key)) continue
+      if (seen.has(key)) {
+        drop(r, 'Same as another suggestion')
+        continue
+      }
       seen.add(key)
       const email = clean(r.email, 200)
       drafts.push({
@@ -114,17 +135,36 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
         (r.brief_scope === 'project' && owner != null && projectIds.has(owner)) ||
         (r.brief_scope === 'task' && owner != null && taskIds.has(owner)) ||
         (r.brief_scope === 'person' && owner != null && personIds.has(owner))
-      if (!ok || !details) continue
+      if (!ok || !details) {
+        drop(r, !details ? 'No text to add to the brief' : !r.brief_scope || owner == null ? "Didn't say whose brief" : `${r.brief_scope} #${owner} doesn't exist`)
+        continue
+      }
       briefScope = r.brief_scope
       briefOwnerId = owner
     }
-    if ((r.kind === 'status_update' || r.kind === 'mark_done') && taskId == null) continue
-    if (r.kind === 'status_update' && !details) continue
-    if (r.kind === 'new_task' && !title) continue
-    if (r.kind === 'waiting_on' && taskId == null && !title) continue
+    const missingTask = r.task_id != null ? `Task #${r.task_id} doesn't exist` : "Didn't say which task"
+    if ((r.kind === 'status_update' || r.kind === 'mark_done') && taskId == null) {
+      drop(r, missingTask)
+      continue
+    }
+    if (r.kind === 'status_update' && !details) {
+      drop(r, 'No update text')
+      continue
+    }
+    if (r.kind === 'new_task' && !title) {
+      drop(r, 'No task title')
+      continue
+    }
+    if (r.kind === 'waiting_on' && taskId == null && !title) {
+      drop(r, `${missingTask}, and no title for a new item`)
+      continue
+    }
 
     const key = `${r.kind}|${taskId}|${title.toLowerCase()}|${briefScope}|${briefOwnerId}`
-    if (seen.has(key)) continue
+    if (seen.has(key)) {
+      drop(r, 'Same as another suggestion')
+      continue
+    }
     seen.add(key)
 
     const projectId = r.project_id != null && projectIds.has(r.project_id) ? r.project_id : null

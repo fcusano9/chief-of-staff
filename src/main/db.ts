@@ -115,6 +115,35 @@ const MIGRATIONS: string[] = [
   ALTER TABLE people ADD COLUMN brief_at TEXT;
   ALTER TABLE people ADD COLUMN brief_context TEXT;
   `,
+  // AI log: each extraction run of an import, and every request sent to the AI with its raw response.
+  `
+  CREATE TABLE extraction_runs (
+    id INTEGER PRIMARY KEY,
+    source_id INTEGER NOT NULL REFERENCES source_items(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    finished_at TEXT,
+    raw_output TEXT,
+    kept_output TEXT,
+    dropped_output TEXT,
+    error TEXT
+  );
+  CREATE INDEX ix_extraction_runs_source ON extraction_runs(source_id);
+  CREATE TABLE ai_calls (
+    id INTEGER PRIMARY KEY,
+    run_id INTEGER NOT NULL REFERENCES extraction_runs(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    request TEXT NOT NULL,
+    response TEXT,
+    error TEXT,
+    started_at TEXT NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    input_tokens INTEGER,
+    output_tokens INTEGER
+  );
+  CREATE INDEX ix_ai_calls_run ON ai_calls(run_id);
+  `,
 ]
 
 /** The schema version this build of the app writes. Backups newer than this can't be restored. */

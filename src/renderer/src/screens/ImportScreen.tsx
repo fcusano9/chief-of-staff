@@ -14,7 +14,7 @@ const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, {
 
 /** Paste or drop text; the AI turns it into suggestions for the review queue. */
 export function ImportScreen() {
-  const { ai, go, toast, refresh, version } = useApp()
+  const { ai, go, toast, refresh, version, openAiLog } = useApp()
   const [kind, setKind] = useState<SourceKind>('copilot_summary')
   const [title, setTitle] = useState('')
   const [fromName, setFromName] = useState('')
@@ -162,7 +162,7 @@ export function ImportScreen() {
       <h2>Recent imports</h2>
       <div className="list">
         {recent.map((s) => (
-          <div key={s.id} className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto auto', paddingLeft: 12, cursor: 'default' }}>
+          <div key={s.id} className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto auto auto', paddingLeft: 12, cursor: 'default' }}>
             <div className="ttl">
               {s.title}
               <span className="why">
@@ -185,6 +185,9 @@ export function ImportScreen() {
                 'Not read yet'
               )}
             </span>
+            <button className="btn ghost" title="See exactly what was sent to the AI and what came back" onClick={() => openAiLog(s.id, 'import')}>
+              AI log
+            </button>
             <button className="btn ghost" disabled={busy} title="Ask the AI to read it again" onClick={() => void rerun(s.id)}>
               Run again
             </button>

@@ -35,7 +35,7 @@ function alsoCreates(s: Suggestion, p: SuggestionPayload): string {
 
 /** AI suggestions waiting for a decision. Nothing changes until one is accepted. */
 export function ReviewScreen() {
-  const { version, refresh, toast, go, openTask } = useApp()
+  const { version, refresh, toast, go, openTask, openAiLog } = useApp()
   const [items, setItems] = useState<Suggestion[]>([])
   const [cursor, setCursor] = useState(0)
   const [editing, setEditing] = useState<number | null>(null)
@@ -142,6 +142,9 @@ export function ReviewScreen() {
               {new Date(g.source.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
             <div className="spacer" />
+            <button className="btn ghost" style={{ fontSize: 12 }} title="See exactly what was sent to the AI and what came back" onClick={() => openAiLog(g.source.id, 'review')}>
+              AI log
+            </button>
             {g.items.length > 1 && (
               <button
                 className="btn ghost"
