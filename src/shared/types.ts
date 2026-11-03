@@ -167,7 +167,7 @@ export interface Suggestion {
   taskTitle: string | null
 }
 
-export type AiProviderId = 'demo' | 'claude'
+export type AiProviderId = 'demo' | 'claude' | 'local'
 
 export interface AiModelOption {
   id: string
@@ -243,6 +243,10 @@ export interface AppSettings {
   userName: string
   aiProvider: AiProviderId
   aiModel: string
+  /** Ollama model name used when aiProvider is 'local', e.g. "gpt-oss:20b". */
+  localModel: string
+  /** Ollama server address. Anything other than this computer counts as sending data out. */
+  localUrl: string
   priorityWeights: PriorityWeights
   theme: ThemeSetting
   /** Left pane width of split views, as a percentage. */
@@ -258,6 +262,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   userName: 'Frank Cusano',
   aiProvider: 'demo',
   aiModel: 'claude-opus-5-5',
+  localModel: 'gpt-oss:20b',
+  localUrl: 'http://127.0.0.1:11434',
   priorityWeights: { dueDate: 8, requester: 7, staleness: 5 },
   theme: 'system',
   splitPercent: 50,

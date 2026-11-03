@@ -24,8 +24,10 @@ export class SettingsStore {
     this.current = {
       ...settings,
       userName: settings.userName?.trim() || DEFAULT_SETTINGS.userName,
-      aiProvider: settings.aiProvider === 'claude' ? 'claude' : 'demo',
+      aiProvider: settings.aiProvider === 'claude' || settings.aiProvider === 'local' ? settings.aiProvider : 'demo',
       aiModel: CLAUDE_MODELS.some((m) => m.id === settings.aiModel) ? settings.aiModel : DEFAULT_SETTINGS.aiModel,
+      localModel: settings.localModel?.trim() || DEFAULT_SETTINGS.localModel,
+      localUrl: /^https?:\/\/[^\s]+$/.test(settings.localUrl?.trim() ?? '') ? settings.localUrl.trim().replace(/\/+$/, '') : DEFAULT_SETTINGS.localUrl,
       priorityWeights: {
         dueDate: clampWeight(settings.priorityWeights.dueDate),
         requester: clampWeight(settings.priorityWeights.requester),
