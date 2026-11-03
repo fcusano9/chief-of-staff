@@ -2,6 +2,12 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-03 · Quieter Review, and person context updates role and company (Frank)
+After his first large mail import, Frank asked for three changes:
+- **Titles stand apart from details:** titles are 14px semibold, details are smaller and grey and cut to two lines (hover for the rest), and info lines like "Due Fri · Asked by…" are lighter still.
+- **No quotes in Review:** the supporting quote made a long queue too busy. It's still stored and shown in the AI log.
+- **Person context fills in Role and Company:** a "Person context" suggestion can carry a role or company when the import states one that differs from People. Review shows it as "Role: old → new", Edit can change or clear it, and accepting saves it. If that's all it has, no empty context note is added.
+
 ### 2026-11-03 · Real data is never opened from inside Claude Desktop's sandbox (Frank)
 **What happened:** Claude Desktop is a packaged (MSIX) Windows app. Programs started from it inherit its file redirection, so whatever they save under AppData quietly goes to `%LOCALAPPDATA%\Packages\Claude_…\LocalCache\Roaming\…`. The installed app, started from a Claude session, read and wrote that private copy. Frank's morning import (7 tasks, a project, his API key) was saved there, while the Start-menu app kept using the real folder. His data looked lost until the two folders were compared. The OneDrive backup folder isn't redirected, so its backups were real. Every check made from inside Claude also saw only the private copy, which misled the first diagnosis.
 

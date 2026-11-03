@@ -15,8 +15,8 @@ export const RawSuggestionSchema = z.object({
   waiting_on: z.string().nullable().describe('Who or what the user is waiting on (waiting_on only), else null'),
   brief_scope: z.enum(['project', 'task', 'person']).nullable().describe('For brief_update: which kind of brief'),
   brief_owner_id: z.number().int().nullable().describe('For brief_update: ID of the project, task, or person'),
-  role: z.string().nullable().describe("For new_person: their job title or role as stated in the source, else null"),
-  company: z.string().nullable().describe('For new_person: the company or organization they work for, as stated in the source, else null'),
+  role: z.string().nullable().describe("For new_person, or brief_update on a person: their job title or role as stated in the source, else null"),
+  company: z.string().nullable().describe('For new_person, or brief_update on a person: the company or organization they work for, as stated in the source, else null'),
   email: z.string().nullable().describe('For new_person: their email address if it appears in the source, else null'),
   evidence: z.string().describe('A short verbatim quote from the source that supports this suggestion'),
 })
@@ -129,13 +129,23 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
 
     let briefScope: BriefScope | null = null
     let briefOwnerId: number | null = null
+    // Person context can also fill in or correct their role and company; only values that differ count.
+    let personDetails: { role?: string | null; company?: string | null } = {}
     if (r.kind === 'brief_update') {
       const owner = r.brief_owner_id
       const ok =
         (r.brief_scope === 'project' && owner != null && projectIds.has(owner)) ||
         (r.brief_scope === 'task' && owner != null && taskIds.has(owner)) ||
         (r.brief_scope === 'person' && owner != null && personIds.has(owner))
-      if (!ok || !details) {
+      if (ok && r.brief_scope === 'person') {
+        const person = ctx.people.find((x) => x.id === owner)!
+        const changed = (value: string | null, current: string | null) => {
+          const v = clean(value, 120)
+          return v && lower(v) !== lower(current ?? '') ? v : null
+        }
+        personDetails = { role: changed(r.role, person.role), company: changed(r.company, person.company) }
+      }
+      if (!ok || (!details && !personDetails.role && !personDetails.company)) {
         drop(r, !details ? 'No text to add to the brief' : !r.brief_scope || owner == null ? "Didn't say whose brief" : `${r.brief_scope} #${owner} doesn't exist`)
         continue
       }
@@ -192,6 +202,7 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
         waitingOn,
         briefScope,
         briefOwnerId,
+        ...personDetails,
       },
     })
   }

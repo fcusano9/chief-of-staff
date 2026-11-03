@@ -12,7 +12,7 @@ It tracks tasks, projects, people and a waiting-on list, ranks tasks by a transp
 
 1. **The AI only proposes; Frank decides.** Every AI output goes to the Review queue and changes nothing until accepted. Never send email, messages or invites. Drafts are saved as drafts and never sent.
 2. **Don't fabricate or assume.** If a name, fact, figure, or how something works is unclear, ask Frank instead of guessing. Verify claims, such as API shapes or library behavior, before stating them. The same applies inside the app: AI output that references unknown ids or invalid dates is dropped, not guessed at (`validateSuggestions`).
-3. **Show mockups before building new UI.** For a new screen or a visible redesign, build a clickable prototype first (see `design/`) and get approval.
+3. **Show a mockup before any visual change.** That includes new screens, redesigns and small tweaks Frank describes himself (styling, removing an element, a new field on a screen). Build a clickable before/after prototype in `design/`, get his approval, then implement.
 4. **No secrets in files or logs.** API keys go through `KeyStore`, which uses Electron `safeStorage`. The UI may learn that a key exists, never its value.
 5. **Commit or push only when Frank asks.** Work on a branch, and open a PR into `main` when asked. Commit messages end with a `Co-Authored-By:` line for the AI that wrote them.
 6. **Keep PR descriptions short (Frank's preference).** Use a one-line why, 3–6 bullets of what changed, one line on testing, and notes only when something needs his attention (not verified, or a decision for him). Aim for about 150 words, with no per-file detail.
