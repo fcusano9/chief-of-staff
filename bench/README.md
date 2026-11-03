@@ -1,6 +1,6 @@
 # Extraction benchmark
 
-Scores AI providers on seven made-up imports shaped like Frank's real work: a Copilot summary, an email from his manager, a Teams chat, a long meeting transcript, a vendor email with a prompt injection, a newsletter with nothing to do, and a recap showing finished work. Each case lists the suggestions a careful assistant should make, extras that are fine, and things it must not do.
+Scores AI providers on eight made-up imports shaped like Frank's real work: a Copilot summary, an email from his manager, a Teams chat, a long meeting transcript, a vendor email with a prompt injection, a newsletter with nothing to do, a recap showing finished work, and a kickoff that introduces a new project and person. Each case lists the suggestions a careful assistant should make, extras that are fine, and things it must not do.
 
 ```bash
 npm run bench:ai                                          # demo, every installed Ollama model, and Claude if ANTHROPIC_API_KEY is set

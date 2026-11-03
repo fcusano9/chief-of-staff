@@ -126,14 +126,20 @@ export interface ImportResult {
   error: string | null
 }
 
-export type SuggestionKind = 'new_task' | 'status_update' | 'mark_done' | 'waiting_on' | 'brief_update'
+export type SuggestionKind = 'new_task' | 'status_update' | 'mark_done' | 'waiting_on' | 'brief_update' | 'new_project' | 'new_person'
 export const SUGGESTION_LABELS: Record<SuggestionKind, string> = {
   new_task: 'New task',
   status_update: 'Status update',
   mark_done: 'Looks done',
   waiting_on: 'Waiting on',
-  brief_update: 'Brief update',
+  brief_update: 'Context',
+  new_project: 'New project',
+  new_person: 'New person',
 }
+/** Brief updates are labeled by what they add context to. */
+export const BRIEF_UPDATE_LABELS: Record<BriefScope, string> = { project: 'Project context', person: 'Person context', task: 'Task context' }
+export const suggestionLabel = (kind: SuggestionKind, briefScope: BriefScope | null): string =>
+  kind === 'brief_update' && briefScope ? BRIEF_UPDATE_LABELS[briefScope] : SUGGESTION_LABELS[kind]
 
 /** What the AI proposed. All references are validated against the database before saving. */
 export interface SuggestionPayload {
@@ -152,6 +158,18 @@ export interface SuggestionPayload {
   waitingOn: string | null
   briefScope: BriefScope | null
   briefOwnerId: number | null
+  /** new_project: the color the project gets. */
+  color?: string | null
+  /** new_person: as written in the source. New people always start at 3 stars. */
+  role?: string | null
+  email?: string | null
+  /**
+   * Links to a new_project or new_person suggestion from the same import that isn't decided yet.
+   * Accepting this suggestion creates that project or person too; rejecting it clears the link.
+   */
+  projectSuggestionId?: number | null
+  requesterSuggestionId?: number | null
+  waitingOnSuggestionId?: number | null
 }
 
 export interface Suggestion {

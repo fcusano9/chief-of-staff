@@ -17,4 +17,5 @@ E2E_NETWORK=1 npm run e2e     # also run "Test connection" with a fake key again
 | Suite | Covers |
 |---|---|
 | `m1-core.mjs` | Every tab; people, projects and tasks through the UI; priority ordering; J/K selection; autosave on switch; E to mark done (including with unsaved edits); waiting-on; divider minimums and reset; command palette; theme toggle; G-navigation; backup; data surviving a restart |
+| `m2-projects-people.mjs` | New project, new person and context suggestions from a fake local model: order in Review, "(new)" links, accepting a task creates its project and person (3 stars, briefs), context added to existing briefs |
 | `m2-ai.mjs` | Import, then Review; editing then accepting; A and R keys; linked sources; duplicate detection; the Claude-without-key error with retry; encrypted key storage; key removal; local model settings, the unreachable-Ollama error and the privacy wording; re-running an import; the Today prompt |

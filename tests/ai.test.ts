@@ -21,7 +21,7 @@ const input = (o: Partial<TaskInput>): TaskInput => ({
 })
 const raw = (o: Partial<RawSuggestion>): RawSuggestion => ({
   kind: 'new_task', task_id: null, title: '', details: '', due_date: null, project_id: null, requester_name: null,
-  waiting_on: null, brief_scope: null, brief_owner_id: null, evidence: 'quote', ...o,
+  waiting_on: null, brief_scope: null, brief_owner_id: null, project_name: null, role: null, email: null, evidence: 'quote', ...o,
 })
 
 /** A provider that returns canned output, standing in for Claude. */
@@ -57,7 +57,7 @@ describe('AI import and review queue', () => {
     projects = new ProjectService(db)
     people = new PersonService(db)
     briefs = new BriefService(db)
-    suggestions = new SuggestionService(db, tasks, briefs)
+    suggestions = new SuggestionService(db, tasks, briefs, projects, people)
   })
   afterEach(() => {
     db.close()
@@ -237,5 +237,109 @@ describe('AI import and review queue', () => {
     expect(opus.output_config.format.type).toBe('json_schema')
     expect(opus).toMatchObject({ betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' })
     expect(buildExtractionRequest('claude-haiku-5-5', ctx, src)).not.toHaveProperty('fallbacks')
+  })
+  it('proposes new projects and people only when they are not already known, and links tasks to them', () => {
+    projects.save({ id: 0, name: 'Partner portal', color: '#378ADD', status: 'active' })
+    people.save({ id: 0, name: 'Dana Lee', role: 'VP', email: null, priorityWeight: 5 })
+    const ctx = buildExtractionContext(db, 'Frank Cusano')
+    const drafts = validateSuggestions(
+      [
+        raw({ kind: 'new_task', title: 'Send course outline', requester_name: 'Alex', project_name: 'Dealer training program' }),
+        raw({ kind: 'waiting_on', title: 'Platform quotes', waiting_on: 'Alex Rivera' }),
+        raw({ kind: 'new_project', title: 'Dealer training program', details: 'Courses for dealers' }),
+        raw({ kind: 'new_project', title: 'partner portal' }), // already a project
+        raw({ kind: 'new_person', title: 'Alex Rivera', role: 'Training manager', email: 'alex@example.com' }),
+        raw({ kind: 'new_person', title: 'Dana' }), // already in People
+        raw({ kind: 'new_person', title: 'Frank Cusano' }), // the user
+        raw({ kind: 'new_person', title: 'Sam Ortiz', email: 'not an email' }),
+        raw({ kind: 'new_task', title: 'Unknown project', project_name: 'Nothing proposed' }),
+      ],
+      ctx,
+    )
+    expect(drafts.map((d) => `${d.kind}:${d.payload.title}`)).toEqual([
+      'new_project:Dealer training program',
+      'new_person:Alex Rivera',
+      'new_person:Sam Ortiz',
+      'new_task:Send course outline',
+      'waiting_on:Platform quotes',
+      'new_task:Unknown project',
+    ])
+    expect(drafts[0]!.payload.color).toBeTruthy()
+    expect(drafts[1]!.payload).toMatchObject({ role: 'Training manager', email: 'alex@example.com' })
+    expect(drafts[2]!.payload.email).toBeNull()
+    expect(drafts[3]!.links).toEqual({ project: 'Dealer training program', requester: 'Alex Rivera', waitingOn: undefined })
+    expect(drafts[4]!.links?.waitingOn).toBe('Alex Rivera')
+    expect(drafts[5]!.links?.project).toBeUndefined()
+  })
+
+  it('accepting a linked task also creates its new project and person', async () => {
+    const sources = sourcesWith(
+      new FakeProvider([
+        raw({ kind: 'new_project', title: 'Dealer training program', details: 'Courses for dealers, live in Q2' }),
+        raw({ kind: 'new_person', title: 'Alex Rivera', role: 'Training manager', details: 'Prefers Thursday syncs' }),
+        raw({ kind: 'new_task', title: 'Send course outline', requester_name: 'Alex Rivera', project_name: 'Dealer training program' }),
+        raw({ kind: 'new_task', title: 'Pick pilot dealers', project_name: 'Dealer training program' }),
+      ]),
+    )
+    await sources.importAndExtract({ kind: 'meeting_transcript', title: 'Training kickoff', content: 'transcript' })
+    const pending = suggestions.listPending()
+    expect(pending.map((s) => s.kind)).toEqual(['new_project', 'new_person', 'new_task', 'new_task'])
+    expect(pending[2]!.payload).toMatchObject({ projectSuggestionId: pending[0]!.id, requesterSuggestionId: pending[1]!.id })
+
+    const taskId = suggestions.accept(pending[2]!.id)
+    const task = tasks.get(taskId!)!
+    const project = projects.list().find((p) => p.name === 'Dealer training program')!
+    const alex = people.list().find((p) => p.name === 'Alex Rivera')!
+    expect(task.projectId).toBe(project.id)
+    expect(task.requesterId).toBe(alex.id)
+    expect(alex).toMatchObject({ role: 'Training manager', priorityWeight: 3 })
+    expect(briefs.get('project', project.id).summary).toContain('Courses for dealers, live in Q2')
+    expect(briefs.get('person', alex.id).summary).toContain('Prefers Thursday syncs')
+
+    // The project and person were accepted with the task; the other task now points at the real project.
+    const left = suggestions.listPending()
+    expect(left.map((s) => s.payload.title)).toEqual(['Pick pilot dealers'])
+    expect(left[0]!.payload).toMatchObject({ projectId: project.id, projectSuggestionId: null })
+    expect(projects.list()).toHaveLength(1) // not created twice
+  })
+
+  it('rejecting a new project or person leaves linked tasks without the link', async () => {
+    const sources = sourcesWith(
+      new FakeProvider([
+        raw({ kind: 'new_project', title: 'Dealer training program' }),
+        raw({ kind: 'new_person', title: 'Alex Rivera' }),
+        raw({ kind: 'new_task', title: 'Send course outline', requester_name: 'Alex Rivera', project_name: 'Dealer training program' }),
+      ]),
+    )
+    await sources.importAndExtract({ kind: 'note', title: 'n', content: 'x' })
+    const [project, person, task] = suggestions.listPending()
+    suggestions.reject(project!.id)
+    suggestions.reject(person!.id)
+    expect(suggestions.listPending()[0]!.payload).toMatchObject({ projectSuggestionId: null, requesterSuggestionId: null, requesterName: 'Alex Rivera' })
+    const created = tasks.get(suggestions.accept(task!.id)!)!
+    expect(created.projectId).toBeNull()
+    expect(created.requesterId).toBeNull()
+    expect(projects.list()).toHaveLength(0)
+    expect(people.list()).toHaveLength(0)
+  })
+
+  it('accepting a new project or person with edits uses the edits, and reuses one that now exists', async () => {
+    const sources = sourcesWith(new FakeProvider([raw({ kind: 'new_project', title: 'Training' }), raw({ kind: 'new_person', title: 'Alex Rivera' })]))
+    await sources.importAndExtract({ kind: 'note', title: 'n', content: 'x' })
+    const [project, person] = suggestions.listPending()
+    suggestions.accept(project!.id, { title: 'Dealer training', color: '#E24B4A' })
+    expect(projects.list()[0]).toMatchObject({ name: 'Dealer training', color: '#E24B4A' })
+    people.save({ id: 0, name: 'Alex Rivera', role: 'Added by hand', email: null, priorityWeight: 4 })
+    suggestions.accept(person!.id)
+    expect(people.list()).toHaveLength(1)
+    expect(people.list()[0]).toMatchObject({ role: 'Added by hand', priorityWeight: 4 })
+  })
+
+  it('tells the AI about new projects, new people and context', () => {
+    const system = buildSystemPrompt(buildExtractionContext(db, 'Frank Cusano'))
+    expect(system).toContain('new_project: a named, ongoing initiative')
+    expect(system).toContain('new_person: someone Frank Cusano works with')
+    expect(system).toContain('never propose Frank Cusano')
+    expect(system).toContain("set project_name to that project's name")
   })
 })

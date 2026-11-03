@@ -65,7 +65,7 @@ export class DemoProvider implements AiProvider {
       const mentionsMe = new RegExp(`\\b(${first}|i|i'll|me)\\b`).test(lower)
       const actiony = /\b(action item|todo|to do|follow up|follow-up|need to|needs to|will send|will share|please|owner:|assigned to)\b/.test(lower)
       const task = this.matchTask(line, ctx)
-      const base = { task_id: null, due_date: findDueDate(line, ctx.today), project_id: null, requester_name: findRequester(line), waiting_on: null, brief_scope: null, brief_owner_id: null, evidence: line.slice(0, 300) }
+      const base = { task_id: null, due_date: findDueDate(line, ctx.today), project_id: null, project_name: null, requester_name: findRequester(line), waiting_on: null, brief_scope: null, brief_owner_id: null, role: null, email: null, evidence: line.slice(0, 300) }
 
       const waiting = line.match(/\bwaiting (?:on|for) ([^.,;:]+)/i)
       if (waiting) {

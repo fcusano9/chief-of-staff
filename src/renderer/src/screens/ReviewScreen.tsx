@@ -1,11 +1,34 @@
 import { useEffect, useState } from 'react'
-import type { Suggestion, SuggestionPayload } from '@shared/types'
-import { SOURCE_KIND_LABELS, SUGGESTION_LABELS } from '@shared/types'
+import type { Suggestion, SuggestionKind, SuggestionPayload } from '@shared/types'
+import { PROJECT_COLORS, SOURCE_KIND_LABELS, suggestionLabel } from '@shared/types'
 import { cos, errorMessage } from '../api'
-import { dueLabel, ProjectChip } from '../components/bits'
+import { Avatar, dueLabel, ProjectChip, Stars } from '../components/bits'
 import { useApp } from '../context'
 
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
+
+/** New projects and people are green, context is amber, task changes use the accent color. */
+const chipColor = (kind: SuggestionKind) =>
+  kind === 'new_project' || kind === 'new_person' ? 'var(--ok)' : kind === 'brief_update' ? 'var(--warn)' : 'var(--accent)'
+
+const ACCEPTED: Record<SuggestionKind, string> = {
+  new_task: 'Task created',
+  waiting_on: 'Task updated',
+  status_update: 'Task updated',
+  mark_done: 'Task updated',
+  brief_update: 'Context added',
+  new_project: 'Project created',
+  new_person: 'Added to People',
+}
+
+/** What accepting a task also creates, e.g. "with its new project and person". */
+function alsoCreates(s: Suggestion, p: SuggestionPayload): string {
+  const made = [
+    !p.projectId && p.projectSuggestionId ? 'project' : null,
+    (!p.requesterId && p.requesterSuggestionId) || p.waitingOnSuggestionId ? 'person' : null,
+  ].filter(Boolean)
+  return s.kind === 'new_task' || (s.kind === 'waiting_on' && !p.taskId) ? (made.length ? `, with its new ${made.join(' and ')}` : '') : ''
+}
 
 /** AI suggestions waiting for a decision. Nothing changes until one is accepted. */
 export function ReviewScreen() {
@@ -25,7 +48,7 @@ export function ReviewScreen() {
     try {
       const taskId = await cos['suggestions.accept'](s.id, edits)
       setEditing(null)
-      toast(s.kind === 'new_task' ? 'Task created' : s.kind === 'brief_update' ? 'Brief updated' : 'Task updated', false)
+      toast(`${s.kind === 'waiting_on' && !s.payload.taskId ? 'Task created' : ACCEPTED[s.kind]}${alsoCreates(s, edits ?? s.payload)}`, false)
       refresh()
       return taskId
     } catch (err) {
@@ -137,12 +160,16 @@ export function ReviewScreen() {
                   onClick={() => setCursor(index)}
                 >
                   <div>
-                    <span className="chip" style={{ background: 'var(--accent-bg)', color: 'var(--accent)' }}>
-                      {SUGGESTION_LABELS[s.kind]}
+                    <span className="chip" style={{ background: `color-mix(in srgb, ${chipColor(s.kind)} 14%, transparent)`, color: chipColor(s.kind) }}>
+                      {suggestionLabel(s.kind, s.payload.briefScope)}
                     </span>
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    {isEditing ? <Editor kind={s.kind} draft={draft} setDraft={setDraft} /> : <Summary s={s} onOpenTask={(id) => openTask({ id })} />}
+                    {isEditing ? (
+                      <Editor kind={s.kind} draft={draft} setDraft={setDraft} pending={items} />
+                    ) : (
+                      <Summary s={s} pending={items} onOpenTask={(id) => openTask({ id })} />
+                    )}
                     {s.evidence && (
                       <div className="faint" style={{ fontSize: 12, marginTop: 4, fontStyle: 'italic', overflowWrap: 'anywhere' }}>
                         “{s.evidence}”
@@ -176,28 +203,91 @@ export function ReviewScreen() {
   )
 }
 
-function Summary({ s, onOpenTask }: { s: Suggestion; onOpenTask: (id: number) => void }) {
+/** A new project or person from the same import that isn't decided yet, shown with a dashed "(new)" chip. */
+function linked(pending: Suggestion[], id: number | null | undefined): Suggestion | null {
+  return id ? (pending.find((x) => x.id === id) ?? null) : null
+}
+
+function NewProjectChip({ s }: { s: Suggestion }) {
+  const color = s.payload.color ?? PROJECT_COLORS[0]!
+  return (
+    <span className="chip" style={{ border: '1px dashed currentColor', color: `color-mix(in srgb, ${color} 65%, var(--text))` }}>
+      {s.payload.title} (new)
+    </span>
+  )
+}
+
+function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestion[]; onOpenTask: (id: number) => void }) {
   const { projects, people } = useApp()
   const p = s.payload
   const project = projects.find((x) => x.id === p.projectId) ?? null
-  const requester = people.find((x) => x.id === p.requesterId)?.name ?? p.requesterName
+  const newProject = linked(pending, p.projectSuggestionId)
+  const newRequester = linked(pending, p.requesterSuggestionId)
+  const requester = people.find((x) => x.id === p.requesterId)?.name ?? (newRequester ? `${newRequester.payload.title} (new)` : p.requesterName)
   const taskLink = p.taskId ? (
     <button className="btn ghost" style={{ padding: 0, fontWeight: 500 }} onClick={() => onOpenTask(p.taskId!)}>
       {s.taskTitle ?? p.title}
     </button>
   ) : null
+
+  if (s.kind === 'new_project') {
+    const links = pending.filter((x) => x.payload.projectSuggestionId === s.id).length
+    return (
+      <div>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <span className="dot" style={{ background: p.color ?? PROJECT_COLORS[0] }} />
+          <span style={{ fontWeight: 500 }}>{p.title}</span>
+        </div>
+        {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
+        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+          Summary goes into the project's brief{links ? ` · ${links} suggestion${links === 1 ? '' : 's'} below link to it` : ''}
+        </div>
+      </div>
+    )
+  }
+  if (s.kind === 'new_person') {
+    const links = pending.filter((x) => x.payload.requesterSuggestionId === s.id || x.payload.waitingOnSuggestionId === s.id).length
+    return (
+      <div>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <Avatar person={{ name: p.title, color: 'var(--ok)' }} />
+          <span style={{ fontWeight: 500 }}>{p.title}</span>
+          <span className="muted">{[p.role || 'No role', p.email].filter(Boolean).join(' · ')}</span>
+        </div>
+        {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
+        <div className="muted row" style={{ fontSize: 12, marginTop: 2, gap: 4, flexWrap: 'wrap' }}>
+          Starts at <Stars value={3} /> · context goes into their brief{links ? ` · ${links} suggestion${links === 1 ? '' : 's'} below involve them` : ''}
+        </div>
+      </div>
+    )
+  }
+  if (s.kind === 'brief_update') {
+    const owner =
+      p.briefScope === 'project' ? <ProjectChip project={projects.find((x) => x.id === p.briefOwnerId) ?? null} />
+      : p.briefScope === 'person' ? <span style={{ fontWeight: 500 }}>{people.find((x) => x.id === p.briefOwnerId)?.name}</span>
+      : taskLink
+    return (
+      <div>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          {owner}
+          <span className="muted">add to context</span>
+        </div>
+        {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
+      </div>
+    )
+  }
+
   const meta = [
     p.dueDate ? `Due ${dueLabel(p.dueDate).text}` : null,
-    requester ? `Asked by ${requester}${p.requesterId ? '' : ' (not in People)'}` : null,
-    p.waitingOn ? `Waiting on ${p.waitingOn}` : null,
+    requester ? `Asked by ${requester}${p.requesterId || newRequester ? '' : ' (not in People)'}` : null,
+    p.waitingOn ? `Waiting on ${p.waitingOn}${linked(pending, p.waitingOnSuggestionId) ? ' (new)' : ''}` : null,
   ].filter(Boolean)
 
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         {s.kind === 'new_task' || (s.kind === 'waiting_on' && !p.taskId) ? <span style={{ fontWeight: 500 }}>{p.title}</span> : taskLink}
-        {s.kind === 'brief_update' && <span className="muted">{p.briefScope} brief</span>}
-        <ProjectChip project={project} />
+        {newProject && !project ? <NewProjectChip s={newProject} /> : <ProjectChip project={project} />}
       </div>
       {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
       {meta.length > 0 && (
@@ -209,10 +299,44 @@ function Summary({ s, onOpenTask }: { s: Suggestion; onOpenTask: (id: number) =>
   )
 }
 
-function Editor({ kind, draft, setDraft }: { kind: Suggestion['kind']; draft: SuggestionPayload; setDraft: (d: SuggestionPayload) => void }) {
+function Editor({ kind, draft, setDraft, pending }: { kind: Suggestion['kind']; draft: SuggestionPayload; setDraft: (d: SuggestionPayload) => void; pending: Suggestion[] }) {
   const { projects, people } = useApp()
   const set = (patch: Partial<SuggestionPayload>) => setDraft({ ...draft, ...patch })
+
+  if (kind === 'new_project') {
+    return (
+      <div className="grid" style={{ gap: 6 }}>
+        <input className="inp" autoFocus value={draft.title} placeholder="Project name" onChange={(e) => set({ title: e.target.value })} />
+        <div className="swatches" role="radiogroup" aria-label="Project color">
+          {PROJECT_COLORS.map((c) => (
+            <button key={c} className={`swatch ${draft.color === c ? 'on' : ''}`} style={{ background: c }} aria-label={c} onClick={() => set({ color: c })} />
+          ))}
+        </div>
+        <textarea className="inp" style={{ minHeight: 48 }} value={draft.details} placeholder="Summary for the project's brief" onChange={(e) => set({ details: e.target.value })} />
+      </div>
+    )
+  }
+  if (kind === 'new_person') {
+    return (
+      <div className="grid" style={{ gap: 6 }}>
+        <div className="row">
+          <input className="inp" autoFocus value={draft.title} placeholder="Name" onChange={(e) => set({ title: e.target.value })} />
+          <input className="inp" value={draft.role ?? ''} placeholder="Role" onChange={(e) => set({ role: e.target.value || null })} />
+        </div>
+        <input className="inp" value={draft.email ?? ''} placeholder="Email (optional)" onChange={(e) => set({ email: e.target.value || null })} />
+        <textarea className="inp" style={{ minHeight: 48 }} value={draft.details} placeholder="What to remember about them" onChange={(e) => set({ details: e.target.value })} />
+      </div>
+    )
+  }
+
   const creates = kind === 'new_task' || (kind === 'waiting_on' && !draft.taskId)
+  // Projects and people proposed in the same import can be picked before they exist; "s:" marks a suggestion id.
+  const newProjects = pending.filter((x) => x.kind === 'new_project')
+  const newPeople = pending.filter((x) => x.kind === 'new_person')
+  const projectValue = draft.projectId ?? (draft.projectSuggestionId && newProjects.some((x) => x.id === draft.projectSuggestionId) ? `s:${draft.projectSuggestionId}` : '')
+  const requesterValue = draft.requesterId ?? (draft.requesterSuggestionId && newPeople.some((x) => x.id === draft.requesterSuggestionId) ? `s:${draft.requesterSuggestionId}` : '')
+  const pick = (value: string, existing: 'projectId' | 'requesterId', link: 'projectSuggestionId' | 'requesterSuggestionId') =>
+    set({ [existing]: value && !value.startsWith('s:') ? Number(value) : null, [link]: value.startsWith('s:') ? Number(value.slice(2)) : null })
   return (
     <div className="grid" style={{ gap: 6 }}>
       {creates && <input className="inp" autoFocus value={draft.title} placeholder="Task title" onChange={(e) => set({ title: e.target.value })} />}
@@ -222,16 +346,26 @@ function Editor({ kind, draft, setDraft }: { kind: Suggestion['kind']; draft: Su
           <input className="inp" style={{ width: 150 }} type="date" value={draft.dueDate ?? ''} onChange={(e) => set({ dueDate: e.target.value || null })} />
           {creates && (
             <>
-              <select className="inp" style={{ width: 'auto' }} value={draft.projectId ?? ''} onChange={(e) => set({ projectId: e.target.value ? Number(e.target.value) : null })}>
+              <select className="inp" style={{ width: 'auto' }} value={projectValue} onChange={(e) => pick(e.target.value, 'projectId', 'projectSuggestionId')}>
                 <option value="">No project</option>
+                {newProjects.map((x) => (
+                  <option key={`s${x.id}`} value={`s:${x.id}`}>
+                    {x.payload.title} (new)
+                  </option>
+                ))}
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
                 ))}
               </select>
-              <select className="inp" style={{ width: 'auto' }} value={draft.requesterId ?? ''} onChange={(e) => set({ requesterId: e.target.value ? Number(e.target.value) : null })}>
+              <select className="inp" style={{ width: 'auto' }} value={requesterValue} onChange={(e) => pick(e.target.value, 'requesterId', 'requesterSuggestionId')}>
                 <option value="">Asked by nobody</option>
+                {newPeople.map((x) => (
+                  <option key={`s${x.id}`} value={`s:${x.id}`}>
+                    {x.payload.title} (new)
+                  </option>
+                ))}
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}

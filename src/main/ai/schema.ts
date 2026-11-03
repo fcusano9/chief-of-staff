@@ -1,19 +1,22 @@
 import { z } from 'zod'
-import type { BriefScope, SuggestionKind, SuggestionPayload } from '@shared/types'
+import { PROJECT_COLORS, type BriefScope, type SuggestionKind, type SuggestionPayload } from '@shared/types'
 import type { ExtractionContext } from './context'
 
 /** The JSON shape the AI must return (enforced with structured outputs for Claude). */
 export const RawSuggestionSchema = z.object({
-  kind: z.enum(['new_task', 'status_update', 'mark_done', 'waiting_on', 'brief_update']),
+  kind: z.enum(['new_task', 'status_update', 'mark_done', 'waiting_on', 'brief_update', 'new_project', 'new_person']),
   task_id: z.number().int().nullable().describe('ID of the existing task this is about, from the open-task list; null for new tasks'),
-  title: z.string().describe('New task title (imperative, under 80 characters), or a short headline'),
-  details: z.string().describe('Status update text, brief text to add, or useful detail for a new task'),
+  title: z.string().describe("New task title (imperative, under 80 characters); the project's name for new_project; the person's full name for new_person; else a short headline"),
+  details: z.string().describe('Status update text, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task'),
   due_date: z.string().nullable().describe('YYYY-MM-DD if a deadline is stated or clearly implied, else null'),
-  project_id: z.number().int().nullable().describe('ID of the matching project, else null'),
+  project_id: z.number().int().nullable().describe('ID of the matching existing project, else null'),
+  project_name: z.string().nullable().describe('For a task in a project you propose with new_project in this response: that project name exactly; else null'),
   requester_name: z.string().nullable().describe('Who asked for this, as written in the source, else null'),
   waiting_on: z.string().nullable().describe('Who or what the user is waiting on (waiting_on only), else null'),
   brief_scope: z.enum(['project', 'task', 'person']).nullable().describe('For brief_update: which kind of brief'),
   brief_owner_id: z.number().int().nullable().describe('For brief_update: ID of the project, task, or person'),
+  role: z.string().nullable().describe("For new_person: their job title or role as stated in the source, else null"),
+  email: z.string().nullable().describe('For new_person: their email address if it appears in the source, else null'),
   evidence: z.string().describe('A short verbatim quote from the source that supports this suggestion'),
 })
 
@@ -27,7 +30,15 @@ export interface SuggestionDraft {
   kind: SuggestionKind
   payload: SuggestionPayload
   evidence: string
+  /** Names of new projects or people proposed in the same batch, resolved to suggestion ids when saved. */
+  links?: { project?: string; requester?: string; waitingOn?: string }
 }
+
+/** New projects and people first, then context, then everything else in the AI's order, so links read top to bottom in Review. */
+const FIRST: SuggestionKind[] = ['new_project', 'new_person', 'brief_update']
+const rank = (k: SuggestionKind) => (FIRST.includes(k) ? FIRST.indexOf(k) : FIRST.length)
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const lower = (s: string) => s.trim().toLowerCase()
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 const validDate = (d: string | null) => (d && DATE.test(d) && !Number.isNaN(Date.parse(d)) ? d : null)
@@ -42,10 +53,52 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
   const projectIds = new Set(ctx.projects.map((p) => p.id))
   const personByName = new Map(ctx.people.map((p) => [p.name.toLowerCase(), p.id]))
   const personIds = new Set(ctx.people.map((p) => p.id))
+  const projectNames = new Set(ctx.projects.map((p) => lower(p.name)))
   const drafts: SuggestionDraft[] = []
   const seen = new Set<string>()
 
+  // New projects and people the AI proposed, minus anything already in the lists (or the user).
+  const isKnownPerson = (name: string) => personByName.has(lower(name)) || matchFirstName(name, ctx) != null || lower(name) === lower(ctx.userName)
+  const newProjects = new Map<string, string>()
+  const newPeople = new Map<string, string>()
   for (const r of raw) {
+    const name = clean(r.title, 120)
+    if (r.kind === 'new_project' && name && !projectNames.has(lower(name))) newProjects.set(lower(name), name)
+    if (r.kind === 'new_person' && name && !isKnownPerson(name)) newPeople.set(lower(name), name)
+  }
+  /** "Alex" finds "Alex Rivera" when exactly one new person has that first name. */
+  const findNewPerson = (name: string | null): string | undefined => {
+    if (!name?.trim()) return undefined
+    const exact = newPeople.get(lower(name))
+    if (exact) return exact
+    const first = lower(name).split(/\s+/)[0]
+    const hits = [...newPeople.values()].filter((n) => lower(n).split(/\s+/)[0] === first)
+    return hits.length === 1 ? hits[0] : undefined
+  }
+  let colorIndex = ctx.projects.length
+
+  for (const r of raw) {
+    if (r.kind === 'new_project' || r.kind === 'new_person') {
+      const name = clean(r.title, 120)
+      if (!(r.kind === 'new_project' ? newProjects : newPeople).has(lower(name))) continue
+      const key = `${r.kind}|${lower(name)}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      const email = clean(r.email, 200)
+      drafts.push({
+        kind: r.kind,
+        evidence: clean(r.evidence, 600),
+        payload: {
+          taskId: null, title: name, details: clean(r.details), dueDate: null, projectId: null, requesterId: null, requesterName: null,
+          waitingOn: null, briefScope: null, briefOwnerId: null,
+          ...(r.kind === 'new_project'
+            ? { color: PROJECT_COLORS[colorIndex++ % PROJECT_COLORS.length] }
+            : { role: clean(r.role, 120) || null, email: EMAIL.test(email) ? email : null }),
+        },
+      })
+      continue
+    }
+
     const taskId = r.task_id != null && taskIds.has(r.task_id) ? r.task_id : null
     const title = clean(r.title, 200)
     const details = clean(r.details)
@@ -73,24 +126,35 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
     if (seen.has(key)) continue
     seen.add(key)
 
+    const projectId = r.project_id != null && projectIds.has(r.project_id) ? r.project_id : null
+    const waitingOn = r.kind === 'waiting_on' ? clean(r.waiting_on, 200) || null : null
+    const creates = r.kind === 'new_task' || (r.kind === 'waiting_on' && taskId == null)
+    const links = creates
+      ? {
+          project: projectId == null && r.project_name ? newProjects.get(lower(r.project_name)) : undefined,
+          requester: requesterId == null ? findNewPerson(requesterName) : undefined,
+          waitingOn: findNewPerson(waitingOn),
+        }
+      : {}
     drafts.push({
       kind: r.kind,
       evidence: clean(r.evidence, 600),
+      links,
       payload: {
         taskId,
         title: title || ctx.tasks.find((t) => t.id === taskId)?.title || '',
         details,
         dueDate: validDate(r.due_date),
-        projectId: r.project_id != null && projectIds.has(r.project_id) ? r.project_id : null,
+        projectId,
         requesterId,
         requesterName,
-        waitingOn: r.kind === 'waiting_on' ? clean(r.waiting_on, 200) || null : null,
+        waitingOn,
         briefScope,
         briefOwnerId,
       },
     })
   }
-  return drafts
+  return drafts.sort((a, b) => rank(a.kind) - rank(b.kind))
 }
 
 /** "Dana" matches "Dana Lee" when exactly one person has that first name. */

@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
-import type { BriefScope, SourceKind, Suggestion, SuggestionKind, SuggestionPayload } from '@shared/types'
+import { PROJECT_COLORS, type BriefScope, type SourceKind, type Suggestion, type SuggestionKind, type SuggestionPayload } from '@shared/types'
 import { nowIso, transaction } from '../db'
-import type { BriefService } from './directory'
+import type { BriefService, PersonService, ProjectService } from './directory'
 import type { TaskService } from './tasks'
 
 function toSuggestion(r: Record<string, unknown>): Suggestion {
@@ -26,6 +26,8 @@ export class SuggestionService {
     private readonly db: DatabaseSync,
     private readonly tasks: TaskService,
     private readonly briefs: BriefService,
+    private readonly projects: ProjectService,
+    private readonly people: PersonService,
   ) {}
 
   listPending(): Suggestion[] {
@@ -45,12 +47,17 @@ export class SuggestionService {
   }
 
   reject(id: number): void {
-    this.db.prepare(`UPDATE suggestions SET status = 'rejected', decided_at = ? WHERE id = ? AND status = 'pending'`).run(nowIso(), id)
+    transaction(this.db, () => {
+      const changed = this.db.prepare(`UPDATE suggestions SET status = 'rejected', decided_at = ? WHERE id = ? AND status = 'pending'`).run(nowIso(), id).changes
+      // Tasks that linked to a rejected new project or person just lose the link.
+      if (changed) this.relink(id, { projectSuggestionId: null }, { requesterSuggestionId: null }, { waitingOnSuggestionId: null })
+    })
   }
 
   /**
    * Applies a suggestion, with any edits the user made, and records it as accepted.
-   * Returns the id of the task it created or changed (null for project/person brief updates).
+   * Returns the id of the task it created or changed (null for projects, people and their briefs).
+   * A task linked to a new project or person from the same import creates that too.
    */
   accept(id: number, edits: Partial<SuggestionPayload> = {}): number | null {
     const row = this.db.prepare(`SELECT * FROM suggestions WHERE id = ? AND status = 'pending'`).get(id) as Record<string, unknown> | undefined
@@ -62,7 +69,35 @@ export class SuggestionService {
 
     return transaction(this.db, () => {
       let taskId: number | null = null
+      let refId: number | null = null
+      if (kind === 'new_task' || (kind === 'waiting_on' && !p.taskId)) {
+        if (!p.projectId && p.projectSuggestionId) p.projectId = this.createdBy(p.projectSuggestionId)
+        if (!p.requesterId && p.requesterSuggestionId) p.requesterId = this.createdBy(p.requesterSuggestionId)
+        if (p.waitingOnSuggestionId) this.createdBy(p.waitingOnSuggestionId)
+        p.projectSuggestionId = p.requesterSuggestionId = p.waitingOnSuggestionId = null
+      }
       switch (kind) {
+        case 'new_project': {
+          const name = p.title.trim()
+          if (!name) throw new Error('A new project needs a name.')
+          const existing = this.projects.list().find((x) => x.name.toLowerCase() === name.toLowerCase())
+          const project = existing ?? this.projects.save({ id: 0, name, color: p.color || PROJECT_COLORS[0]!, status: 'active' })
+          if (p.details.trim()) this.appendBrief('project', project.id, p.details, sourceTitle)
+          refId = project.id
+          this.relink(id, { projectSuggestionId: null, projectId: project.id })
+          break
+        }
+        case 'new_person': {
+          const name = p.title.trim()
+          if (!name) throw new Error('A new person needs a name.')
+          const existing = this.people.list().find((x) => x.name.toLowerCase() === name.toLowerCase())
+          // New people start at 3 stars; the AI never guesses how much their requests matter.
+          const person = existing ?? this.people.save({ id: 0, name, role: p.role ?? null, email: p.email ?? null, priorityWeight: 3 })
+          if (p.details.trim()) this.appendBrief('person', person.id, p.details, sourceTitle)
+          refId = person.id
+          this.relink(id, { requesterSuggestionId: null, requesterId: person.id }, { waitingOnSuggestionId: null })
+          break
+        }
         case 'new_task':
           taskId = this.createTask(p, 'open')
           break
@@ -96,10 +131,44 @@ export class SuggestionService {
       }
       if (taskId) this.db.prepare('INSERT OR IGNORE INTO task_sources (work_item_id, source_id) VALUES (?, ?)').run(taskId, sourceId)
       this.db
-        .prepare(`UPDATE suggestions SET status = 'accepted', decided_at = ?, result_task_id = ?, payload = ? WHERE id = ?`)
-        .run(nowIso(), taskId, JSON.stringify(p), id)
+        .prepare(`UPDATE suggestions SET status = 'accepted', decided_at = ?, result_task_id = ?, result_ref_id = ?, payload = ? WHERE id = ?`)
+        .run(nowIso(), taskId, refId, JSON.stringify(p), id)
       return taskId
     })
+  }
+
+  /**
+   * The project or person a new_project / new_person suggestion created, accepting it first if
+   * it's still pending. Null if it was rejected or what it created has since been deleted.
+   */
+  private createdBy(suggestionId: number): number | null {
+    const status = () => this.db.prepare('SELECT kind, status, result_ref_id FROM suggestions WHERE id = ?').get(suggestionId) as Record<string, unknown> | undefined
+    let row = status()
+    if (row?.status === 'pending') {
+      this.accept(suggestionId)
+      row = status()
+    }
+    if (row?.status !== 'accepted' || row.result_ref_id == null) return null
+    const table = row.kind === 'new_project' ? 'projects' : 'people'
+    return this.db.prepare(`SELECT id FROM ${table} WHERE id = ?`).get(Number(row.result_ref_id)) ? Number(row.result_ref_id) : null
+  }
+
+  /**
+   * Updates pending suggestions that link to a new project or person suggestion once it's decided.
+   * Each patch applies where its first key (the link field) currently points at the suggestion.
+   */
+  private relink(suggestionId: number, ...patches: Partial<SuggestionPayload>[]): void {
+    const rows = this.db.prepare(`SELECT id, payload FROM suggestions WHERE status = 'pending' AND id <> ?`).all(suggestionId) as Record<string, unknown>[]
+    const update = this.db.prepare('UPDATE suggestions SET payload = ? WHERE id = ?')
+    for (const row of rows) {
+      const payload = JSON.parse(String(row.payload)) as SuggestionPayload
+      let next = payload
+      for (const patch of patches) {
+        const field = Object.keys(patch)[0] as keyof SuggestionPayload
+        if (payload[field] === suggestionId) next = { ...next, ...patch }
+      }
+      if (next !== payload) update.run(JSON.stringify(next), Number(row.id))
+    }
   }
 
   private requireTask(id: number | null) {

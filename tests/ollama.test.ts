@@ -54,7 +54,7 @@ describe('local AI through Ollama', () => {
   })
 
   it('returns parsed suggestions from the model', async () => {
-    const suggestion = { kind: 'new_task', task_id: null, title: 'Send the deck', details: '', due_date: null, project_id: null, requester_name: null, waiting_on: null, brief_scope: null, brief_owner_id: null, evidence: 'Frank to send the deck' }
+    const suggestion = { kind: 'new_task', task_id: null, title: 'Send the deck', details: '', due_date: null, project_id: null, requester_name: null, waiting_on: null, brief_scope: null, brief_owner_id: null, project_name: null, role: null, email: null, evidence: 'Frank to send the deck' }
     const sent = fakeOllama(() => ({ body: { message: { content: JSON.stringify({ suggestions: [suggestion] }) }, done_reason: 'stop', prompt_eval_count: 900 } }))
     const out = await new OllamaProvider('http://127.0.0.1:11434', 'qwen3:8b').extract(ctx, source('Frank to send the deck'))
     expect(out).toEqual([suggestion])
