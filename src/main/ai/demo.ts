@@ -1,6 +1,6 @@
 import type { PersonBriefInput, ProjectBriefInput } from './brief'
 import type { ExtractionContext, SourceForExtraction } from './context'
-import type { AiProvider } from './provider'
+import type { AiCallLog, AiProvider } from './provider'
 import type { RawSuggestion } from './schema'
 
 const STOP = new Set(['the', 'and', 'for', 'with', 'from', 'into', 'that', 'this', 'about', 'review', 'send', 'draft', 'update', 'new'])
@@ -51,7 +51,24 @@ export class DemoProvider implements AiProvider {
   readonly label = 'Demo AI'
   readonly sendsDataExternally = false
 
-  async extract(ctx: ExtractionContext, source: SourceForExtraction): Promise<RawSuggestion[]> {
+  async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawSuggestion[]> {
+    const startedAt = new Date().toISOString()
+    const out = this.applyRules(ctx, source)
+    log?.record({
+      purpose: 'Find suggestions (demo rules)',
+      endpoint: 'Demo AI on this computer: fixed pattern rules, no prompt',
+      request: { note: 'The demo AI sends no prompt. It scans these lines of the imported item for patterns.', importedItem: source.content },
+      response: { suggestions: out },
+      error: null,
+      startedAt,
+      durationMs: 0,
+      inputTokens: null,
+      outputTokens: null,
+    })
+    return out
+  }
+
+  private applyRules(ctx: ExtractionContext, source: SourceForExtraction): RawSuggestion[] {
     const first = ctx.userName.split(/\s+/)[0]!.toLowerCase()
     const lines = source.content
       .split(/\r?\n|(?<=[.!?])\s+(?=[A-Z])/)

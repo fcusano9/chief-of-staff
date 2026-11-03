@@ -350,6 +350,39 @@ export interface AppInfo {
   restoredFrom: string | null
 }
 
+/** One request to the AI during an import, exactly as sent and received. JSON is pretty-printed. */
+export interface AiCall {
+  id: number
+  purpose: string
+  endpoint: string
+  request: string
+  response: string | null
+  error: string | null
+  startedAt: string
+  durationMs: number
+  inputTokens: number | null
+  outputTokens: number | null
+}
+
+/** One time the AI read an import ("Run again" makes another). The newest few are kept. */
+export interface AiRun {
+  id: number
+  sourceId: number
+  provider: string
+  startedAt: string
+  finishedAt: string | null
+  /** Everything the AI proposed, before the app's checks (JSON). */
+  rawOutput: string | null
+  /** What passed the checks and went to Review (JSON). */
+  keptOutput: string | null
+  rawCount: number | null
+  keptCount: number | null
+  /** Suggestions the app's checks left out of Review, with the reason. */
+  dropped: { kind: string; title: string; reason: string }[]
+  error: string | null
+  calls: AiCall[]
+}
+
 export type BackupKind = 'daily' | 'before-upgrade' | 'before-restore'
 
 export interface BackupInfo {

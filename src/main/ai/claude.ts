@@ -3,7 +3,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { CLAUDE_MODELS } from '@shared/types'
 import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
 import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
-import { AiError, type AiProvider } from './provider'
+import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
 
 /** Models that accept the server-side refusal fallback in its "default" form. */
@@ -68,9 +68,20 @@ export class ClaudeProvider implements AiProvider {
     this.label = CLAUDE_MODELS.find((m) => m.id === model)?.label ?? model
   }
 
-  async extract(ctx: ExtractionContext, source: SourceForExtraction): Promise<RawSuggestion[]> {
+  async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawSuggestion[]> {
     try {
-      const response = await this.client.beta.messages.parse(buildExtractionRequest(this.model, ctx, source))
+      const request = buildExtractionRequest(this.model, ctx, source)
+      const response = await logged(
+        log,
+        { purpose: 'Find suggestions', endpoint: 'Anthropic Messages API (POST /v1/messages; the beta flag is sent as a header)', request: asSent(request) },
+        () => this.client.beta.messages.parse(request),
+        (r) => {
+          // parsed_output is added by the SDK; drop it so this is the API's response as received.
+          const { parsed_output: _parsed, ...raw } = r
+          return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens }
+        },
+        (err) => (err instanceof Anthropic.APIError ? (err.error ?? null) : null),
+      )
       if (response.stop_reason === 'refusal') {
         throw new AiError('Claude declined to process this item. Nothing was changed.')
       }

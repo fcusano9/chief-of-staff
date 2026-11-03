@@ -4,7 +4,10 @@ import { DatabaseSync } from 'node:sqlite'
  * Schema migrations, applied in order. PRAGMA user_version records how many have run.
  * Never edit a shipped migration; add a new one.
  */
-const MIGRATIONS: string[] = [
+/** A migration is SQL, or a function for steps SQL can't express (like adding a column only if missing). */
+export type Migration = string | ((db: DatabaseSync) => void)
+
+export const MIGRATIONS: Migration[] = [
   `
   CREATE TABLE projects (
     id INTEGER PRIMARY KEY,
@@ -125,14 +128,57 @@ const MIGRATIONS: string[] = [
   ALTER TABLE projects ADD COLUMN brief_at TEXT;
   ALTER TABLE projects ADD COLUMN brief_context TEXT;
   `,
+  // AI log: each extraction run of an import, and every request sent to the AI with its raw response.
+  // IF NOT EXISTS because a development build applied this as version 5 on one database (see the next step).
+  `
+  CREATE TABLE IF NOT EXISTS extraction_runs (
+    id INTEGER PRIMARY KEY,
+    source_id INTEGER NOT NULL REFERENCES source_items(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    finished_at TEXT,
+    raw_output TEXT,
+    kept_output TEXT,
+    dropped_output TEXT,
+    error TEXT
+  );
+  CREATE INDEX IF NOT EXISTS ix_extraction_runs_source ON extraction_runs(source_id);
+  CREATE TABLE IF NOT EXISTS ai_calls (
+    id INTEGER PRIMARY KEY,
+    run_id INTEGER NOT NULL REFERENCES extraction_runs(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    request TEXT NOT NULL,
+    response TEXT,
+    error TEXT,
+    started_at TEXT NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    input_tokens INTEGER,
+    output_tokens INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS ix_ai_calls_run ON ai_calls(run_id);
+  `,
+  // Repair: the AI log and the project overview were built in parallel and both shipped as
+  // version 5. A database that got the AI log as version 5 skipped the project columns above;
+  // add whatever is missing. A no-op everywhere else.
+  (db) => {
+    addMissingColumns(db, 'projects', ['overview', 'brief', 'brief_by', 'brief_at', 'brief_context'])
+    addMissingColumns(db, 'extraction_runs', ['dropped_output'])
+  },
 ]
+
+/** Adds TEXT columns that aren't there yet (SQLite has no ADD COLUMN IF NOT EXISTS). */
+function addMissingColumns(db: DatabaseSync, table: string, columns: string[]): void {
+  const existing = new Set((db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name))
+  for (const column of columns) if (!existing.has(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`)
+}
 
 /** The schema version this build of the app writes. Backups newer than this can't be restored. */
 export const SCHEMA_VERSION = MIGRATIONS.length
 
 export interface MigrateOptions {
   /** Defaults to the app's migrations; tests pass their own. */
-  migrations?: string[]
+  migrations?: Migration[]
   /**
    * Runs before an existing database is upgraded (never for a brand-new one). Used to take a
    * safety copy. If it throws, nothing is migrated and the error is passed on.
@@ -161,7 +207,9 @@ export function migrate(db: DatabaseSync, { migrations = MIGRATIONS, beforeUpgra
   for (let i = current; i < migrations.length; i++) {
     db.exec('BEGIN')
     try {
-      db.exec(migrations[i]!)
+      const step = migrations[i]!
+      if (typeof step === 'string') db.exec(step)
+      else step(db)
       db.exec(`PRAGMA user_version = ${i + 1}`)
       db.exec('COMMIT')
     } catch (err) {

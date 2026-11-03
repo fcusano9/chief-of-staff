@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import type { ImportRequest, ImportResult, SourceItem, SourceKind } from '@shared/types'
+import type { AiRun, ImportRequest, ImportResult, SourceItem, SourceKind } from '@shared/types'
 import { buildExtractionContext } from '../ai/context'
 import type { AiProvider } from '../ai/provider'
-import { validateSuggestions } from '../ai/schema'
+import { validateSuggestions, type DroppedSuggestion } from '../ai/schema'
 import { nowIso, transaction } from '../db'
+import { AiLogService } from './ai-log'
 
 /** Removes WEBVTT/SRT timing lines and cue numbers so transcripts read as plain text. */
 export function cleanTranscript(text: string): string {
@@ -53,7 +54,16 @@ export class SourceService {
     private readonly db: DatabaseSync,
     private readonly provider: () => AiProvider,
     private readonly userName: () => string,
-  ) {}
+  ) {
+    this.aiLog = new AiLogService(db)
+  }
+
+  private readonly aiLog: AiLogService
+
+  /** What was sent to the AI and what came back, for each time this import was read. */
+  aiRuns(sourceId: number): AiRun[] {
+    return this.aiLog.runsFor(sourceId)
+  }
 
   list(limit = 30): SourceItem[] {
     return (this.db.prepare(`${SOURCE_SELECT} ORDER BY s.imported_at DESC, s.id DESC LIMIT ?`).all(limit) as Record<string, unknown>[]).map(toSource)
@@ -86,17 +96,25 @@ export class SourceService {
     const row = this.db.prepare('SELECT kind, title, from_name, occurred_at, content FROM source_items WHERE id = ?').get(sourceId) as Record<string, unknown> | undefined
     if (!row) throw new Error(`Source ${sourceId} not found`)
     const ctx = buildExtractionContext(this.db, this.userName())
+    let runId: number | null = null
     try {
       // Inside the try: a misconfigured provider (e.g. no API key) is reported on the source like any other failure.
       const provider = this.provider()
-      const raw = await provider.extract(ctx, {
-        kind: row.kind as SourceKind,
-        title: String(row.title),
-        fromName: (row.from_name as string) ?? null,
-        occurredAt: String(row.occurred_at),
-        content: String(row.content),
-      })
-      const drafts = validateSuggestions(raw, ctx)
+      runId = this.aiLog.startRun(sourceId, provider.label)
+      const raw = await provider.extract(
+        ctx,
+        {
+          kind: row.kind as SourceKind,
+          title: String(row.title),
+          fromName: (row.from_name as string) ?? null,
+          occurredAt: String(row.occurred_at),
+          content: String(row.content),
+        },
+        this.aiLog.logFor(runId),
+      )
+      const dropped: DroppedSuggestion[] = []
+      const drafts = validateSuggestions(raw, ctx, dropped)
+      this.aiLog.finishRun(runId, { raw, kept: drafts, dropped })
       const now = nowIso()
       transaction(this.db, () => {
         this.db.prepare(`DELETE FROM suggestions WHERE source_id = ? AND status = 'pending'`).run(sourceId)
@@ -119,6 +137,7 @@ export class SourceService {
       return { source: this.get(sourceId)!, duplicate: false, suggestionsCreated: drafts.length, error: null }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
+      this.aiLog.finishRun(runId ?? this.aiLog.startRun(sourceId, 'AI not set up'), { error: message })
       this.db.prepare('UPDATE source_items SET extract_error = ? WHERE id = ?').run(message, sourceId)
       return { source: this.get(sourceId)!, duplicate: false, suggestionsCreated: 0, error: message }
     }

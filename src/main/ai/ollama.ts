@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { SuggestionKind } from '@shared/types'
 import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
 import { ALL_KINDS, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
-import { AiError, type AiProvider } from './provider'
+import { AiError, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
 
 /** Context window bounds. Ollama's default is small and it silently drops the start of longer prompts. */
@@ -185,18 +185,18 @@ export class OllamaProvider implements AiProvider {
     this.options = { ...DEFAULT_OLLAMA_OPTIONS, ...options }
   }
 
-  async extract(ctx: ExtractionContext, source: SourceForExtraction): Promise<RawSuggestion[]> {
+  async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawSuggestion[]> {
     const { reasoning, passes } = this.options
     this.lastStats = { requests: 0, promptTokens: 0, outputTokens: 0, promptSeconds: 0, outputSeconds: 0 }
-    if (passes === 'single') return this.suggest(buildOllamaRequest(this.model, ctx, source, reasoning))
+    if (passes === 'single') return this.suggest(buildOllamaRequest(this.model, ctx, source, reasoning), 'Find suggestions', log)
 
-    const tasks = await this.suggest(buildOllamaRequest(this.model, ctx, source, reasoning, TASK_KINDS))
-    const directory = await this.suggest(buildOllamaRequest(this.model, ctx, source, reasoning, DIRECTORY_KINDS))
+    const tasks = await this.suggest(buildOllamaRequest(this.model, ctx, source, reasoning, TASK_KINDS), 'Pass 1 of 3: tasks, updates, done, waiting on', log)
+    const directory = await this.suggest(buildOllamaRequest(this.model, ctx, source, reasoning, DIRECTORY_KINDS), 'Pass 2 of 3: projects, people, context', log)
     const projects = directory.filter((s) => s.kind === 'new_project').map((s) => s.title)
     const people = directory.filter((s) => s.kind === 'new_person').map((s) => s.title)
     const creating = tasks.filter((t) => t.kind === 'new_task' || (t.kind === 'waiting_on' && t.task_id == null))
     if (creating.length && (projects.length || people.length)) {
-      const body = await this.chat(buildLinkRequest(this.model, source, creating, projects, people, reasoning))
+      const body = await this.chat(buildLinkRequest(this.model, source, creating, projects, people, reasoning), 'Pass 3 of 3: link new tasks to new projects and people', log)
       const parsed = LinkSchema.safeParse(this.parseJson(body))
       // Linking is a bonus: if it fails, the tasks are still useful without links.
       for (const link of parsed.success ? parsed.data.links : []) {
@@ -221,8 +221,8 @@ export class OllamaProvider implements AiProvider {
     return parsed.data.brief
   }
 
-  private async suggest(request: ReturnType<typeof chatRequest>): Promise<RawSuggestion[]> {
-    const parsed = ExtractionSchema.safeParse(this.parseJson(await this.chat(request)))
+  private async suggest(request: ReturnType<typeof chatRequest>, purpose: string, log?: AiCallLog): Promise<RawSuggestion[]> {
+    const parsed = ExtractionSchema.safeParse(this.parseJson(await this.chat(request, purpose, log)))
     if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
     return parsed.data.suggestions
   }
@@ -235,8 +235,13 @@ export class OllamaProvider implements AiProvider {
     }
   }
 
-  private async chat(request: ReturnType<typeof chatRequest>): Promise<OllamaChatResponse> {
-    const body = await this.call<OllamaChatResponse>('/api/chat', request)
+  private async chat(request: ReturnType<typeof chatRequest>, purpose = 'Request', log?: AiCallLog): Promise<OllamaChatResponse> {
+    const body = await logged(
+      log,
+      { purpose, endpoint: `Ollama ${new URL('/api/chat', this.baseUrl).href}`, request },
+      () => this.call<OllamaChatResponse>('/api/chat', request),
+      (b) => ({ response: b, inputTokens: b.prompt_eval_count ?? null, outputTokens: b.eval_count ?? null }),
+    )
     if (body.prompt_eval_count != null && body.prompt_eval_count >= request.options.num_ctx) {
       throw new AiError('The item was cut off because it is too long for the local model. Import a shorter section.')
     }

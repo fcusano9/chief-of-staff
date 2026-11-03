@@ -1,4 +1,5 @@
 import type {
+  AiRun,
   AiStatus,
   ImportRequest,
   ImportResult,
@@ -66,6 +67,8 @@ export interface Api {
   'sources.extract': (sourceId: number) => ImportResult
   'sources.list': () => SourceItem[]
   'sources.delete': (id: number) => void
+  /** Every time the AI read this import: the exact requests sent and responses received. */
+  'sources.aiRuns': (sourceId: number) => AiRun[]
   'suggestions.listPending': () => Suggestion[]
   'suggestions.count': () => number
   'suggestions.accept': (id: number, edits?: Partial<SuggestionPayload>) => number | null
@@ -114,6 +117,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'sources.extract',
   'sources.list',
   'sources.delete',
+  'sources.aiRuns',
   'suggestions.listPending',
   'suggestions.count',
   'suggestions.accept',

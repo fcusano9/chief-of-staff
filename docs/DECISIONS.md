@@ -2,6 +2,20 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-03 · Database versions 5–7 after parallel work
+The project overview (PR 9) and the AI log (PR 10) were built in parallel, and both added schema version 5. Frank's Windows database had already applied the AI log as version 5, from an installed development build.
+- **Resolution:**
+  - The project columns, already on `main`, stay version 5.
+  - The AI log becomes version 6, using `CREATE … IF NOT EXISTS`, so re-running it is harmless.
+  - Version 7 is a repair step that adds any missing project or AI-log columns. Migrations can now be functions for steps like this.
+- **Lesson:** when two branches both add a migration, the second one to merge renumbers and must handle databases that already ran the other branch's build.
+
+### 2026-11-03 · AI log per import (Frank)
+Frank wants to see the exact prompts sent to the AI and the exact responses, so he can debug imports.
+- **Storage:** every request is recorded as sent, and every response as received. The SDK-added `parsed_output` is stripped, and helper functions drop out as they do on the wire. Records are tied to the import's extraction run, along with the app's keep/drop decisions and reasons.
+- **Retention:** the newest 5 runs are kept per import, locally only.
+- **Where it's shown:** an "AI log" page, opened from Import and Review, with tabs for Instructions, Message, Answer form, Response and Full request. The design was approved from a mockup.
+
 ### 2026-11-03 · Projects: hand-written overview, AI status brief, history in a window (Frank)
 Frank asked for a project overview under the name, like the People brief, and for the project brief to be a short, high-level status the AI writes from the full history of imports, with that history out of the way behind a button. **Frank's choices** (from the approved mockup `design/project-overview-brief.html`, after three rounds): the **overview** is one sentence (two at most) that he writes himself, because it rarely changes, so it has no Regenerate; a pencil icon (or clicking the text) edits it; it's in the softer muted color, and the project name is bigger (20px), so the two don't look alike; it also shows under each name in the list. The **project brief** is a status: where it stands with dated decisions, a "Next:" line and an "Open:" line, under 120 words. It works like the People brief: Regenerate shows a suggestion with Keep, Discard and Try again, Edit writes it by hand, nothing changes until Keep, and a "new notes since this brief" hint replaces automatic rewrites. The **History** button opens a window with every dated note, newest first, with new notes marked; Frank can add a note or edit it all as text there. **How it's stored:** `projects.overview`, and `projects.brief` with who wrote it, when, and the history it was written from (to count new notes). The history is the existing project `context_briefs.summary`, unchanged, so nothing was migrated: existing projects start with no overview or brief. Accepted "Project context" suggestions keep adding dated lines to the history. **What the AI reads on imports:** each project's name, overview, status brief (or the newest 400 characters of history when there's no brief) and standing instructions. Before, it read the first 400 characters of the brief box, which were the oldest notes. **Brief input:** the history (only the newest ~24,000 characters if it's very long, so it fits the local model), the open tasks with due dates, the overview, standing instructions and today's date. Claude writes it at low effort with structured output; Ollama and the demo AI implement the same `writeProjectBrief`.
 

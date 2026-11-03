@@ -77,7 +77,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   The preload exposes exactly the listed channels.
 - **Schema change:** append a new SQL string to `MIGRATIONS` in `src/main/db.ts`. Never edit a shipped migration. `transaction()` calls nest by joining the outer transaction.
 - **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, the prompt in `ai/context.ts`, `SuggestionService.accept`, and `ReviewScreen`.
-- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]` from `extract` (validation is shared) and a sentence from `writePersonBrief`.
+- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]` from `extract` (validation is shared) and a sentence from `writePersonBrief`. Wrap every request in `logged()` with the `log` that `extract` receives, so the AI log shows it exactly as sent and received. Never put the API key in the logged request.
 - **Claude API changes:** use the official SDK only. Check current model ids and parameters against Anthropic's docs; don't rely on memory, because the API changes often. The default model is `claude-opus-5-5` (Frank can choose Sonnet or Haiku 5.5 in Settings).
 
 ## Product and UI conventions
@@ -113,6 +113,10 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **Local model (Ollama):** runs on this computer, so nothing is sent anywhere. If the Ollama address points at another machine, the app says data is sent there.
 - **Claude:** when selected, each import's text plus open-task titles, briefs and names are sent to Anthropic. The Settings screen says so explicitly.
 - **Prompt injection:** imported content is fenced as data in the prompt, and the system prompt tells the model to ignore instructions inside it.
+- **AI log** (Import or Review → "AI log"):
+  - Each extraction run is stored in `extraction_runs`, and each request in `ai_calls` (`services/ai-log.ts`). That covers the exact request, the raw response, timing, tokens, everything proposed, what reached Review, and what was dropped and why (`validateSuggestions`' `dropped` list).
+  - The last 5 runs per import are kept, and they're deleted with the import. Everything stays in the local database.
+  - The prompts themselves live in `ai/context.ts` (`buildSystemPrompt`, `buildUserPrompt`) and `ai/schema.ts` (the answer form).
 
 ## Environment notes (Frank's Windows PC)
 
