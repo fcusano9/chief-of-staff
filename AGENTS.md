@@ -15,6 +15,7 @@ It tracks tasks, projects, people and a waiting-on list, ranks tasks by a transp
 3. **Show mockups before building new UI.** For a new screen or a visible redesign, build a clickable prototype first (see `design/`) and get approval.
 4. **No secrets in files or logs.** API keys go through `KeyStore`, which uses Electron `safeStorage`. The UI may learn that a key exists, never its value.
 5. **Commit or push only when Frank asks.** Work on a branch, and open a PR into `main` when asked. Commit messages end with a `Co-Authored-By:` line for the AI that wrote them.
+6. **Keep PR descriptions short (Frank's preference).** Use a one-line why, 3–6 bullets of what changed, one line on testing, and notes only when something needs his attention (not verified, or a decision for him). Aim for about 150 words, with no per-file detail.
 
 ## Working with Frank
 
