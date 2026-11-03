@@ -21,7 +21,7 @@ const input = (o: Partial<TaskInput>): TaskInput => ({
 })
 const raw = (o: Partial<RawSuggestion>): RawSuggestion => ({
   kind: 'new_task', task_id: null, title: '', details: '', due_date: null, project_id: null, requester_name: null,
-  waiting_on: null, brief_scope: null, brief_owner_id: null, project_name: null, role: null, email: null, evidence: 'quote', ...o,
+  waiting_on: null, brief_scope: null, brief_owner_id: null, project_name: null, role: null, company: null, email: null, evidence: 'quote', ...o,
 })
 
 /** A provider that returns canned output, standing in for Claude. */
@@ -34,6 +34,9 @@ class FakeProvider implements AiProvider {
     this.calls++
     if (this.output instanceof Error) throw this.output
     return this.output
+  }
+  async writePersonBrief() {
+    return 'A brief.'
   }
   async test() {
     return 'ok'
@@ -88,7 +91,7 @@ describe('AI import and review queue', () => {
   })
 
   it('matches requesters to people by full or unique first name', () => {
-    const dana = people.save({ id: 0, name: 'Dana Lee', role: 'VP', email: null, priorityWeight: 5 })
+    const dana = people.save({ id: 0, name: 'Dana Lee', role: 'VP', company: null, email: null, priorityWeight: 5 })
     const ctx = buildExtractionContext(db, 'Frank Cusano')
     const [a, b, c] = validateSuggestions(
       [raw({ title: 'A', requester_name: 'Dana Lee' }), raw({ title: 'B', requester_name: 'Dana' }), raw({ title: 'C', requester_name: 'Someone Else' })],
@@ -240,7 +243,7 @@ describe('AI import and review queue', () => {
   })
   it('proposes new projects and people only when they are not already known, and links tasks to them', () => {
     projects.save({ id: 0, name: 'Partner portal', color: '#378ADD', status: 'active' })
-    people.save({ id: 0, name: 'Dana Lee', role: 'VP', email: null, priorityWeight: 5 })
+    people.save({ id: 0, name: 'Dana Lee', role: 'VP', company: null, email: null, priorityWeight: 5 })
     const ctx = buildExtractionContext(db, 'Frank Cusano')
     const drafts = validateSuggestions(
       [
@@ -329,7 +332,7 @@ describe('AI import and review queue', () => {
     const [project, person] = suggestions.listPending()
     suggestions.accept(project!.id, { title: 'Dealer training', color: '#E24B4A' })
     expect(projects.list()[0]).toMatchObject({ name: 'Dealer training', color: '#E24B4A' })
-    people.save({ id: 0, name: 'Alex Rivera', role: 'Added by hand', email: null, priorityWeight: 4 })
+    people.save({ id: 0, name: 'Alex Rivera', role: 'Added by hand', company: null, email: null, priorityWeight: 4 })
     suggestions.accept(person!.id)
     expect(people.list()).toHaveLength(1)
     expect(people.list()[0]).toMatchObject({ role: 'Added by hand', priorityWeight: 4 })

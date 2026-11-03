@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { CLAUDE_MODELS } from '@shared/types'
+import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
 import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
 import { AiError, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
@@ -9,9 +10,11 @@ import { ExtractionSchema, type RawSuggestion } from './schema'
 const FALLBACK_MODELS = new Set(['claude-opus-5-5', 'claude-sonnet-5-5'])
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01'
 
+/** If a safety classifier declines, the API retries on a fallback model instead of failing. */
+const fallbackFor = (model: string) => (FALLBACK_MODELS.has(model) ? { betas: [FALLBACK_BETA], fallbacks: 'default' as const } : {})
+
 /** The request sent for one extraction. Exported so tests can check it without calling the API. */
 export function buildExtractionRequest(model: string, ctx: ExtractionContext, source: SourceForExtraction) {
-  const withFallback = FALLBACK_MODELS.has(model)
   return {
     model,
     max_tokens: 16000,
@@ -19,8 +22,22 @@ export function buildExtractionRequest(model: string, ctx: ExtractionContext, so
     output_config: { effort: 'medium' as const, format: betaZodOutputFormat(ExtractionSchema) },
     system: buildSystemPrompt(ctx),
     messages: [{ role: 'user' as const, content: buildUserPrompt(ctx, source) }],
-    // If a safety classifier declines, the API retries on a fallback model instead of failing.
-    ...(withFallback ? { betas: [FALLBACK_BETA], fallbacks: 'default' as const } : {}),
+    ...fallbackFor(model),
+  }
+}
+
+/** The request for a person's one-line brief. */
+export function buildBriefRequest(model: string, input: PersonBriefInput) {
+  const { system, user } = buildBriefPrompt(input)
+  return {
+    model,
+    // Room for a short answer plus the model's thinking, which counts toward the limit.
+    max_tokens: 4000,
+    // Low effort: summarizing a few notes needs little reasoning.
+    output_config: { effort: 'low' as const, format: betaZodOutputFormat(PersonBriefSchema) },
+    system,
+    messages: [{ role: 'user' as const, content: user }],
+    ...fallbackFor(model),
   }
 }
 
@@ -48,6 +65,18 @@ export class ClaudeProvider implements AiProvider {
       }
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
       return response.parsed_output.suggestions
+    } catch (err) {
+      throw toAiError(err)
+    }
+  }
+
+  async writePersonBrief(input: PersonBriefInput): Promise<string> {
+    try {
+      const response = await this.client.beta.messages.parse(buildBriefRequest(this.model, input))
+      if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this brief. Nothing was changed.')
+      if (response.stop_reason === 'max_tokens') throw new AiError('The brief was cut off. Try again.')
+      if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
+      return response.parsed_output.brief
     } catch (err) {
       throw toAiError(err)
     }

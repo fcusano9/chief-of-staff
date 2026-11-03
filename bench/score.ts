@@ -14,7 +14,7 @@ export interface CaseScore {
 }
 
 const describe = (d: SuggestionDraft) => `${d.kind}${d.payload.taskId ? ` #${d.payload.taskId}` : ''}: ${d.payload.title}${d.payload.dueDate ? ` (due ${d.payload.dueDate})` : ''}`
-const describeExpect = (e: Expect) => `${e.kinds.join('/')}${e.taskId ? ` #${e.taskId}` : ''}${e.text ? ` ${e.text}` : ''}${e.due ? ` due ${e.due.join(' or ')}` : ''}`
+const describeExpect = (e: Expect) => `${e.kinds.join('/')}${e.taskId ? ` #${e.taskId}` : ''}${e.text ? ` ${e.text}` : ''}${e.due ? ` due ${e.due.join(' or ')}` : ''}${e.company ? ` at ${e.company}` : ''}`
 
 function matches(d: SuggestionDraft, e: Expect | Forbid): boolean {
   // "Must not" checks look at the title only: a good answer can mention other people's work in its details.
@@ -24,6 +24,7 @@ function matches(d: SuggestionDraft, e: Expect | Forbid): boolean {
   if (e.text && !e.text.test(text)) return false
   if ('waitingOn' in e && e.waitingOn && !e.waitingOn.test(d.payload.waitingOn ?? text)) return false
   if ('linksProject' in e && e.linksProject && !e.linksProject.test(d.links?.project ?? '')) return false
+  if ('company' in e && e.company && !e.company.test(d.payload.company ?? '')) return false
   return true
 }
 

@@ -2,6 +2,9 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-02 · People: company, filters, and a one-line brief apart from the context history (Frank)
+Frank asked for a Company field, filters on the People list, and a person brief that is just one sentence (two at most) on who someone is and what they do, while keeping the full history. **Frank's choices** (from the approved mockup `design/people-company-brief.html`): the brief is plain text right under the name with **Edit** and **Regenerate**; Regenerate shows the AI's sentence in place with Keep, Discard and Try again, and nothing changes until Keep; the AI writes a brief only when he clicks, with a "new notes since this brief" hint instead of automatic rewrites; filters are **Company** (including "No company") and **Open asks** (tasks they asked for, plus tasks waiting on them, matched by name); Company sits above Role; and the AI fills in Company for a new person only when the import states it. **How it's stored:** `people.brief` (plus who wrote it, when, and the history it was written from, to count new notes); the existing person brief summary is unchanged and is now labeled "Context history", so nothing was migrated or lost. **What the AI reads on imports:** each person's name, role, company and one-line brief, or the newest 300 characters of their history when there's no brief. Before, it read the first 200 characters, which were the oldest notes. Claude writes briefs at low effort with structured output; Ollama and the demo AI implement the same `writePersonBrief`.
+
 ### 2026-11-02 · Local model: split passes and a calendar; Claude Opus as the yardstick
 Frank asked for better local results even if slower. Benchmarked on the M5 MacBook Pro against Claude Opus 5.5 (8 cases, 19 expected suggestions, same scoring):
 

@@ -92,7 +92,7 @@ export class SuggestionService {
           if (!name) throw new Error('A new person needs a name.')
           const existing = this.people.list().find((x) => x.name.toLowerCase() === name.toLowerCase())
           // New people start at 3 stars; the AI never guesses how much their requests matter.
-          const person = existing ?? this.people.save({ id: 0, name, role: p.role ?? null, email: p.email ?? null, priorityWeight: 3 })
+          const person = existing ?? this.people.save({ id: 0, name, role: p.role ?? null, company: p.company ?? null, email: p.email ?? null, priorityWeight: 3 })
           if (p.details.trim()) this.appendBrief('person', person.id, p.details, sourceTitle)
           refId = person.id
           this.relink(id, { requesterSuggestionId: null, requesterId: person.id }, { waitingOnSuggestionId: null })

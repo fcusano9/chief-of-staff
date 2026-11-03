@@ -1,3 +1,4 @@
+import type { PersonBriefInput } from './brief'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { AiProvider } from './provider'
 import type { RawSuggestion } from './schema'
@@ -65,7 +66,7 @@ export class DemoProvider implements AiProvider {
       const mentionsMe = new RegExp(`\\b(${first}|i|i'll|me)\\b`).test(lower)
       const actiony = /\b(action item|todo|to do|follow up|follow-up|need to|needs to|will send|will share|please|owner:|assigned to)\b/.test(lower)
       const task = this.matchTask(line, ctx)
-      const base = { task_id: null, due_date: findDueDate(line, ctx.today), project_id: null, project_name: null, requester_name: findRequester(line), waiting_on: null, brief_scope: null, brief_owner_id: null, role: null, email: null, evidence: line.slice(0, 300) }
+      const base = { task_id: null, due_date: findDueDate(line, ctx.today), project_id: null, project_name: null, requester_name: findRequester(line), waiting_on: null, brief_scope: null, brief_owner_id: null, role: null, company: null, email: null, evidence: line.slice(0, 300) }
 
       const waiting = line.match(/\bwaiting (?:on|for) ([^.,;:]+)/i)
       if (waiting) {
@@ -79,6 +80,15 @@ export class DemoProvider implements AiProvider {
       }
     }
     return out
+  }
+
+  /** "Alex Rivera, Training manager at Crestron. Owns the Q2 certification courses." from role, company and the newest note. */
+  async writePersonBrief(input: PersonBriefInput): Promise<string> {
+    const who = [input.role, input.company ? `${input.role ? 'at ' : ''}${input.company}` : null].filter(Boolean).join(' ')
+    const newest = input.history.split('\n').map((l) => l.trim()).filter(Boolean).pop() ?? ''
+    // Notes from Review look like 'Nov 2, 2026: text (from “Title”)'.
+    const fact = newest.replace(/^[^:]{0,24}\d{4}:\s*/, '').replace(/\s*\(from “[^”]*”\)$/, '').replace(/[.!]*$/, '')
+    return `${input.name}${who ? `, ${who}` : ''}.${fact ? ` ${fact[0]!.toUpperCase()}${fact.slice(1)}.` : ''}`
   }
 
   async test(): Promise<string> {

@@ -76,7 +76,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   The preload exposes exactly the listed channels.
 - **Schema change:** append a new SQL string to `MIGRATIONS` in `src/main/db.ts`. Never edit a shipped migration. `transaction()` calls nest by joining the outer transaction.
 - **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, the prompt in `ai/context.ts`, `SuggestionService.accept`, and `ReviewScreen`.
-- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]`; validation is shared.
+- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]` from `extract` (validation is shared) and a sentence from `writePersonBrief`.
 - **Claude API changes:** use the official SDK only. Check current model ids and parameters against Anthropic's docs; don't rely on memory, because the API changes often. The default model is `claude-opus-5-5` (Frank can choose Sonnet or Haiku 5.5 in Settings).
 
 ## Product and UI conventions
@@ -92,6 +92,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **Project colors:** tasks are themed with their project's color. Tasks with no project get no label and a neutral stripe.
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".
 - **Context briefs:** every project, task and person has a summary and standing instructions, so the AI never needs things re-explained. The AI request includes these briefs.
+- **People** also have a one-line brief (`people.brief`), shown under their name. The AI writes it only when Frank clicks Regenerate, as a suggestion he keeps or discards, and he can edit it by hand. Their context summary is labeled "Context history" and keeps every dated note. Imports send the one-line brief, or the newest notes when there's none.
 
 ## Data and privacy
 

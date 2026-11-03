@@ -105,6 +105,16 @@ const MIGRATIONS: string[] = [
   `
   ALTER TABLE suggestions ADD COLUMN result_ref_id INTEGER;
   `,
+  // People: company, and a one-line brief kept apart from the context history (the person's
+  // context_briefs.summary). brief_context is the history the brief was written from, so notes
+  // added since can be counted.
+  `
+  ALTER TABLE people ADD COLUMN company TEXT;
+  ALTER TABLE people ADD COLUMN brief TEXT;
+  ALTER TABLE people ADD COLUMN brief_by TEXT;
+  ALTER TABLE people ADD COLUMN brief_at TEXT;
+  ALTER TABLE people ADD COLUMN brief_context TEXT;
+  `,
 ]
 
 /** Opens (creating if needed) the database and brings its schema up to date. */

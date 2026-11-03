@@ -75,7 +75,7 @@ describe('data services', () => {
   })
 
   it('puts higher priority first and hides done tasks', () => {
-    const vip = people.save({ id: 0, name: 'VP', role: null, email: null, priorityWeight: 5 })
+    const vip = people.save({ id: 0, name: 'VP', role: null, company: null, email: null, priorityWeight: 5 })
     tasks.save(input({ title: 'Low' }))
     tasks.save(input({ title: 'High', dueDate: yesterday(), requesterId: vip.id }))
     const done = tasks.save(input({ title: 'Finished' }))

@@ -24,7 +24,8 @@ const ACTIVE_SQL = `w.status IN (${ACTIVE_STATUSES.map((s) => `'${s}'`).join(', 
 const SELECT = `
   SELECT w.*,
          p.id AS p_id, p.name AS p_name, p.color AS p_color, p.status AS p_status, p.created_at AS p_created_at,
-         r.id AS r_id, r.name AS r_name, r.role AS r_role, r.email AS r_email, r.priority_weight AS r_weight
+         r.id AS r_id, r.name AS r_name, r.role AS r_role, r.company AS r_company, r.email AS r_email, r.priority_weight AS r_weight,
+         r.brief AS r_brief, r.brief_by AS r_brief_by, r.brief_at AS r_brief_at
   FROM work_items w
   LEFT JOIN projects p ON p.id = w.project_id
   LEFT JOIN people r ON r.id = w.requester_id`
@@ -37,7 +38,8 @@ function toTask(row: Row): Task {
   const requester: Person | null =
     row.r_id == null
       ? null
-      : { id: Number(row.r_id), name: String(row.r_name), role: (row.r_role as string) ?? null, email: (row.r_email as string) ?? null, priorityWeight: Number(row.r_weight) }
+      : { id: Number(row.r_id), name: String(row.r_name), role: (row.r_role as string) ?? null, company: (row.r_company as string) ?? null, email: (row.r_email as string) ?? null,
+          priorityWeight: Number(row.r_weight), brief: (row.r_brief as string) ?? null, briefBy: (row.r_brief_by as Person['briefBy']) ?? null, briefAt: (row.r_brief_at as string) ?? null }
   return {
     id: Number(row.id),
     title: String(row.title),

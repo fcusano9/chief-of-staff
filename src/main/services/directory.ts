@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import type { BriefScope, ContextBrief, Person, PersonSummary, Project, ProjectSummary } from '@shared/types'
+import type { BriefScope, ContextBrief, Person, PersonInput, PersonSummary, Project, ProjectSummary } from '@shared/types'
 import { ACTIVE_STATUSES } from '@shared/types'
 import { nowIso, transaction } from '../db'
 
@@ -44,30 +44,62 @@ export class ProjectService {
 export class PersonService {
   constructor(private readonly db: DatabaseSync) {}
 
-  /** Everyone, most important first, with their open-request counts. */
+  /**
+   * Everyone, most important first, with their open asks, the tasks waiting on them, and how many
+   * context notes arrived since their brief was written.
+   */
   list(): PersonSummary[] {
     const rows = this.db
       .prepare(
-        `SELECT p.*, (SELECT COUNT(*) FROM work_items w WHERE w.requester_id = p.id AND w.status IN ${ACTIVE_IN}) AS open_count
-         FROM people p ORDER BY p.priority_weight DESC, p.name COLLATE NOCASE`,
+        `SELECT p.*, IFNULL(b.summary, '') AS history,
+           (SELECT COUNT(*) FROM work_items w WHERE w.requester_id = p.id AND w.status IN ${ACTIVE_IN}) AS open_count,
+           (SELECT COUNT(*) FROM work_items w WHERE w.status = 'waiting_on' AND TRIM(w.waiting_on) = p.name COLLATE NOCASE
+              AND (w.requester_id IS NULL OR w.requester_id <> p.id)) AS waiting_count
+         FROM people p LEFT JOIN context_briefs b ON b.scope = 'person' AND b.owner_id = p.id
+         ORDER BY p.priority_weight DESC, p.name COLLATE NOCASE`,
       )
       .all() as Record<string, unknown>[]
-    return rows.map((r) => ({ ...toPerson(r), openCount: Number(r.open_count) }))
+    return rows.map((r) => ({
+      ...toPerson(r),
+      openCount: Number(r.open_count),
+      waitingCount: Number(r.waiting_count),
+      newNotes: r.brief ? countNewNotes(String(r.history), String(r.brief_context ?? '')) : 0,
+    }))
   }
 
-  save(person: Omit<Person, 'id'> & { id: number }): Person {
+  get(id: number): Person | null {
+    const row = this.db.prepare('SELECT * FROM people WHERE id = ?').get(id) as Record<string, unknown> | undefined
+    return row ? toPerson(row) : null
+  }
+
+  save(person: PersonInput): Person {
     const name = person.name.trim()
     if (!name) throw new Error('A person needs a name.')
     const weight = Math.min(5, Math.max(1, Math.round(person.priorityWeight)))
     const role = person.role?.trim() || null
+    const company = person.company?.trim() || null
     const email = person.email?.trim() || null
     let id = person.id
     if (id) {
-      this.db.prepare('UPDATE people SET name = ?, role = ?, email = ?, priority_weight = ? WHERE id = ?').run(name, role, email, weight, id)
+      this.db.prepare('UPDATE people SET name = ?, role = ?, company = ?, email = ?, priority_weight = ? WHERE id = ?').run(name, role, company, email, weight, id)
     } else {
-      id = Number(this.db.prepare('INSERT INTO people (name, role, email, priority_weight) VALUES (?, ?, ?, ?)').run(name, role, email, weight).lastInsertRowid)
+      id = Number(this.db.prepare('INSERT INTO people (name, role, company, email, priority_weight) VALUES (?, ?, ?, ?, ?)').run(name, role, company, email, weight).lastInsertRowid)
     }
     return toPerson(this.db.prepare('SELECT * FROM people WHERE id = ?').get(id) as Record<string, unknown>)
+  }
+
+  /**
+   * Sets the one-line brief (empty text clears it) and remembers the context history it was
+   * written from, so later notes show as new.
+   */
+  saveBrief(id: number, text: string, by: 'ai' | 'user'): Person {
+    const brief = text.replace(/\s+/g, ' ').trim().slice(0, 600) || null
+    const history = (this.db.prepare(`SELECT summary FROM context_briefs WHERE scope = 'person' AND owner_id = ?`).get(id) as { summary: string } | undefined)?.summary ?? ''
+    const changed = this.db
+      .prepare('UPDATE people SET brief = ?, brief_by = ?, brief_at = ?, brief_context = ? WHERE id = ?')
+      .run(brief, brief ? by : null, brief ? nowIso() : null, brief ? history : null, id).changes
+    if (!changed) throw new Error('That person no longer exists.')
+    return this.get(id)!
   }
 
   /** Deletes the person; tasks they requested keep existing with no requester. */
@@ -108,5 +140,22 @@ function toProject(r: Record<string, unknown>): Project {
 }
 
 function toPerson(r: Record<string, unknown>): Person {
-  return { id: Number(r.id), name: String(r.name), role: (r.role as string) ?? null, email: (r.email as string) ?? null, priorityWeight: Number(r.priority_weight) }
+  return {
+    id: Number(r.id),
+    name: String(r.name),
+    role: (r.role as string) ?? null,
+    company: (r.company as string) ?? null,
+    email: (r.email as string) ?? null,
+    priorityWeight: Number(r.priority_weight),
+    brief: (r.brief as string) ?? null,
+    briefBy: (r.brief_by as Person['briefBy']) ?? null,
+    briefAt: (r.brief_at as string) ?? null,
+  }
+}
+
+/** Lines in the context history that weren't there when the brief was written. */
+export function countNewNotes(history: string, writtenFrom: string): number {
+  const lines = (s: string) => s.split('\n').map((l) => l.trim()).filter(Boolean)
+  const before = new Set(lines(writtenFrom))
+  return lines(history).filter((l) => !before.has(l)).length
 }

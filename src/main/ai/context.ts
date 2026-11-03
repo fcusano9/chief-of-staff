@@ -8,7 +8,7 @@ export interface ExtractionContext {
   userName: string
   tasks: { id: number; title: string; status: string; dueDate: string | null; project: string | null; requester: string | null; waitingOn: string | null }[]
   projects: { id: number; name: string; brief: string; instructions: string }[]
-  people: { id: number; name: string; role: string | null; brief: string }[]
+  people: { id: number; name: string; role: string | null; company: string | null; brief: string }[]
 }
 
 export interface SourceForExtraction {
@@ -40,7 +40,7 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
     .all() as Record<string, unknown>[]
   const people = db
     .prepare(
-      `SELECT p.id, p.name, p.role, IFNULL(b.summary, '') AS brief
+      `SELECT p.id, p.name, p.role, p.company, p.brief, IFNULL(b.summary, '') AS history
        FROM people p LEFT JOIN context_briefs b ON b.scope = 'person' AND b.owner_id = p.id ORDER BY p.name`,
     )
     .all() as Record<string, unknown>[]
@@ -58,7 +58,14 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
       waitingOn: (t.waiting_on as string) ?? null,
     })),
     projects: projects.map((p) => ({ id: Number(p.id), name: String(p.name), brief: String(p.brief), instructions: String(p.instructions) })),
-    people: people.map((p) => ({ id: Number(p.id), name: String(p.name), role: (p.role as string) ?? null, brief: String(p.brief) })),
+    // A person's one-line brief; without one, the newest notes in their context history.
+    people: people.map((p) => ({
+      id: Number(p.id),
+      name: String(p.name),
+      role: (p.role as string) ?? null,
+      company: (p.company as string) ?? null,
+      brief: (p.brief as string) || newest(String(p.history), 300),
+    })),
   }
 }
 
@@ -74,7 +81,7 @@ export function buildSystemPrompt(ctx: ExtractionContext, kinds: SuggestionKind[
     mark_done: `an existing open task that the source shows is finished. Use its task_id.`,
     waiting_on: `${name} is now waiting on someone else for an existing task (task_id) or a new item (task_id null, title set).`,
     new_project: `a named, ongoing initiative with its own goal or several pieces of work (for example "the dealer training program") that is not in the project list. Title is the project's name; details is a one- or two-sentence summary of its goal, timing and who is involved. One-off requests are tasks, not projects.`,
-    new_person: `someone ${name} works with who is not in the people list: they ask ${name} for something, ${name} is waiting on them, or they own a decision or piece of work ${name} cares about. Title is their full name as written; set role and email only if the source states them; details is what's worth remembering about them. Skip people only mentioned in passing, and never propose ${name}.`,
+    new_person: `someone ${name} works with who is not in the people list: they ask ${name} for something, ${name} is waiting on them, or they own a decision or piece of work ${name} cares about. Title is their full name as written; set role, company and email only if the source states them; details is what's worth remembering about them. Skip people only mentioned in passing, and never propose ${name}.`,
     brief_update: `new context about an existing project, person, or task that will still matter later: a decision with its date, a change in scope, goal or timeline, who now owns what, or a stakeholder's preference. Use brief_scope and brief_owner_id from the lists. Put the text to add in details, written so it makes sense on its own months later. Propose one whenever the source contains such a fact; don't repeat what the brief already says.`,
   }
   return `You help ${name} keep a task list current. You read one imported item (an email, Teams chat, meeting transcript, Copilot summary, or notes) and propose changes. ${name} reviews every proposal; nothing you suggest is applied or sent until they accept it, so be precise rather than exhaustive.
@@ -122,7 +129,7 @@ export function buildUserPrompt(ctx: ExtractionContext, source: SourceForExtract
     ? ctx.projects.map((p) => `- [${p.id}] ${p.name}${p.brief ? `: ${oneLine(p.brief, 400)}` : ''}${p.instructions ? ` (Instructions: ${oneLine(p.instructions, 200)})` : ''}`).join('\n')
     : '(none)'
   const people = ctx.people.length
-    ? ctx.people.map((p) => `- [${p.id}] ${p.name}${p.role ? `, ${p.role}` : ''}${p.brief ? `: ${oneLine(p.brief, 200)}` : ''}`).join('\n')
+    ? ctx.people.map((p) => `- [${p.id}] ${p.name}${p.role ? `, ${p.role}` : ''}${p.company ? `, ${p.company}` : ''}${p.brief ? `: ${oneLine(p.brief, 300)}` : ''}`).join('\n')
     : '(none)'
 
   return `<open_tasks>
@@ -147,5 +154,10 @@ Propose suggestions for ${ctx.userName} based on the imported item.`
 const oneLine = (s: string, max: number) => {
   const t = s.replace(/\s+/g, ' ').trim()
   return t.length > max ? `${t.slice(0, max)}…` : t
+}
+/** The end of a context history, where the newest notes are. */
+const newest = (s: string, max: number) => {
+  const t = s.replace(/\s+/g, ' ').trim()
+  return t.length > max ? `…${t.slice(-(max - 1))}` : t
 }
 const escapeAttr = (s: string) => s.replace(/"/g, "'").replace(/[<>]/g, '')

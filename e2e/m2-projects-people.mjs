@@ -16,7 +16,7 @@ const check = (name, ok, detail = '') => results.push(`${ok ? 'PASS' : 'FAIL'}  
 
 const s = (o) => ({
   kind: 'new_task', task_id: null, title: '', details: '', due_date: null, project_id: null, project_name: null, requester_name: null,
-  waiting_on: null, brief_scope: null, brief_owner_id: null, role: null, email: null, evidence: 'quote', ...o,
+  waiting_on: null, brief_scope: null, brief_owner_id: null, role: null, company: null, email: null, evidence: 'quote', ...o,
 })
 // Ids match the project and person created below (a fresh database starts at 1).
 const CANNED = [

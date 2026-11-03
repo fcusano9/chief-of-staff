@@ -171,6 +171,7 @@ export function AiSettings() {
               </div>
               <p className="muted" style={{ fontSize: 12, margin: '10px 0 0', lineHeight: 1.6 }}>
                 With Claude selected, each import's text, plus your open task titles, project and person briefs, and names, is sent to Anthropic to produce suggestions.
+                Writing a person's brief sends their context history and open items.
                 Confirm this is allowed by Crestron's policy before importing work content. Use a key from the Anthropic Console; usage is billed per token.
               </p>
             </>

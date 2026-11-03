@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { SuggestionKind } from '@shared/types'
+import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
 import { ALL_KINDS, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
 import { AiError, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
@@ -129,6 +130,14 @@ Return one entry per task, using its number.`
   return chatRequest(model, system, user, format, reasoning)
 }
 
+/** The request for a person's one-line brief. */
+export function buildOllamaBriefRequest(model: string, input: PersonBriefInput, reasoning: Reasoning = 'low') {
+  const { system, user } = buildBriefPrompt(input)
+  const format = z.toJSONSchema(PersonBriefSchema) as Record<string, unknown>
+  delete format.$schema
+  return chatRequest(model, system, user, format, reasoning)
+}
+
 /** Totals for the last extract() call, for the benchmark. */
 export interface OllamaStats {
   requests: number
@@ -190,6 +199,12 @@ export class OllamaProvider implements AiProvider {
       }
     }
     return [...directory, ...tasks]
+  }
+
+  async writePersonBrief(input: PersonBriefInput): Promise<string> {
+    const parsed = PersonBriefSchema.safeParse(this.parseJson(await this.chat(buildOllamaBriefRequest(this.model, input, this.options.reasoning))))
+    if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
+    return parsed.data.brief
   }
 
   private async suggest(request: ReturnType<typeof chatRequest>): Promise<RawSuggestion[]> {
