@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Review: projects and people</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --new: #1d9e75; --new-bg: #e3f5ee;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+    --new: #5cc2a0; --new-bg: #173a30; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+  --new: #5cc2a0; --new-bg: #173a30; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.count { font: 500 11px var(--mono); background: var(--accent-bg); color: var(--accent); padding: 0 5px; border-radius: 4px; }
+.spacer { flex: 1; }
+.page { max-width: 1080px; margin: 0 auto; padding: 22px 28px 40px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; }
+.muted { color: var(--muted); } .faint { color: var(--faint); }
+.row { display: flex; align-items: center; gap: 8px; }
+.label { font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.r { display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 12px; border-top: 1px solid var(--border); }
+.r:first-child { border-top: 0; }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.r.gone { display: none; }
+.chip { font-size: 11px; padding: 1px 7px; border-radius: 4px; white-space: nowrap; display: inline-block; }
+.k-task { background: var(--accent-bg); color: var(--accent); }
+.k-new { background: var(--new-bg); color: var(--new); }
+.k-ctx { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+.pchip { font-size: 11px; padding: 1px 7px; border-radius: 4px; }
+.pchip.pending { border: 1px dashed currentColor; background: none !important; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; background: var(--new-bg); color: var(--new); flex: none; }
+.stars { font-family: var(--mono); color: var(--warn); letter-spacing: 1px; }
+.stars .off { color: var(--faint); }
+.meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.evidence { font-size: 12px; margin-top: 4px; font-style: italic; color: var(--faint); }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 8px; width: 100%; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { min-height: 48px; resize: vertical; }
+.edit { display: grid; gap: 6px; }
+.edit .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.swatches { display: flex; gap: 6px; align-items: center; }
+.swatch { width: 16px; height: 16px; border-radius: 50%; border: 0; cursor: pointer; padding: 0; }
+.swatch.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.actions { display: flex; gap: 4px; }
+@media (max-width: 760px) {
+  .page { padding: 16px; }
+  .r { grid-template-columns: minmax(0, 1fr); }
+  .edit .two { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button><button class="tab">Tasks</button>
+  <button class="tab on">Review <span class="count" id="count">8</span></button>
+  <button class="tab">Waiting</button><button class="tab">Projects</button><button class="tab">People</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="page">
+  <div class="head">
+    <h1>Review queue</h1>
+    <span class="muted" id="sub">8 suggestions · nothing changes until you accept</span>
+    <div class="spacer"></div>
+    <button class="btn" id="reset">Reset mockup</button>
+  </div>
+
+  <div class="row" style="margin-bottom:6px">
+    <span class="label">From meeting transcript · <b style="font-weight:500;color:var(--text)">Dealer training kickoff</b> · Nov 2</span>
+  </div>
+  <div class="list" id="list"></div>
+
+  <div class="notes">
+    <h3>Mockup notes (not part of the app)</h3>
+    <ul>
+      <li><b>Order:</b> new projects and people come first, then context for existing ones, then tasks, so the links read top to bottom.</li>
+      <li><b>Links:</b> the dashed chips mean "not created yet". Accept a task with one and the project or person is created with it. Reject the project or person and the task just loses the link.</li>
+      <li><b>Context:</b> "Project context" and "Person context" replace today's "Brief update" label. The text is added to the brief with the date and source, as it is today.</li>
+      <li><b>New people</b> start at 3 stars. Edit to change their name, role, email or what's added to their context.</li>
+      <li>Keys still work: J/K to move, A accept, R reject, Enter edit.</li>
+    </ul>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const COLORS = ['#7F77DD', '#1D9E75', '#D85A30', '#D4537E', '#378ADD', '#639922', '#BA7517', '#E24B4A']
+const EXISTING = { portal: { name: 'Partner portal', color: '#378ADD' } }
+const initial = () => [
+  { id: 1, kind: 'new_project', name: 'Dealer training program', color: '#D85A30',
+    details: 'Online certification courses for dealers, launching with the four-tier pricing in Q2. Alex Rivera runs it; Frank owns the product content.',
+    evidence: 'We want the dealer training program live when the new tiers launch in April.' },
+  { id: 2, kind: 'new_person', name: 'Alex Rivera', role: 'Training manager', email: '',
+    details: 'Runs dealer training. Prefers a short weekly sync on Thursdays.',
+    evidence: "Alex Rivera: I'm running the training side, so send the course outline my way." },
+  { id: 3, kind: 'project_context', target: 'portal',
+    details: 'Training courses will be linked from the partner portal dashboard; Marcus is adding a "Training" tile.',
+    evidence: "Marcus Webb: I'll add a Training tile to the portal dashboard." },
+  { id: 4, kind: 'person_context', target: 'Marcus Webb',
+    details: 'Now also owns the portal side of dealer training.',
+    evidence: "Marcus Webb: I'll own the portal side of this." },
+  { id: 5, kind: 'new_task', title: 'Send course outline to Alex', due: 'Fri, Nov 6', project: 1, requester: 2,
+    details: '', evidence: 'Frank, can you send me the course outline by Friday?' },
+  { id: 6, kind: 'new_task', title: 'Pick three pilot dealers for training', due: null, project: 1, requester: null,
+    details: '', evidence: 'Frank to pick three pilot dealers.' },
+  { id: 7, kind: 'waiting_on', title: 'Training platform pricing', due: null, project: 1, waitingOn: 'Alex Rivera',
+    details: '', evidence: 'Alex will get quotes from two platforms.' },
+  { id: 8, kind: 'new_task', title: 'Review Training tile design', due: 'Nov 12', project: 'portal', requester: null,
+    details: '', evidence: 'Marcus will share the tile design next week for Frank to review.' },
+]
+const LABEL = { new_project: 'New project', new_person: 'New person', project_context: 'Project context', person_context: 'Person context', new_task: 'New task', waiting_on: 'Waiting on' }
+const CHIP = { new_project: 'k-new', new_person: 'k-new', project_context: 'k-ctx', person_context: 'k-ctx', new_task: 'k-task', waiting_on: 'k-task' }
+
+let items, state, cursor, editing
+function reset() { items = initial(); state = {}; cursor = 0; editing = null; render() }
+const byId = (id) => items.find((i) => i.id === id)
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+const initials = (n) => n.split(' ').map((w) => w[0]).slice(0, 2).join('')
+function toast(text) { const t = document.getElementById('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1800) }
+
+function projectChip(ref) {
+  if (ref == null) return ''
+  if (typeof ref === 'string') { const p = EXISTING[ref]; return `<span class="pchip" style="background:color-mix(in srgb, ${p.color} 16%, transparent);color:color-mix(in srgb, ${p.color} 65%, var(--text))">${p.name}</span>` }
+  const p = byId(ref)
+  if (state[ref] === 'rejected') return ''
+  const pending = state[ref] !== 'accepted'
+  return `<span class="pchip ${pending ? 'pending' : ''}" style="background:color-mix(in srgb, ${p.color} 16%, transparent);color:color-mix(in srgb, ${p.color} 65%, var(--text))">${esc(p.name)}${pending ? ' (new)' : ''}</span>`
+}
+function personName(ref) {
+  if (ref == null || state[ref] === 'rejected') return null
+  const p = byId(ref)
+  return esc(p.name) + (state[ref] === 'accepted' ? '' : ' (new)')
+}
+const linkedCount = (id, field) => items.filter((i) => i[field] === id && state[i.id] !== 'accepted' && state[i.id] !== 'rejected').length
+
+function summary(i) {
+  switch (i.kind) {
+    case 'new_project': {
+      const n = linkedCount(i.id, 'project')
+      return `<div class="row" style="flex-wrap:wrap"><span class="dot" style="background:${i.color}"></span><b style="font-weight:500">${esc(i.name)}</b></div>
+        <div style="margin-top:2px">${esc(i.details)}</div>
+        <div class="meta">Summary goes into the project's brief${n ? ` · ${n} suggestion${n > 1 ? 's' : ''} below link to it` : ''}</div>`
+    }
+    case 'new_person': {
+      const n = items.filter((x) => (x.requester === i.id || x.waitingOn === i.name) && !state[x.id]).length
+      return `<div class="row" style="flex-wrap:wrap"><span class="av">${initials(i.name)}</span><b style="font-weight:500">${esc(i.name)}</b><span class="muted">${esc(i.role || 'No role')}${i.email ? ' · ' + esc(i.email) : ''}</span></div>
+        <div style="margin-top:2px">${esc(i.details)}</div>
+        <div class="meta">Starts at <span class="stars">★★★<span class="off">★★</span></span> · context goes into their brief${n ? ` · ${n} suggestion${n > 1 ? 's' : ''} below involve them` : ''}</div>`
+    }
+    case 'project_context':
+      return `<div class="row">${projectChip(i.target)}<span class="muted">add to context</span></div><div style="margin-top:2px">${esc(i.details)}</div>`
+    case 'person_context':
+      return `<div class="row"><b style="font-weight:500">${esc(i.target)}</b><span class="muted">add to context</span></div><div style="margin-top:2px">${esc(i.details)}</div>`
+    default: {
+      const req = personName(i.requester)
+      const meta = [i.due ? `Due ${i.due}` : null, req ? `Asked by ${req}` : null, i.waitingOn ? `Waiting on ${state[2] === 'rejected' ? esc(i.waitingOn) + ' (not in People)' : esc(i.waitingOn) + (state[2] === 'accepted' ? '' : ' (new)')}` : null].filter(Boolean)
+      return `<div class="row" style="flex-wrap:wrap"><b style="font-weight:500">${esc(i.title)}</b>${projectChip(i.project)}</div>
+        ${meta.length ? `<div class="meta">${meta.join(' · ')}</div>` : ''}`
+    }
+  }
+}
+
+function editor(i) {
+  switch (i.kind) {
+    case 'new_project':
+      return `<div class="edit"><input class="inp" data-f="name" value="${esc(i.name)}" placeholder="Project name">
+        <div class="swatches">${COLORS.map((c) => `<button class="swatch ${c === i.color ? 'on' : ''}" data-color="${c}" style="background:${c}"></button>`).join('')}</div>
+        <textarea class="inp" data-f="details" placeholder="Summary for the project's brief">${esc(i.details)}</textarea></div>`
+    case 'new_person':
+      return `<div class="edit"><div class="two"><input class="inp" data-f="name" value="${esc(i.name)}" placeholder="Name"><input class="inp" data-f="role" value="${esc(i.role)}" placeholder="Role"></div>
+        <input class="inp" data-f="email" value="${esc(i.email)}" placeholder="Email (optional)">
+        <textarea class="inp" data-f="details" placeholder="What to remember about them">${esc(i.details)}</textarea></div>`
+    case 'project_context':
+    case 'person_context':
+      return `<div class="edit"><textarea class="inp" data-f="details">${esc(i.details)}</textarea></div>`
+    default:
+      return `<div class="edit"><input class="inp" data-f="title" value="${esc(i.title)}">
+        <div class="two"><select class="inp" data-f="project">
+          <option value="">No project</option>
+          ${state[1] !== 'rejected' ? `<option value="1" ${i.project === 1 ? 'selected' : ''}>${esc(byId(1).name)}${state[1] === 'accepted' ? '' : ' (new)'}</option>` : ''}
+          <option value="portal" ${i.project === 'portal' ? 'selected' : ''}>Partner portal</option>
+        </select>
+        <select class="inp" data-f="requester"><option value="">Asked by nobody</option>
+          ${state[2] !== 'rejected' ? `<option value="2" ${i.requester === 2 ? 'selected' : ''}>${esc(byId(2).name)}${state[2] === 'accepted' ? '' : ' (new)'}</option>` : ''}
+          <option value="x">Dana Lee</option><option value="y">Marcus Webb</option></select></div></div>`
+  }
+}
+
+function render() {
+  const visible = items.filter((i) => !state[i.id])
+  cursor = Math.min(cursor, Math.max(0, visible.length - 1))
+  document.getElementById('count').textContent = visible.length
+  document.getElementById('sub').textContent = visible.length ? `${visible.length} suggestion${visible.length === 1 ? '' : 's'} · nothing changes until you accept` : "You're all caught up"
+  document.getElementById('list').innerHTML = visible.map((i, idx) => `
+    <div class="r ${idx === cursor ? 'sel' : ''}" data-id="${i.id}">
+      <div><span class="chip ${CHIP[i.kind]}">${LABEL[i.kind]}</span></div>
+      <div style="min-width:0">${editing === i.id ? editor(i) : summary(i)}<div class="evidence">“${esc(i.evidence)}”</div></div>
+      <div class="actions">
+        <button class="btn" data-act="accept">Accept <span class="kbd">A</span></button>
+        ${editing === i.id ? '<button class="btn ghost" data-act="cancel">Cancel</button>' : '<button class="btn ghost" data-act="edit">Edit</button>'}
+        <button class="btn ghost" data-act="reject">Reject <span class="kbd">R</span></button>
+      </div>
+    </div>`).join('') || '<div class="r"><div></div><div class="muted">Nothing left. Use "Reset mockup" to try again.</div><div></div></div>'
+}
+
+function saveEdits(i) {
+  const row = document.querySelector(`[data-id="${i.id}"]`)
+  row?.querySelectorAll('[data-f]').forEach((el) => {
+    const f = el.dataset.f
+    let v = el.value
+    if (f === 'project') v = v === '' ? null : v === 'portal' ? 'portal' : Number(v)
+    if (f === 'requester') v = v === '' ? null : v === '2' ? 2 : null
+    i[f] = v
+  })
+}
+
+function accept(i) {
+  if (editing === i.id) saveEdits(i)
+  editing = null
+  state[i.id] = 'accepted'
+  const made = []
+  if (typeof i.project === 'number' && !state[i.project]) { state[i.project] = 'accepted'; made.push('project') }
+  if (i.requester === 2 && !state[2]) { state[2] = 'accepted'; made.push('person') }
+  if (i.waitingOn === 'Alex Rivera' && !state[2]) { state[2] = 'accepted'; made.push('person') }
+  const what = { new_project: 'Project created', new_person: 'Added to People', project_context: 'Project context updated', person_context: 'Person context updated', new_task: 'Task created', waiting_on: 'Task created' }[i.kind]
+  toast(made.length ? `${what}, with its new ${made.join(' and ')}` : what)
+  render()
+}
+function reject(i) {
+  editing = null
+  state[i.id] = 'rejected'
+  render()
+}
+
+document.getElementById('list').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-id]')
+  if (!row) return
+  const i = byId(Number(row.dataset.id))
+  const visible = items.filter((x) => !state[x.id])
+  cursor = visible.indexOf(i)
+  const sw = e.target.closest('[data-color]')
+  if (sw) { saveEdits(i); i.color = sw.dataset.color; render(); return }
+  const act = e.target.closest('[data-act]')?.dataset.act
+  if (act === 'accept') accept(i)
+  else if (act === 'reject') reject(i)
+  else if (act === 'edit') { editing = i.id; render() }
+  else if (act === 'cancel') { editing = null; render() }
+  else if (!e.target.closest('.edit')) render()
+})
+window.addEventListener('keydown', (e) => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) { if (e.key === 'Escape') { editing = null; render() } return }
+  const visible = items.filter((x) => !state[x.id])
+  const i = visible[cursor]
+  if (e.key === 'j' || e.key === 'ArrowDown') { cursor = Math.min(cursor + 1, visible.length - 1); render() }
+  else if (e.key === 'k' || e.key === 'ArrowUp') { cursor = Math.max(cursor - 1, 0); render() }
+  else if (i && e.key === 'a') accept(i)
+  else if (i && e.key === 'r') reject(i)
+  else if (i && e.key === 'Enter') { e.preventDefault(); editing = i.id; render() }
+})
+document.getElementById('reset').onclick = reset
+document.getElementById('theme').onclick = () => {
+  const root = document.documentElement
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+  root.dataset.theme = dark ? 'light' : 'dark'
+}
+reset()
+</script>
+</body>
+</html>

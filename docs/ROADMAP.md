@@ -20,6 +20,7 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 | 1 | Foundation: tasks, subtasks, projects, people, briefs, priority score, waiting-on, backup, settings | ✅ Done (built in WinUI, then ported to Electron; PR 1) |
 | 2 | AI core: provider interface, Claude and demo providers, encrypted key storage, paste/file import, extraction, review queue | ✅ Built (PR 2). Claude has never run with a real key |
 | 2.1 | Local AI: Ollama provider, extraction benchmark (`npm run bench:ai`) | ✅ Built. Local models benchmarked on the Mac; Claude and the Windows PC not yet |
+| 2.2 | AI-proposed projects and people, linked tasks, clearer context suggestions | ✅ Built. Benchmarked with gpt-oss:20b only |
 | 3 | Priorities and briefings | Next |
 | 4 | Outlook | Planned |
 | 5 | Knowledge archive and meeting prep | Planned |

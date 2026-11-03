@@ -101,7 +101,19 @@ export class SourceService {
       transaction(this.db, () => {
         this.db.prepare(`DELETE FROM suggestions WHERE source_id = ? AND status = 'pending'`).run(sourceId)
         const insert = this.db.prepare('INSERT INTO suggestions (source_id, kind, payload, evidence, created_at) VALUES (?, ?, ?, ?, ?)')
-        for (const d of drafts) insert.run(sourceId, d.kind, JSON.stringify(d.payload), d.evidence, now)
+        // New projects and people come first in drafts, so tasks can link to their suggestion ids.
+        const created = new Map<string, number>()
+        const ref = (kind: string, name: string | undefined) => (name ? (created.get(`${kind}|${name.toLowerCase()}`) ?? null) : null)
+        for (const d of drafts) {
+          const payload = {
+            ...d.payload,
+            projectSuggestionId: ref('new_project', d.links?.project),
+            requesterSuggestionId: ref('new_person', d.links?.requester),
+            waitingOnSuggestionId: ref('new_person', d.links?.waitingOn),
+          }
+          const id = Number(insert.run(sourceId, d.kind, JSON.stringify(payload), d.evidence, now).lastInsertRowid)
+          if (d.kind === 'new_project' || d.kind === 'new_person') created.set(`${d.kind}|${d.payload.title.toLowerCase()}`, id)
+        }
         this.db.prepare('UPDATE source_items SET extracted_at = ?, extracted_by = ?, extract_error = NULL WHERE id = ?').run(now, provider.label, sourceId)
       })
       return { source: this.get(sourceId)!, duplicate: false, suggestionsCreated: drafts.length, error: null }

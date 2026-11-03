@@ -22,6 +22,7 @@ function matches(d: SuggestionDraft, e: Expect | Forbid): boolean {
   if (e.taskId != null && d.payload.taskId !== e.taskId) return false
   if (e.text && !e.text.test(text)) return false
   if ('waitingOn' in e && e.waitingOn && !e.waitingOn.test(d.payload.waitingOn ?? text)) return false
+  if ('linksProject' in e && e.linksProject && !e.linksProject.test(d.links?.project ?? '')) return false
   return true
 }
 

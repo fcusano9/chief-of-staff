@@ -101,6 +101,10 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (work_item_id, source_id)
   );
   `,
+  // AI-proposed projects and people: the id of the project or person an accepted suggestion created.
+  `
+  ALTER TABLE suggestions ADD COLUMN result_ref_id INTEGER;
+  `,
 ]
 
 /** Opens (creating if needed) the database and brings its schema up to date. */

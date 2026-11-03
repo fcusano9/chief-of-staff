@@ -45,7 +45,7 @@ const tasks = new TaskService(db, () => settings.current.priorityWeights)
 const projects = new ProjectService(db)
 const people = new PersonService(db)
 const briefs = new BriefService(db)
-const suggestions = new SuggestionService(db, tasks, briefs)
+const suggestions = new SuggestionService(db, tasks, briefs, projects, people)
 
 /** The AI that reads imports. Claude only when chosen in Settings and a key is stored. */
 function currentProvider(): AiProvider {
