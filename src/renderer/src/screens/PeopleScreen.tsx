@@ -5,6 +5,7 @@ import { cos, errorMessage } from '../api'
 import { Avatar, ConfirmButton, SearchBox, Stars, TaskRow } from '../components/bits'
 import { HistoryWindow } from '../components/HistoryWindow'
 import { SplitView } from '../components/SplitView'
+import { useAutosave } from '../components/useAutosave'
 import { useApp } from '../context'
 
 interface Draft {
@@ -33,9 +34,19 @@ export function PeopleScreen() {
   const filter = settings.peopleFilter
   const setFilter = (patch: Partial<PeopleFilter>) => void saveSettings({ peopleFilter: { ...filter, ...patch } })
 
+  /** Saves the form: the person, then their standing instructions (history read fresh, so it isn't overwritten). */
+  const persist = async (d: Draft) => {
+    const saved = await cos['people.save']({ id: d.id, name: d.name, role: d.role, company: d.company, email: d.email, priorityWeight: d.priorityWeight })
+    const current = await cos['briefs.get']('person', saved.id)
+    await cos['briefs.save']({ ...current, standingInstructions: d.standingInstructions })
+    return saved
+  }
+  const { markClean, flush } = useAutosave(draft, persist)
+
   useEffect(() => {
     if (selected === null) {
       loadedFor.current = null
+      markClean(null)
       return setDraft(null)
     }
     if (selected === 'new') {
@@ -43,7 +54,9 @@ export function PeopleScreen() {
       setTasks([])
       setHistory('')
       // New people start at 1 star; raise it for people whose requests matter more.
-      return setDraft({ id: 0, name: '', role: '', company: '', email: '', priorityWeight: 1, standingInstructions: '' })
+      const fresh: Draft = { id: 0, name: '', role: '', company: '', email: '', priorityWeight: 1, standingInstructions: '' }
+      markClean(fresh)
+      return setDraft(fresh)
     }
     const p = people.find((x) => x.id === selected)
     if (!p) return setDraft(null) // just created: wait for the refreshed list
@@ -52,17 +65,18 @@ export function PeopleScreen() {
     loadedFor.current = p.id
     void cos['briefs.get']('person', p.id).then((b) => {
       setHistory(b.summary)
-      if (first) setDraft({ id: p.id, name: p.name, role: p.role ?? '', company: p.company ?? '', email: p.email ?? '', priorityWeight: p.priorityWeight, standingInstructions: b.standingInstructions })
+      if (!first) return
+      const loaded: Draft = { id: p.id, name: p.name, role: p.role ?? '', company: p.company ?? '', email: p.email ?? '', priorityWeight: p.priorityWeight, standingInstructions: b.standingInstructions }
+      markClean(loaded)
+      setDraft(loaded)
     })
   }, [selected, people, version])
 
   const save = async () => {
     if (!draft) return
     try {
-      const saved = await cos['people.save']({ id: draft.id, name: draft.name, role: draft.role, company: draft.company, email: draft.email, priorityWeight: draft.priorityWeight })
-      // Read the history fresh, so notes added from Review or the History window aren't overwritten.
-      const current = await cos['briefs.get']('person', saved.id)
-      await cos['briefs.save']({ ...current, standingInstructions: draft.standingInstructions })
+      const saved = await persist(draft)
+      markClean(draft)
       toast('Saved. Priorities updated.')
       if (draft.id === 0) select(saved.id)
       refresh()
@@ -71,7 +85,9 @@ export function PeopleScreen() {
     }
   }
 
+  /** Switches the form to another person, saving pending edits first. */
   const select = (id: number | 'new' | null) => {
+    if (id !== selected) flush()
     setShowHistory(false)
     setSelected(id)
   }
@@ -221,7 +237,7 @@ export function PeopleScreen() {
             label="Delete person"
             confirmLabel="Click again: their tasks stay, with no requester"
             onConfirm={() =>
-              void cos['people.delete'](draft.id).then(() => {
+              void (markClean(draft), cos['people.delete'](draft.id)).then(() => {
                 toast('Person deleted')
                 setSelected(null)
                 refresh()

@@ -2,6 +2,10 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-03 · Archived projects can be found again; Projects and People save on switch (Frank)
+- **Archived projects** were hidden everywhere with no way back. Projects now has an Active / Archived switch (mockup `design/projects-archived.html`, approved). An archived project opens as usual with an "Archived" note and **Unarchive**; changing Status in the form moves it between the lists too. They stay out of `projects.list`, so Tasks filters, the task editor and the AI still leave them out; `projects.listArchived` is only for this tab.
+- **Auto-save:** Frank lost edits on Projects and People, which kept changes only until you switched away. They now save pending edits like the task editor (`useAutosave`): on picking another item, starting a new one, or changing tabs. An empty name isn't saved, and says so.
+
 ### 2026-11-03 · Waiting apart from Tasks, Done lists, search, People history (Frank)
 Frank asked for these after using the app day to day. The mockup `design/lists-waiting-done-search.html` was approved.
 - **Waiting is its own list.** Tasks shows open and in-progress items only. Waiting is the same screen showing only waiting-on items, longest waiting first, with the same project filters and editor. "New waiting item" (or N on that tab) starts as Waiting on. Today still shows both, as before.

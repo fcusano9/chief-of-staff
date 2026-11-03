@@ -171,6 +171,7 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'tasks.delete': (id) => tasks.delete(id),
   'tasks.summary': () => tasks.summary(),
   'projects.list': () => projects.list(),
+  'projects.listArchived': () => projects.listArchived(),
   'projects.save': (project) => projects.save(project),
   'projects.saveOverview': (id, text) => projects.saveOverview(id, text),
   'projects.suggestBrief': async (id) => {
