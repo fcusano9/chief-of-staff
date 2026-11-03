@@ -87,6 +87,12 @@ try {
   check('new project counts its links', text.includes('3 suggestions below link to it'), (text.match(/\d+ suggestions? below link to it/) ?? [''])[0])
   check('context names what it adds to', text.includes('Partner portal') && text.includes('Marcus Webb') && text.includes('add to context'))
   await app.screenshot(join(shots, 'm2pp-01-review.png'))
+  await app.eval(`document.activeElement?.blur()`)
+  await app.key('D', { shift: true })
+  await app.sleep(300)
+  await app.screenshot(join(shots, 'm2pp-01b-review-other-theme.png'))
+  await app.key('D', { shift: true })
+  await app.sleep(300)
 
   // Accept the first task: its project and person are created with it.
   await app.eval(`document.activeElement?.blur()`)

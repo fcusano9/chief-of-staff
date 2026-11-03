@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Suggestion, SuggestionKind, SuggestionPayload } from '@shared/types'
+import type { BriefScope, Suggestion, SuggestionKind, SuggestionPayload } from '@shared/types'
 import { PROJECT_COLORS, SOURCE_KIND_LABELS, suggestionLabel } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { Avatar, dueLabel, ProjectChip, Stars } from '../components/bits'
@@ -7,9 +7,12 @@ import { useApp } from '../context'
 
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
 
-/** New projects and people are green, context is amber, task changes use the accent color. */
-const chipColor = (kind: SuggestionKind) =>
-  kind === 'new_project' || kind === 'new_person' ? 'var(--ok)' : kind === 'brief_update' ? 'var(--warn)' : 'var(--accent)'
+/** Each type of suggestion has its own chip color: projects, people, tasks and their context. */
+const chipColor = (kind: SuggestionKind, briefScope: BriefScope | null) =>
+  kind === 'new_project' ? 'var(--k-project)'
+  : kind === 'new_person' ? 'var(--k-person)'
+  : kind === 'brief_update' ? (briefScope === 'project' ? 'var(--k-project-ctx)' : briefScope === 'person' ? 'var(--k-person-ctx)' : 'var(--k-task-ctx)')
+  : 'var(--k-task)'
 
 const ACCEPTED: Record<SuggestionKind, string> = {
   new_task: 'Task created',
@@ -160,7 +163,7 @@ export function ReviewScreen() {
                   onClick={() => setCursor(index)}
                 >
                   <div>
-                    <span className="chip" style={{ background: `color-mix(in srgb, ${chipColor(s.kind)} 14%, transparent)`, color: chipColor(s.kind) }}>
+                    <span className="chip" style={{ background: `color-mix(in srgb, ${chipColor(s.kind, s.payload.briefScope)} 14%, transparent)`, color: chipColor(s.kind, s.payload.briefScope) }}>
                       {suggestionLabel(s.kind, s.payload.briefScope)}
                     </span>
                   </div>
@@ -250,7 +253,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
     return (
       <div>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <Avatar person={{ name: p.title, color: 'var(--ok)' }} />
+          <Avatar person={{ name: p.title, color: 'var(--k-person)' }} />
           <span style={{ fontWeight: 500 }}>{p.title}</span>
           <span className="muted">{[p.role || 'No role', p.email].filter(Boolean).join(' · ')}</span>
         </div>
