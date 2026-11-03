@@ -29,7 +29,7 @@ It tracks tasks, projects, people and a waiting-on list, ranks tasks by a transp
 | Shell | Electron 45 (bundles Node 24). Custom title bar, sandboxed renderer, `contextIsolation`, single instance |
 | UI | React 19 + TypeScript, built by electron-vite 6 (Vite 8, rolldown) |
 | Database | SQLite via Node's **built-in `node:sqlite`**: no native modules, no rebuilds |
-| AI | `@anthropic-ai/sdk` with Zod structured outputs; provider interface for others |
+| AI | `@anthropic-ai/sdk` with Zod structured outputs; local models through Ollama's HTTP API (plain `fetch`); provider interface for others |
 | Tests | Vitest (unit and data), plus a Chrome DevTools end-to-end driver in `e2e/` |
 | Types | TypeScript 7 (`tsc` 7.x); two projects: `tsconfig.node.json` and `tsconfig.web.json` |
 
@@ -42,7 +42,7 @@ src/main/        Electron main process
   db.ts          openDatabase, migrations (PRAGMA user_version), transaction()
   services/      tasks, directory (projects/people/briefs), sources (import), suggestions
                  (review queue), settings (JSON), backup, secrets (KeyStore)
-  ai/            provider.ts (interface), claude.ts, demo.ts, context.ts (prompt), schema.ts (Zod + validation)
+  ai/            provider.ts (interface), claude.ts, ollama.ts, demo.ts, context.ts (prompt), schema.ts (Zod + validation)
 src/preload/     Exposes the API as window.cos (CommonJS, sandboxed)
 src/renderer/    React UI: App.tsx (shell, shortcuts), screens/, components/
 tests/           Vitest: priority, data services, AI and review queue
@@ -60,10 +60,11 @@ npm test             # vitest
 npm run typecheck    # both TS projects
 npm run build        # electron-vite build into out/
 npm run e2e          # build, then click through the real app (see e2e/README.md)
+npm run bench:ai     # score demo, local and Claude models on sample imports (see bench/README.md)
 npm run install:win  # package to %LOCALAPPDATA%\Programs\Chief of Staff (build) (Start-menu shortcut points here)
 ```
 
-Before telling Frank something is done, run `npm test`, `npm run typecheck` and `npm run e2e`. If the packaged app is running, close it before `install:win`.
+Before telling Frank something is done, run `npm test`, `npm run typecheck` and `npm run e2e`. After changing the extraction prompt or a provider, also run `npm run bench:ai`. If the packaged app is running, close it before `install:win`.
 
 ## How to do common changes
 
@@ -75,7 +76,7 @@ Before telling Frank something is done, run `npm test`, `npm run typecheck` and 
   The preload exposes exactly the listed channels.
 - **Schema change:** append a new SQL string to `MIGRATIONS` in `src/main/db.ts`. Never edit a shipped migration. `transaction()` calls nest by joining the outer transaction.
 - **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, the prompt in `ai/context.ts`, `SuggestionService.accept`, and `ReviewScreen`.
-- **New AI provider** (for example M365 Copilot or Ollama): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]`; validation is shared.
+- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]`; validation is shared.
 - **Claude API changes:** use the official SDK only. Check current model ids and parameters against Anthropic's docs; don't rely on memory, because the API changes often. The default model is `claude-opus-5-5` (Frank can choose Sonnet or Haiku 5.5 in Settings).
 
 ## Product and UI conventions
@@ -97,6 +98,7 @@ Before telling Frank something is done, run `npm test`, `npm run typecheck` and 
 - **Where data lives:** the live database and settings are in the Electron `userData` folder (`%APPDATA%\Chief of Staff`). Override it with `COS_DATA_DIR` for tests.
 - **Backups:** a daily snapshot (SQLite online backup API) goes to `OneDrive\Chief of Staff Backups` by default, keeping the last 30.
 - **Demo AI:** the default provider. It runs locally and sends nothing anywhere.
+- **Local model (Ollama):** runs on this computer, so nothing is sent anywhere. If the Ollama address points at another machine, the app says data is sent there.
 - **Claude:** when selected, each import's text plus open-task titles, briefs and names are sent to Anthropic. The Settings screen says so explicitly.
 - **Prompt injection:** imported content is fenced as data in the prompt, and the system prompt tells the model to ignore instructions inside it.
 

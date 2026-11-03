@@ -138,6 +138,32 @@ try {
   await app.eval(setValue('main .card select', 'demo', 'HTMLSelectElement'))
   await app.sleep(300)
 
+  // Local model through Ollama. Points at a closed port so the suite never depends on Ollama running.
+  const setAddress = (url) =>
+    app.eval(`const e=[...document.querySelectorAll('main .field')].find(f => f.textContent.startsWith('Ollama address')).querySelector('input'); e.focus()
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e, ${JSON.stringify(url)}); e.dispatchEvent(new Event('input',{bubbles:true})); e.blur()`)
+  await app.eval(setValue('main .card select', 'local', 'HTMLSelectElement'))
+  await app.sleep(400)
+  check('status bar shows local model', (await app.eval(`return document.querySelector('.statusbar').textContent`)).includes('gpt-oss:20b (local)'))
+  const localFields = await app.eval(`return [...document.querySelectorAll('main .field > span:first-child')].map(s => s.textContent)`)
+  check('local model and address fields', localFields.includes('Model') && localFields.includes('Ollama address') && !localFields.includes('API key'), JSON.stringify(localFields))
+  check('local privacy note', (await app.eval(`return document.querySelector('main .card').textContent`)).includes('Nothing is sent anywhere'))
+  await setAddress('http://127.0.0.1:9')
+  await app.sleep(400)
+  await app.clickText('Test connection', 'button')
+  await app.sleep(1000)
+  check('unreachable Ollama gives a readable error', (await app.eval(`return document.querySelector('main .card').textContent`)).includes("Couldn't reach Ollama at http://127.0.0.1:9"))
+  await app.screenshot(join(shots, 'm2-05-settings-local.png'))
+  await app.clickText('Import', '.tab')
+  check('privacy line for local model', (await app.eval(`return document.querySelector('main').textContent`)).includes('gpt-oss:20b (local): nothing leaves this computer'))
+  await app.click('.iconbtn[title="Settings"]')
+  await setAddress('http://192.168.1.250:11434')
+  await app.sleep(400)
+  check('remote Ollama counts as sending data out', (await app.eval(`return (await window.cos['ai.status']()).sendsDataExternally`)) === true)
+  await setAddress('http://127.0.0.1:11434')
+  await app.eval(setValue('main .card select', 'demo', 'HTMLSelectElement'))
+  await app.sleep(300)
+
   // Retry from the import failure now works with demo
   await app.clickText('Import', '.tab')
   await app.clickText('Run again', 'main .list button')

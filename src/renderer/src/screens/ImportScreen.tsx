@@ -134,7 +134,7 @@ export function ImportScreen() {
           </span>
           <div className="spacer" />
           <span className="muted" style={{ fontSize: 12 }}>
-            {ai.sendsDataExternally ? `Sent to Anthropic (${ai.label}) to find suggestions` : `${ai.label}: nothing leaves this computer`}
+            {ai.sendsDataExternally ? `Sent to ${ai.provider === 'claude' ? 'Anthropic' : 'your Ollama server'} (${ai.label}) to find suggestions` : `${ai.label}: nothing leaves this computer`}
           </span>
           <button className="btn primary" disabled={busy} onClick={() => void run()}>
             {busy ? 'Reading…' : 'Extract suggestions'} <span className="kbd">Ctrl ↵</span>

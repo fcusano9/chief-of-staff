@@ -2,6 +2,9 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-02 · Local models through Ollama, default gpt-oss:20b
+A third provider runs a model on the computer through Ollama's HTTP API, so nothing leaves the machine. It uses plain `fetch` (no new dependency), Ollama's JSON-schema constrained output, a context window sized to each prompt (Ollama's default silently drops the start of long prompts), and the shared validation. **Why gpt-oss:20b:** on Frank's MacBook Pro (M5, 32 GB) it found 85% of expected suggestions with no rule breaks, at about 17 s per item and 12.7 GB of memory. qwen3:8b was as fast but followed a prompt injection and proposed duplicates; qwen3:30b returns empty answers with thinking off. gpt-oss can't turn thinking off and thinks at length if sent `false`, so it gets `think: "low"`. Claude hasn't been benchmarked yet (no key on the Mac). Demo AI stays the default provider.
+
 ### 2026-11-02 · Refusal fallback on for Claude extraction
 On Opus 5.5 and Sonnet 5.5, extraction requests send `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`). If Claude's safety classifier declines, the API reruns the request on a fallback model instead of failing. This follows Anthropic's guidance. Frank was told; it's easy to remove.
 

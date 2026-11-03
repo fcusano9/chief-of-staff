@@ -5,6 +5,7 @@ import { API_CHANNELS, type Api } from '@shared/api'
 import { CLAUDE_MODELS, type AiStatus, type AppSettings } from '@shared/types'
 import { ClaudeProvider } from './ai/claude'
 import { DemoProvider } from './ai/demo'
+import { isLoopbackUrl, OllamaProvider } from './ai/ollama'
 import { AiError, type AiProvider } from './ai/provider'
 import { openDatabase } from './db'
 import { createBackup } from './services/backup'
@@ -48,6 +49,8 @@ const suggestions = new SuggestionService(db, tasks, briefs)
 
 /** The AI that reads imports. Claude only when chosen in Settings and a key is stored. */
 function currentProvider(): AiProvider {
+  const { aiProvider, localUrl, localModel } = settings.current
+  if (aiProvider === 'local') return new OllamaProvider(localUrl, localModel)
   const key = keys.get()
   if (settings.current.aiProvider === 'claude') {
     if (!key) throw new AiError('Claude is selected but no API key is set. Add one in Settings, or switch to the demo AI.')
@@ -58,16 +61,17 @@ function currentProvider(): AiProvider {
 const sources = new SourceService(db, currentProvider, () => settings.current.userName)
 
 function aiStatus(): AiStatus {
-  const { aiProvider, aiModel } = settings.current
+  const { aiProvider, aiModel, localModel, localUrl } = settings.current
   const hasKey = !!keys.get()
   const modelLabel = CLAUDE_MODELS.find((m) => m.id === aiModel)?.label ?? aiModel
+  const local = aiProvider === 'local'
   return {
     provider: aiProvider,
-    model: aiModel,
+    model: local ? localModel : aiModel,
     hasKey,
     encryptionAvailable: keys.encryptionAvailable,
-    label: aiProvider === 'demo' ? 'Demo AI (on this PC)' : hasKey ? modelLabel : 'Claude · no API key',
-    sendsDataExternally: aiProvider === 'claude',
+    label: aiProvider === 'demo' ? 'Demo AI (on this PC)' : local ? `${localModel} (local)` : hasKey ? modelLabel : 'Claude · no API key',
+    sendsDataExternally: aiProvider === 'claude' || (local && !isLoopbackUrl(localUrl)),
   }
 }
 
@@ -144,6 +148,7 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
     return aiStatus()
   },
   'ai.test': () => currentProvider().test(),
+  'ai.listLocalModels': () => new OllamaProvider(settings.current.localUrl, settings.current.localModel).listModels().catch(() => []),
 }
 
 function registerIpc(): void {

@@ -28,6 +28,7 @@ An AI-assisted work manager for Windows and Mac. It replaces Microsoft To Do: ta
 npm install
 npm run dev           # run with hot reload
 npm test              # unit and data tests
+npm run bench:ai      # compare AI models on sample imports (bench/README.md)
 npm run typecheck
 npm run install:win   # build the app into %LOCALAPPDATA%\Programs\Chief of Staff (build)
 npm run package:win   # Windows installer in release/

@@ -59,6 +59,8 @@ export interface Api {
   /** Stores (or with null, removes) the Anthropic API key. The key is never returned to the UI. */
   'ai.setKey': (key: string | null) => AiStatus
   'ai.test': () => string
+  /** Models installed in the local Ollama server; empty if it isn't running. */
+  'ai.listLocalModels': () => string[]
 }
 
 export type ApiChannel = keyof Api
@@ -97,6 +99,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'ai.status',
   'ai.setKey',
   'ai.test',
+  'ai.listLocalModels',
 ]
 
 /** The renderer sees every call as async. */

@@ -6,3 +6,4 @@ release/
 .claude/settings.local.json
 .DS_Store
 e2e/shots/
+bench/results/
