@@ -17,7 +17,8 @@ const describe = (d: SuggestionDraft) => `${d.kind}${d.payload.taskId ? ` #${d.p
 const describeExpect = (e: Expect) => `${e.kinds.join('/')}${e.taskId ? ` #${e.taskId}` : ''}${e.text ? ` ${e.text}` : ''}${e.due ? ` due ${e.due.join(' or ')}` : ''}`
 
 function matches(d: SuggestionDraft, e: Expect | Forbid): boolean {
-  const text = `${d.payload.title}\n${d.payload.details}`
+  // "Must not" checks look at the title only: a good answer can mention other people's work in its details.
+  const text = 'why' in e ? d.payload.title : `${d.payload.title}\n${d.payload.details}`
   if (e.kinds && !e.kinds.includes(d.kind)) return false
   if (e.taskId != null && d.payload.taskId !== e.taskId) return false
   if (e.text && !e.text.test(text)) return false

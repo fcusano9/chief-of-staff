@@ -3,11 +3,14 @@
 Scores AI providers on eight made-up imports shaped like Frank's real work: a Copilot summary, an email from his manager, a Teams chat, a long meeting transcript, a vendor email with a prompt injection, a newsletter with nothing to do, a recap showing finished work, and a kickoff that introduces a new project and person. Each case lists the suggestions a careful assistant should make, extras that are fine, and things it must not do.
 
 ```bash
-npm run bench:ai                                          # demo, every installed Ollama model, and Claude if ANTHROPIC_API_KEY is set
+npm run bench:ai                                          # demo, every installed Ollama model, and Claude if a key is available
 BENCH_MODELS=gpt-oss:20b,claude-sonnet-5-5 npm run bench:ai
+BENCH_MODELS=gpt-oss:20b@medium+split npm run bench:ai    # local model with other options (low|medium|high, split)
+BENCH_RESCORE=bench/results/a.json,bench/results/b.json npm run bench:ai   # re-score saved answers, no model calls
 ```
 
-- **Claude** runs only with `ANTHROPIC_API_KEY` in the environment, and only these made-up cases are sent.
+- **Claude** runs only with a key, and only these made-up cases are sent. Set `ANTHROPIC_API_KEY`, or on a Mac store it once in the Keychain with `security add-generic-password -s chief-of-staff-bench -a anthropic -w` (remove it with `security delete-generic-password -s chief-of-staff-bench`). The app's own key can't be read here because it's encrypted for the app.
+- **Re-scoring** applies the current cases and scoring to saved runs, so runs from different days compare fairly. Timings stay as measured.
 - **Local models** need Ollama running (`ollama serve`, or the Ollama app) and the models pulled first. Each model is loaded once before timing, then unloaded so the next one has the memory.
 - **Reports** go to `bench/results/` (git ignores it) as Markdown plus JSON with every raw answer.
 
