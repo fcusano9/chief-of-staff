@@ -255,6 +255,7 @@ export interface PriorityWeights {
 }
 
 export type ThemeSetting = 'system' | 'light' | 'dark'
+export type LocalThoroughness = 'standard' | 'thorough'
 
 export interface AppSettings {
   /** Used in greetings and so the AI knows whose action items to pick out. */
@@ -265,6 +266,8 @@ export interface AppSettings {
   localModel: string
   /** Ollama server address. Anything other than this computer counts as sending data out. */
   localUrl: string
+  /** "thorough" lets the local model reason more: a little more accurate, about three times slower. */
+  localThoroughness: LocalThoroughness
   priorityWeights: PriorityWeights
   theme: ThemeSetting
   /** Left pane width of split views, as a percentage. */
@@ -282,6 +285,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiModel: 'claude-opus-5-5',
   localModel: 'gpt-oss:20b',
   localUrl: 'http://127.0.0.1:11434',
+  localThoroughness: 'standard',
   priorityWeights: { dueDate: 8, requester: 7, staleness: 5 },
   theme: 'system',
   splitPercent: 50,

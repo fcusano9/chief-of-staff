@@ -29,10 +29,12 @@ const CANNED = [
   s({ kind: 'new_person', title: 'Alex Rivera', role: 'Training manager', details: 'Runs dealer training.', evidence: "I'm running the training side." }),
   s({ kind: 'new_person', title: 'Frank Cusano', evidence: 'the user, must be dropped' }),
 ]
+const thinkSent = []
 const server = createServer((req, res) => {
   let body = ''
   req.on('data', (c) => (body += c))
   req.on('end', () => {
+    if (req.url === '/api/chat') thinkSent.push(JSON.parse(body).think)
     res.setHeader('content-type', 'application/json')
     if (req.url === '/api/tags') return res.end(JSON.stringify({ models: [{ name: 'fake:1b' }] }))
     if (req.url === '/api/chat') return res.end(JSON.stringify({ message: { content: JSON.stringify({ suggestions: CANNED }) }, done_reason: 'stop', prompt_eval_count: 100 }))
@@ -64,6 +66,10 @@ try {
   await app.sleep(400)
   const bar = await app.eval(`return document.querySelector('.statusbar')?.textContent ?? ''`)
   check('local model selected', bar.includes('fake:1b (local)'), bar.slice(-60))
+  await app.eval(`const e = ${field('Thoroughness', 'select')}; ${setInput('e', 'thorough', 'HTMLSelectElement', 'change')}`)
+  await app.sleep(400)
+  const bar2 = await app.eval(`return document.querySelector('.statusbar')?.textContent ?? ''`)
+  check('thorough shows in the status bar', bar2.includes('fake:1b (local, thorough)'), bar2.slice(-60))
 
   await app.clickText('Import', '.tab')
   await app.click('main input[placeholder^="Title"]')
@@ -73,6 +79,7 @@ try {
   await app.key('Enter', { ctrl: true })
   await app.waitFor('[data-suggestion]', 8000)
 
+  check('thorough asks the model to think, in every pass', thinkSent.length >= 2 && thinkSent.every((t) => t === true), JSON.stringify(thinkSent))
   const labels = await app.eval(`return [...document.querySelectorAll('[data-suggestion] > div:first-child .chip')].map(c => c.textContent)`)
   check(
     'new projects and people first, then context, then tasks',

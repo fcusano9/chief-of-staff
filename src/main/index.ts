@@ -49,8 +49,8 @@ const suggestions = new SuggestionService(db, tasks, briefs, projects, people)
 
 /** The AI that reads imports. Claude only when chosen in Settings and a key is stored. */
 function currentProvider(): AiProvider {
-  const { aiProvider, localUrl, localModel } = settings.current
-  if (aiProvider === 'local') return new OllamaProvider(localUrl, localModel)
+  const { aiProvider, localUrl, localModel, localThoroughness } = settings.current
+  if (aiProvider === 'local') return new OllamaProvider(localUrl, localModel, { reasoning: localThoroughness === 'thorough' ? 'medium' : 'low' })
   const key = keys.get()
   if (settings.current.aiProvider === 'claude') {
     if (!key) throw new AiError('Claude is selected but no API key is set. Add one in Settings, or switch to the demo AI.')
@@ -61,7 +61,7 @@ function currentProvider(): AiProvider {
 const sources = new SourceService(db, currentProvider, () => settings.current.userName)
 
 function aiStatus(): AiStatus {
-  const { aiProvider, aiModel, localModel, localUrl } = settings.current
+  const { aiProvider, aiModel, localModel, localUrl, localThoroughness } = settings.current
   const hasKey = !!keys.get()
   const modelLabel = CLAUDE_MODELS.find((m) => m.id === aiModel)?.label ?? aiModel
   const local = aiProvider === 'local'
@@ -70,7 +70,7 @@ function aiStatus(): AiStatus {
     model: local ? localModel : aiModel,
     hasKey,
     encryptionAvailable: keys.encryptionAvailable,
-    label: aiProvider === 'demo' ? 'Demo AI (on this PC)' : local ? `${localModel} (local)` : hasKey ? modelLabel : 'Claude · no API key',
+    label: aiProvider === 'demo' ? 'Demo AI (on this PC)' : local ? `${localModel} (local${localThoroughness === 'thorough' ? ', thorough' : ''})` : hasKey ? modelLabel : 'Claude · no API key',
     sendsDataExternally: aiProvider === 'claude' || (local && !isLoopbackUrl(localUrl)),
   }
 }

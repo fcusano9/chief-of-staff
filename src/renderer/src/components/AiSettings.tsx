@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AiProviderId } from '@shared/types'
+import type { AiProviderId, LocalThoroughness } from '@shared/types'
 import { CLAUDE_MODELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
@@ -81,6 +81,13 @@ export function AiSettings() {
                 )}
               </label>
               <label className="field">
+                <span>Thoroughness</span>
+                <select className="inp" value={settings.localThoroughness} onChange={(e) => void saveSettings({ localThoroughness: e.target.value as LocalThoroughness })}>
+                  <option value="standard">Standard · about 40 seconds per item</option>
+                  <option value="thorough">Thorough · about 2 minutes per item, a little more accurate</option>
+                </select>
+              </label>
+              <label className="field">
                 <span>Ollama address</span>
                 <input
                   className="inp"
@@ -121,8 +128,8 @@ export function AiSettings() {
                 {ai.sendsDataExternally
                   ? `Imports are sent to the Ollama server at ${settings.localUrl}, which is not this computer.`
                   : 'Imports are read by a model running on this computer. Nothing is sent anywhere.'}{' '}
-                Install Ollama from ollama.com, then run "ollama pull {settings.localModel}" in a terminal. Local models are free but less accurate than Claude, and long
-                transcripts can take a minute or more.
+                Install Ollama from ollama.com, then run "ollama pull {settings.localModel}" in a terminal. Local models are free but less accurate than Claude. Each import takes about
+                40 seconds (Standard) or 2 minutes (Thorough), longer for long transcripts.
               </p>
             </>
           ) : settings.aiProvider === 'claude' ? (
