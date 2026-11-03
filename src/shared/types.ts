@@ -330,8 +330,29 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export interface AppInfo {
   version: string
   databasePath: string
+  dataFolder: string
   defaultBackupFolder: string
   platform: string
+  /** True when running from source or a test folder: data and backups are kept apart from the real ones. */
+  isSeparateData: boolean
+  /** Set once after a restore, so the UI can confirm it: the backup file that was restored. */
+  restoredFrom: string | null
+}
+
+export type BackupKind = 'daily' | 'before-upgrade' | 'before-restore'
+
+export interface BackupInfo {
+  path: string
+  fileName: string
+  folder: string
+  createdAt: string
+  kind: BackupKind
+  size: number
+  /** False for backups this version can't use (the old Windows app, newer versions, unreadable files). */
+  compatible: boolean
+  reason: string | null
+  schemaVersion: number | null
+  openTasks: number | null
 }
 
 /** Project colors (tasks are themed with their project's color). */

@@ -96,8 +96,17 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 
 ## Data and privacy
 
-- **Where data lives:** the live database and settings are in the Electron `userData` folder (`%APPDATA%\Chief of Staff`). Override it with `COS_DATA_DIR` for tests.
-- **Backups:** a daily snapshot (SQLite online backup API) goes to `OneDrive\Chief of Staff Backups` by default, keeping the last 30.
+- **Where data lives:** only the **installed** app uses the real folder (`%APPDATA%\Chief of Staff`) and the real OneDrive backups. Running from source (`npm run dev`, `electron .`) uses `Chief of Staff (dev)`, and `COS_DATA_DIR` (tests) uses the folder it names. Both keep their backups inside that folder, and the status bar shows "Test data". See `src/main/paths.ts`. Never point a dev or test run at the real folder.
+- **Backups:**
+  - A daily snapshot (SQLite online backup API, saved as a single file) goes to `OneDrive\Chief of Staff Backups` by default, keeping the last 30.
+  - **Before any schema upgrade**, `openDatabase`'s `beforeUpgrade` hook writes a `-before-upgrade-vN` copy with `VACUUM INTO`. It falls back to `<data folder>\backups` if OneDrive isn't available, and **if no copy can be made, the upgrade doesn't run** and the app shows an error.
+  - Safety copies keep the last 10 of each kind, separate from the daily ones.
+- **Restore** (Settings → Restore from backup):
+  - It only accepts backups the app listed and judged compatible (`inspectBackup`). That excludes the old WinUI app's backups, newer schema versions, and unreadable files.
+  - It saves a `-before-restore` copy first, writes `restore-pending.json`, and restarts. `applyPendingRestore` swaps the file before the database opens.
+  - Listing backups reads temporary copies, so nothing is ever written into the backup folder.
+- **Single instance:** a second copy quits before it opens the database.
+- **Adding a migration:** the safety copy is automatic. Still never edit a shipped migration, and test the upgrade from the previous version's data.
 - **Demo AI:** the default provider. It runs locally and sends nothing anywhere.
 - **Local model (Ollama):** runs on this computer, so nothing is sent anywhere. If the Ollama address points at another machine, the app says data is sent there.
 - **Claude:** when selected, each import's text plus open-task titles, briefs and names are sent to Anthropic. The Settings screen says so explicitly.

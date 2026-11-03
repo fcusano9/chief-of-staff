@@ -8,14 +8,19 @@ import { join } from 'node:path'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export async function launch({ appDir, dataDir, port = 9333, fresh = true, packagedExe = null }) {
-  if (fresh) rmSync(dataDir, { recursive: true, force: true })
-  mkdirSync(dataDir, { recursive: true })
+// dataDir: null runs without COS_DATA_DIR (as `npm run dev` would). attachOnly reconnects to an app
+// that is already running on the port (e.g. after it restarted itself).
+export async function launch({ appDir, dataDir, port = 9333, fresh = true, packagedExe = null, attachOnly = false }) {
+  if (dataDir && fresh && !attachOnly) rmSync(dataDir, { recursive: true, force: true })
+  if (dataDir) mkdirSync(dataDir, { recursive: true })
   // Keep test backups out of the real OneDrive folder.
-  if (fresh) writeFileSync(join(dataDir, 'settings.json'), JSON.stringify({ backupFolder: join(dataDir, 'backups') }))
+  if (dataDir && fresh && !attachOnly) writeFileSync(join(dataDir, 'settings.json'), JSON.stringify({ backupFolder: join(dataDir, 'backups') }))
   // The electron package exports the path to its binary (any OS).
   const exe = createRequire(join(appDir, 'package.json'))('electron')
-  const proc = spawn(packagedExe ?? exe, [...(packagedExe ? [] : [appDir]), `--remote-debugging-port=${port}`], { env: { ...process.env, COS_DATA_DIR: dataDir }, stdio: 'ignore' })
+  const env = { ...process.env }
+  if (dataDir) env.COS_DATA_DIR = dataDir
+  else delete env.COS_DATA_DIR
+  const proc = attachOnly ? null : spawn(packagedExe ?? exe, [...(packagedExe ? [] : [appDir]), `--remote-debugging-port=${port}`], { env, stdio: 'ignore' })
   let target
   for (let i = 0; i < 60 && !target; i++) {
     await sleep(500)
@@ -108,10 +113,25 @@ export async function launch({ appDir, dataDir, port = 9333, fresh = true, packa
       await api.key('a', { ctrl: true })
       await api.type(value)
     },
-    async close() {
+    /** Disconnects without stopping the app (e.g. when it is about to restart itself). */
+    detach() {
       ws.close()
-      proc.kill()
-      await sleep(500)
+    },
+    async close() {
+      // An app we only attached to (it restarted itself) has no process handle: ask the browser to quit.
+      if (!proc) {
+        try {
+          const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json()
+          const browser = new WebSocket(webSocketDebuggerUrl)
+          await new Promise((r, j) => ((browser.onopen = r), (browser.onerror = j)))
+          browser.send(JSON.stringify({ id: 1, method: 'Browser.close' }))
+          await sleep(1500)
+          browser.close()
+        } catch {}
+      }
+      ws.close()
+      proc?.kill()
+      await sleep(800)
     },
   }
   await api.waitFor('.top')
