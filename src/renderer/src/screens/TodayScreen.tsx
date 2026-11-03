@@ -53,7 +53,7 @@ export function TodayScreen() {
           <h2 style={{ marginTop: 0 }}>Focus · highest priority first</h2>
           <div className="list">
             {focus.map((t) => (
-              <TaskRow key={t.id} task={t} showWhy={false} onClick={() => openTask({ id: t.id })} />
+              <TaskRow key={t.id} task={t} showWhy={false} onClick={() => openTask({ id: t.id, waiting: t.status === 'waiting_on' })} />
             ))}
             {focus.length === 0 && <div className="empty">Nothing open. Press N to add a task.</div>}
           </div>
@@ -91,7 +91,7 @@ export function TodayScreen() {
             {waiting.map((t) => {
               const d = daysSince(t.waitingSince)
               return (
-                <div key={t.id} className="row" style={{ padding: '3px 0', cursor: 'pointer' }} onClick={() => openTask({ id: t.id })}>
+                <div key={t.id} className="row" style={{ padding: '3px 0', cursor: 'pointer' }} onClick={() => openTask({ id: t.id, waiting: t.status === 'waiting_on' })}>
                   <span className="ttl" style={{ flex: 1 }}>{t.title}</span>
                   <span className="muted ttl" style={{ maxWidth: 110 }}>{t.waitingOn}</span>
                   <span className={`mono ${d > 5 ? 's-mid' : 'muted'}`} style={{ width: 30, textAlign: 'right' }}>{d}d</span>

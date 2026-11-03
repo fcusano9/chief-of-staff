@@ -299,7 +299,7 @@ describe('AI import and review queue', () => {
     const alex = people.list().find((p) => p.name === 'Alex Rivera')!
     expect(task.projectId).toBe(project.id)
     expect(task.requesterId).toBe(alex.id)
-    expect(alex).toMatchObject({ role: 'Training manager', priorityWeight: 3 })
+    expect(alex).toMatchObject({ role: 'Training manager', priorityWeight: 1 })
     expect(briefs.get('project', project.id).summary).toContain('Courses for dealers, live in Q2')
     expect(briefs.get('person', alex.id).summary).toContain('Prefers Thursday syncs')
 

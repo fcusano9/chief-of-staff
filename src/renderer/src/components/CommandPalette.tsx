@@ -45,7 +45,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       { group: 'Actions', label: 'Add person', run: () => go('people') },
       { group: 'Actions', label: 'Toggle light / dark', keys: 'Shift D', run: toggleTheme },
       { group: 'Actions', label: 'Back up now', run: () => void cos['backup.now']().then((p) => toast(`Backed up to ${p}`)) },
-      ...tasks.map((t) => ({ group: 'Tasks', label: t.title, run: () => openTask({ id: t.id }) })),
+      ...tasks.map((t) => ({ group: 'Tasks', label: t.title, run: () => openTask({ id: t.id, waiting: t.status === 'waiting_on' }) })),
       ...projects.map((p) => ({ group: 'Projects', label: p.name, run: () => go('projects') })),
       ...people.map((p) => ({ group: 'People', label: p.name, run: () => go('people') })),
     ]

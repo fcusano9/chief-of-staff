@@ -27,6 +27,9 @@ export function App() {
   const [ai, setAi] = useState<AiStatus | null>(null)
   const [reviewCount, setReviewCount] = useState(0)
   const [view, setView] = useState<View>('today')
+  // For shortcuts registered once: N on the Waiting tab starts a waiting item.
+  const viewRef = useRef(view)
+  viewRef.current = view
   const [aiLog, setAiLog] = useState<{ sourceId: number; from: View } | null>(null)
   const [selection, setSelection] = useState<TaskSelection>(null)
   const [version, setVersion] = useState(0)
@@ -90,7 +93,7 @@ export function App() {
   }, [])
   const openTask = useCallback((s: TaskSelection) => {
     setSelection(s)
-    if (s) setView('tasks')
+    if (s) setView((v) => (s.waiting != null ? (s.waiting ? 'waiting' : 'tasks') : v === 'waiting' ? 'waiting' : 'tasks'))
   }, [])
   const toggleTheme = useCallback(() => void saveSettings({ theme: document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark' }), [saveSettings])
 
@@ -132,7 +135,7 @@ export function App() {
         gTimer = window.setTimeout(() => (gPending = false), 1000)
       } else if (e.key === 'n') {
         consume()
-        openTask({ id: 'new' })
+        openTask({ id: 'new', waiting: viewRef.current === 'waiting' })
       } else if (e.key === 'D' && e.shiftKey) {
         consume()
         toggleTheme()
@@ -186,7 +189,7 @@ export function App() {
             <span className="stext" style={{ flex: 1 }}>Search or jump to…</span>
             <span className="kbd">Ctrl K</span>
           </div>
-          <button className="iconbtn" title="New task (N)" onClick={() => openTask({ id: 'new' })}>
+          <button className="iconbtn" title="New task (N)" onClick={() => openTask({ id: 'new', waiting: view === 'waiting' })}>
             ＋
           </button>
           <button className="iconbtn" title="Toggle light / dark (Shift+D)" onClick={toggleTheme}>

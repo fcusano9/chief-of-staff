@@ -65,6 +65,7 @@ function toTask(row: Row): Task {
     followUpCount: Number(row.follow_up_count),
     waitingOn: (row.waiting_on as string) ?? null,
     waitingSince: (row.waiting_since as string) ?? null,
+    waitedOn: (row.waited_on as string) ?? null,
     createdAt: String(row.created_at),
     lastActivityAt: String(row.last_activity_at),
     completedAt: (row.completed_at as string) ?? null,
@@ -78,6 +79,7 @@ function toTask(row: Row): Task {
 
 const byPriority = (a: Task, b: Task) =>
   effectivePriority(b) - effectivePriority(a) || (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || a.id - b.id
+const longestWaiting = (a: Task, b: Task) => (a.waitingSince ?? a.lastActivityAt).localeCompare(b.waitingSince ?? b.lastActivityAt) || a.id - b.id
 
 export class TaskService {
   constructor(
@@ -86,27 +88,48 @@ export class TaskService {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  /** Active tasks (open, in progress, waiting) sorted by effective priority, highest first. */
+  /**
+   * Active tasks sorted by effective priority, highest first. With list "waiting", only waiting-on
+   * items, longest waiting first; with "tasks", everything else that's active.
+   */
   listActive(filter: TaskFilter = {}): Task[] {
-    const where = [ACTIVE_SQL]
-    const params: Record<string, SQLInputValue> = {}
-    if (filter.projectId != null) {
-      where.push('w.project_id = $projectId')
-      params.projectId = filter.projectId
-    }
+    const status = filter.list === 'waiting' ? `w.status = 'waiting_on'` : filter.list === 'tasks' ? `w.status IN ('open', 'in_progress')` : ACTIVE_SQL
+    const tasks = this.load(`${SELECT} WHERE ${this.where(status, filter)}`, this.params(filter))
+    return filter.list === 'waiting' ? tasks.sort(longestWaiting) : tasks.sort(byPriority)
+  }
+
+  /** Finished tasks, newest first. List "waiting" means ones that were waiting on someone. */
+  listDone(filter: TaskFilter = {}, limit = 200): Task[] {
+    const kind = filter.list === 'waiting' ? ' AND w.waited_on IS NOT NULL' : filter.list === 'tasks' ? ' AND w.waited_on IS NULL' : ''
+    return this.load(`${SELECT} WHERE ${this.where(`w.status = 'done'${kind}`, filter)} ORDER BY w.completed_at DESC, w.id DESC LIMIT ${Math.floor(limit)}`, this.params(filter))
+  }
+
+  private where(status: string, filter: TaskFilter): string {
+    const where = [status]
+    if (filter.projectId != null) where.push('w.project_id = $projectId')
     if (filter.noProjectOnly) where.push('w.project_id IS NULL')
-    if (filter.search?.trim()) {
-      where.push(`(w.title LIKE $search OR IFNULL(w.notes, '') LIKE $search)`)
-      params.search = `%${filter.search.trim()}%`
-    }
-    return this.load(`${SELECT} WHERE ${where.join(' AND ')}`, params).sort(byPriority)
+    // Search also matches who it's waiting on (or was).
+    if (filter.search?.trim()) where.push(`(w.title LIKE $search OR IFNULL(w.notes, '') LIKE $search OR IFNULL(w.waiting_on, '') LIKE $search OR IFNULL(w.waited_on, '') LIKE $search)`)
+    return where.join(' AND ')
+  }
+
+  private params(filter: TaskFilter): Record<string, SQLInputValue> {
+    const params: Record<string, SQLInputValue> = {}
+    if (filter.projectId != null) params.projectId = filter.projectId
+    if (filter.search?.trim()) params.search = `%${filter.search.trim()}%`
+    return params
+  }
+
+  /** Reopens a finished task: back to Waiting if it was waiting on someone, else to Tasks. */
+  reopen(id: number): Task {
+    const task = this.get(id)
+    if (!task) throw new Error(`Task ${id} not found`)
+    return this.save(task.waitedOn ? { ...task, status: 'waiting_on', waitingOn: task.waitedOn } : { ...task, status: 'open' })
   }
 
   /** Waiting-on tasks, longest waiting first. */
   listWaiting(): Task[] {
-    return this.load(`${SELECT} WHERE w.status = 'waiting_on'`).sort((a, b) =>
-      (a.waitingSince ?? a.lastActivityAt).localeCompare(b.waitingSince ?? b.lastActivityAt),
-    )
+    return this.load(`${SELECT} WHERE w.status = 'waiting_on'`).sort(longestWaiting)
   }
 
   listForPerson(personId: number): Task[] {
@@ -141,6 +164,7 @@ export class TaskService {
         waitingOn: input.status === 'waiting_on' ? input.waitingOn?.trim() || null : null,
         waitingSince: input.status !== 'waiting_on' ? null : enteringWaiting ? (input.waitingSince ?? now) : (existing?.waitingSince ?? now),
         completedAt: input.status !== 'done' ? null : enteringDone ? now : (existing?.completedAt ?? now),
+        waitedOn: input.status !== 'done' ? null : enteringDone ? (existing?.status === 'waiting_on' ? existing.waitingOn : null) : (existing?.waitedOn ?? null),
         now,
       }
 
@@ -150,7 +174,7 @@ export class TaskService {
           .prepare(
             `UPDATE work_items SET title=$title, notes=$notes, status=$status, due_date=$dueDate, project_id=$projectId,
                requester_id=$requesterId, priority_override=$priorityOverride, follow_up_count=$followUpCount,
-               waiting_on=$waitingOn, waiting_since=$waitingSince, completed_at=$completedAt, last_activity_at=$now
+               waiting_on=$waitingOn, waiting_since=$waitingSince, waited_on=$waitedOn, completed_at=$completedAt, last_activity_at=$now
              WHERE id=$id`,
           )
           .run({ ...values, id: existing.id })
@@ -159,9 +183,9 @@ export class TaskService {
         const result = this.db
           .prepare(
             `INSERT INTO work_items (title, notes, status, due_date, project_id, requester_id, priority_override,
-               follow_up_count, waiting_on, waiting_since, completed_at, created_at, last_activity_at)
+               follow_up_count, waiting_on, waiting_since, waited_on, completed_at, created_at, last_activity_at)
              VALUES ($title, $notes, $status, $dueDate, $projectId, $requesterId, $priorityOverride,
-               $followUpCount, $waitingOn, $waitingSince, $completedAt, $now, $now)`,
+               $followUpCount, $waitingOn, $waitingSince, $waitedOn, $completedAt, $now, $now)`,
           )
           .run(values)
         taskId = Number(result.lastInsertRowid)

@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lists: waiting, done, search</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; cursor: pointer; display: flex; gap: 6px; align-items: center; }
+.tab:hover { background: var(--hover); color: var(--text); }
+.tab.on { color: var(--text); background: var(--sel); }
+.count { font: 500 11px var(--mono); background: var(--accent-bg); color: var(--accent); padding: 0 5px; border-radius: 4px; }
+.spacer { flex: 1; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: calc(100vh - 44px); }
+.left { padding: 22px 24px; border-right: 1px solid var(--border); min-width: 0; }
+.right { padding: 22px 24px; min-width: 0; }
+.head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.btn.primary .kbd { background: none; color: inherit; border-color: currentColor; }
+.pill { border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.toolbar { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 3px 10px; cursor: pointer; color: var(--muted); font-size: 12px; }
+.seg button.on { background: var(--sel); color: var(--text); }
+.search { flex: 1; min-width: 160px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 4px 8px; }
+.search input { border: 0; outline: 0; background: none; flex: 1; min-width: 0; }
+.search:focus-within { border-color: var(--accent); }
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.r { display: grid; grid-template-columns: 3px 30px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 12px 7px 0; border-top: 1px solid var(--border); cursor: pointer; }
+.r:first-child { border-top: 0; }
+.r:hover { background: var(--hover); }
+.r.sel { background: var(--sel); }
+.stripe { align-self: stretch; }
+.ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.why { color: var(--faint); font-size: 12px; margin-left: 8px; }
+.chip { font-size: 11px; padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
+.score { font: 500 12px var(--mono); color: var(--muted); text-align: right; }
+.done .ttl { color: var(--muted); }
+.empty { color: var(--muted); padding: 18px 14px; text-align: center; }
+.person { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--border); cursor: pointer; }
+.person:first-child { border-top: 0; }
+.person.sel { background: var(--sel); }
+.av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; background: var(--accent-bg); color: var(--accent); }
+.stars { font-family: var(--mono); color: var(--warn); letter-spacing: 1px; }
+.stars .off { color: var(--faint); }
+.field { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px; padding: 3px 0; }
+.field > span { color: var(--muted); }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 8px; width: 100%; outline: 0; }
+.label { font-size: 12px; color: var(--muted); }
+.scrim { position: fixed; inset: 0; background: rgba(24,24,27,.35); display: grid; place-items: center; padding: 16px; }
+.dialog { width: min(620px, 100%); max-height: 80vh; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 16px 48px rgba(0,0,0,.2); }
+.dialog-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.dialog-body { padding: 0 16px 14px; overflow: auto; }
+.hist { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.hist-new { color: var(--accent); }
+.tag { font-size: 11px; color: var(--accent); background: var(--accent-bg); padding: 0 6px; border-radius: 4px; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+[hidden] { display: none !important; }
+@media (max-width: 860px) { .split { grid-template-columns: minmax(0, 1fr); } .left { border-right: 0; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button>
+  <button class="tab on" data-view="tasks">Tasks</button>
+  <button class="tab">Review</button>
+  <button class="tab" data-view="waiting">Waiting</button>
+  <button class="tab" data-view="projects">Projects</button>
+  <button class="tab" data-view="people">People</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="split">
+  <div class="left" id="left"></div>
+  <div class="right" id="right"></div>
+</div>
+<div class="toast" id="toast"></div>
+<div id="dialog"></div>
+
+<script>
+const $ = (id) => document.getElementById(id)
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1600) }
+
+const PROJECTS = [
+  { id: 1, name: 'Partner portal', color: '#378ADD', overview: 'New dealer and partner portal.', open: 3 },
+  { id: 2, name: 'Pricing refresh', color: '#D85A30', overview: 'Dealer pricing tiers for 2027.', open: 2 },
+  { id: 3, name: 'Dealer training', color: '#1D9E75', overview: 'Online certification for dealers.', open: 1 },
+]
+const TASKS = [
+  { id: 1, title: 'Send updated price list to Munich distributor', project: 2, score: 58, why: 'Due tomorrow, requested by Tom Alvarez', status: 'open' },
+  { id: 2, title: 'Approve partner portal wireframes', project: 1, score: 44, why: 'Due in 3 days', status: 'open' },
+  { id: 3, title: 'Reply to Dana: Q1 dealer pricing', project: 2, score: 41, why: 'Requested by Dana Lee', status: 'open' },
+  { id: 4, title: 'Draft course outline for dealer training', project: 3, score: 22, why: 'No deadline or urgency signals', status: 'open' },
+  { id: 5, title: 'Book customer visits for spring launch', project: null, score: 19, why: 'No deadline or urgency signals', status: 'open' },
+  { id: 6, title: 'Training platform quotes', project: 3, score: 39, waitingOn: 'Alex Rivera', days: 5, status: 'waiting' },
+  { id: 7, title: 'Margin model for new tiers', project: 2, score: 33, waitingOn: 'Priya Shah', days: 2, status: 'waiting' },
+  { id: 8, title: 'Portal tile design', project: 1, score: 27, waitingOn: 'Marcus Webb', days: 1, status: 'waiting' },
+  { id: 9, title: 'Roadmap slides for Q1 planning', project: null, done: 'Nov 2', status: 'done' },
+  { id: 10, title: 'Review SOW from Northside AV', project: 1, done: 'Oct 30', status: 'done' },
+  { id: 11, title: 'Firmware 3.2 build date', project: null, done: 'Nov 3', waitingOn: 'Kenji Mori', status: 'done-waiting' },
+]
+const PEOPLE = [
+  { id: 1, name: 'Dana Lee', role: 'VP, Product', company: 'Crestron', weight: 5, brief: 'Frank’s manager; owns the roadmap review.', notes: [
+    ['Oct 20', 'Prefers decks under 10 slides.', 'Q4 planning'], ['Oct 28', 'Approved the four-tier pricing model.', 'Copilot summary'], ['Nov 2', 'Wants the 2027 view only, not three years.', 'Q1 planning'], ['Nov 3', 'Asked for the tier 2 discount confirmation by Wednesday.', 'Q1 dealer pricing'] ] },
+  { id: 2, name: 'Marcus Webb', role: 'UX lead', company: 'Crestron', weight: 3, brief: 'Leads partner portal UX.', notes: [['Nov 2', 'Owns the portal side of dealer training.', 'Dealer training kickoff']] },
+  { id: 3, name: 'Alex Rivera', role: 'Training manager', company: 'Crestron', weight: 1, brief: 'Runs dealer training.', notes: [] },
+  { id: 4, name: 'Jordan Kim', role: 'Owner', company: 'Northwind AV', weight: 2, brief: 'Dealer piloting the new tiers.', notes: [['Nov 1', 'Pilots the tiers from Dec 1.', 'Dealer call']] },
+]
+
+let view = 'tasks'
+const state = { tasks: { mode: 'open', q: '', project: 'all', sel: null }, waiting: { mode: 'open', q: '', project: 'all', sel: null }, projects: { q: '', sel: 1 }, people: { q: '', sel: 1, newPerson: false } }
+
+const proj = (id) => PROJECTS.find((p) => p.id === id)
+const chip = (id) => { const p = proj(id); return p ? `<span class="chip" style="background:color-mix(in srgb, ${p.color} 16%, transparent);color:color-mix(in srgb, ${p.color} 65%, var(--text))">${p.name}</span>` : '<span></span>' }
+const match = (q, ...fields) => !q || fields.some((f) => f && f.toLowerCase().includes(q.toLowerCase()))
+
+function toolbar(s, placeholder, withMode) {
+  return `<div class="toolbar">
+    ${withMode ? `<div class="seg"><button data-mode="open" class="${s.mode === 'open' ? 'on' : ''}">Open</button><button data-mode="done" class="${s.mode === 'done' ? 'on' : ''}">Done</button></div>` : ''}
+    <label class="search"><span class="faint">⌕</span><input id="q" value="${esc(s.q)}" placeholder="${placeholder}"><span class="kbd">/</span></label>
+  </div>`
+}
+function projectPills(s) {
+  return `<div class="row" style="flex-wrap:wrap;gap:6px"><button class="pill ${s.project === 'all' ? 'on' : ''}" data-project="all">All</button>${PROJECTS.map((p) => `<button class="pill ${s.project === p.id ? 'on' : ''}" data-project="${p.id}"><span class="dot" style="background:${p.color}"></span>${p.name}</button>`).join('')}<button class="pill ${s.project === 'none' ? 'on' : ''}" data-project="none">No project</button></div>`
+}
+
+function taskList(kind) {
+  const s = state[kind]
+  const waiting = kind === 'waiting'
+  const items = TASKS.filter((t) =>
+    (s.mode === 'open' ? t.status === (waiting ? 'waiting' : 'open') : t.status === (waiting ? 'done-waiting' : 'done')) &&
+    (s.project === 'all' || (s.project === 'none' ? t.project == null : t.project === s.project)) &&
+    match(s.q, t.title, t.waitingOn, proj(t.project)?.name))
+  const n = TASKS.filter((t) => t.status === (s.mode === 'open' ? (waiting ? 'waiting' : 'open') : waiting ? 'done-waiting' : 'done')).length
+  const sub = s.mode === 'open' ? (waiting ? `${n} waiting · longest first` : `${n} open · by priority`) : `${n} done · newest first`
+  const rows = items.map((t) => {
+    const p = proj(t.project)
+    const stripe = `<div class="stripe" style="background:${p ? p.color : '#B4B2A9'}"></div>`
+    if (s.mode === 'done') return `<div class="r done ${s.sel === t.id ? 'sel' : ''}" data-task="${t.id}" style="grid-template-columns:3px 30px minmax(0,1fr) auto auto">${stripe}<span class="faint" style="text-align:center">✓</span><div class="ttl">${esc(t.title)}${t.waitingOn ? `<span class="why">from ${t.waitingOn}</span>` : ''}</div>${chip(t.project)}<span class="faint mono" style="font-size:12px">${t.done}</span></div>`
+    const why = waiting ? `waiting on ${t.waitingOn}` : t.why === 'No deadline or urgency signals' ? '' : t.why
+    const right = waiting ? `<span class="row" style="gap:6px">${t.days >= 3 ? '<span class="chip" style="background:color-mix(in srgb, var(--warn) 14%, transparent);color:var(--warn)">Follow up</span>' : ''}<span class="mono muted" style="font-size:12px">${t.days}d</span></span>` : '<span class="faint">—</span>'
+    return `<div class="r ${s.sel === t.id ? 'sel' : ''}" data-task="${t.id}">${stripe}<span class="score">${t.score}</span><div class="ttl">${esc(t.title)}${why ? `<span class="why">${why}</span>` : ''}</div>${chip(t.project)}${right}</div>`
+  }).join('')
+  return `<div class="head"><h1>${waiting ? 'Waiting on' : 'Tasks'}</h1><span class="muted">${sub}</span><div class="spacer"></div><button class="btn primary">New ${waiting ? 'waiting item' : 'task'} <span class="kbd">N</span></button></div>
+    ${projectPills(s)}${toolbar(s, waiting ? 'Search waiting items or people' : 'Search tasks', true)}
+    <div class="list">${rows || `<div class="empty">${s.q ? `Nothing matches “${esc(s.q)}”` : 'Nothing here.'}</div>`}</div>`
+}
+function taskDetail(kind) {
+  const t = TASKS.find((x) => x.id === state[kind].sel)
+  if (!t) return `<div class="empty" style="margin-top:30vh">Select ${kind === 'waiting' ? 'an item' : 'a task'} to see it here</div>`
+  if (t.status.startsWith('done')) return `<h1 style="font-size:16px">${esc(t.title)}</h1><div class="muted" style="margin:6px 0 14px">Completed ${t.done}${t.waitingOn ? ` · was waiting on ${t.waitingOn}` : ''}</div><button class="btn" data-reopen="${t.id}">Reopen</button><div class="faint" style="font-size:12px;margin-top:8px">Reopen puts it back on ${t.status === 'done-waiting' ? 'Waiting' : 'Tasks'}.</div>`
+  return `<h1 style="font-size:16px">${esc(t.title)}</h1><div class="muted" style="margin:6px 0">${t.waitingOn ? `Waiting on ${t.waitingOn} · ${t.days} days` : t.why}</div><div class="faint" style="margin-top:20px">(Task editor, unchanged)</div>`
+}
+
+function projectsView() {
+  const s = state.projects
+  const items = PROJECTS.filter((p) => match(s.q, p.name, p.overview))
+  return `<div class="head"><h1>Projects</h1><span class="muted">${PROJECTS.length} active</span><div class="spacer"></div><button class="btn primary">New project</button></div>
+    ${toolbar(s, 'Search projects', false)}
+    <div class="list">${items.map((p) => `<div class="person ${s.sel === p.id ? 'sel' : ''}" data-proj="${p.id}" style="grid-template-columns:3px minmax(0,1fr) auto"><span style="align-self:stretch;background:${p.color}"></span><div><b style="font-weight:500">${p.name}</b><div class="muted" style="font-size:12px">${p.overview}</div></div><span class="mono muted" style="font-size:12px">${p.open} open</span></div>`).join('') || `<div class="empty">Nothing matches “${esc(s.q)}”</div>`}</div>`
+}
+
+function peopleView() {
+  const s = state.people
+  const items = PEOPLE.filter((p) => match(s.q, p.name, p.role, p.company, p.brief))
+  const stars = (w) => `<span class="stars">${'★'.repeat(w)}<span class="off">${'★'.repeat(5 - w)}</span></span>`
+  return `<div class="head"><h1>People</h1><span class="muted">${PEOPLE.length} people</span><div class="spacer"></div><button class="btn primary" id="newPerson">New person</button></div>
+    ${toolbar(s, 'Search name, role, company', false)}
+    <div class="list">${items.map((p) => `<div class="person ${s.sel === p.id && !s.newPerson ? 'sel' : ''}" data-person="${p.id}"><span class="av">${p.name.split(' ').map((w) => w[0]).join('')}</span><div><b style="font-weight:500">${p.name}</b> <span class="muted">${p.role} · ${p.company}</span><div class="faint" style="font-size:12px">${p.brief}</div></div>${stars(p.weight)}</div>`).join('') || `<div class="empty">Nothing matches “${esc(s.q)}”</div>`}</div>`
+}
+function personDetail() {
+  const s = state.people
+  const stars = (w) => `<span class="stars" style="font-size:15px">${'★'.repeat(w)}<span class="off">${'★'.repeat(5 - w)}</span></span>`
+  if (s.newPerson) return `<h1 style="font-size:16px">New person</h1>
+    <div style="margin-top:10px"><div class="field"><span>Name</span><input class="inp" placeholder="Full name"></div><div class="field"><span>Company</span><input class="inp"></div><div class="field"><span>Role</span><input class="inp"></div>
+    <div class="field"><span>Weight</span><span class="row">${stars(1)}<span class="faint" style="font-size:12px">New people start at 1 star; raise it for people whose requests matter more</span></span></div></div>`
+  const p = PEOPLE.find((x) => x.id === s.sel)
+  return `<h1 style="font-size:20px">${p.name}</h1><div class="muted" style="margin:2px 0 12px">${p.brief}</div>
+    <div class="field"><span>Company</span><input class="inp" value="${p.company}"></div><div class="field"><span>Role</span><input class="inp" value="${p.role}"></div>
+    <div class="field"><span>Weight</span>${stars(p.weight)}</div>
+    <div class="label" style="margin-top:12px">Standing instructions</div><textarea class="inp" style="margin:4px 0 12px;min-height:44px" placeholder="e.g. Lead with the ask"></textarea>
+    <div class="row"><button class="btn sm" id="history">History <span class="mono muted">${p.notes.length}</span></button><span class="faint" style="font-size:12px">everything the AI has learned about them, newest first</span></div>`
+}
+function historyDialog() {
+  const p = PEOPLE.find((x) => x.id === state.people.sel)
+  $('dialog').innerHTML = `<div class="scrim" id="scrim"><div class="dialog" role="dialog">
+    <div class="dialog-head"><b>${p.name}</b><span class="muted">context history · ${p.notes.length} note${p.notes.length === 1 ? '' : 's'}</span><div class="spacer"></div><button class="btn ghost sm">Edit</button><button class="btn ghost sm" id="close">Close <span class="kbd">Esc</span></button></div>
+    <div class="dialog-body"><div class="row" style="margin:10px 0 6px"><input class="inp" placeholder="Add a note, e.g. Prefers Teams over email"><button class="btn">Add</button></div>
+    ${p.notes.length ? [...p.notes].reverse().map(([d, t, src], i) => `<div class="hist"><span class="mono muted" style="font-size:11px;padding-top:2px">${d}${i === 0 ? ' <span class="hist-new">new</span>' : ''}</span><div>${t}<div class="faint" style="font-size:11px">from “${src}”</div></div></div>`).join('') : '<div class="empty">No history yet. Accepted "Person context" suggestions land here, newest first.</div>'}
+    </div></div></div>`
+  $('close').onclick = () => ($('dialog').innerHTML = '')
+  $('scrim').onmousedown = (e) => e.target.id === 'scrim' && ($('dialog').innerHTML = '')
+}
+
+const NOTES = {
+  tasks: ['<b>Waiting items are gone from Tasks.</b> They live only on the Waiting tab. Today’s Focus list already leaves them out.', '<b>“No deadline or urgency signals” is gone.</b> Real reasons (“Due tomorrow”, “Requested by…”) still show.', '<b>Open / Done</b> switches the list to completed items, newest first. Click one to Reopen it.', '<b>Search</b> replaces the small Filter box. It matches the title and notes; press / to jump to it.'],
+  waiting: ['<b>Same layout as Tasks:</b> project filters, search, Open / Done, and the task editor on the right.', 'Rows show who you’re waiting on, how long, and the “Follow up” flag after 3 business days. Longest waiting first.', '<b>Done</b> shows waiting items that were answered or closed. Search also matches the person’s name.', '“New waiting item” opens the editor with the status already set to Waiting on.'],
+  projects: ['<b>Search</b> matches the project name and its one-line overview.'],
+  people: ['<b>History button</b> instead of the big text box, the same as Projects: a window with dated notes, newest first, “new” markers, Add, and Edit for the whole text.', '<b>New people start at 1 star</b>, both when you add one and when the AI proposes one in Review.', '<b>Search</b> matches name, role, company and the one-line brief. It works together with the Company and Open asks filters.'],
+}
+
+function render() {
+  document.querySelectorAll('[data-view]').forEach((t) => t.classList.toggle('on', t.dataset.view === view))
+  $('left').innerHTML = (view === 'tasks' || view === 'waiting' ? taskList(view) : view === 'projects' ? projectsView() : peopleView()) +
+    `<div class="notes"><h3>Mockup notes (not part of the app)</h3><ul>${NOTES[view].map((n) => `<li>${n}</li>`).join('')}</ul></div>`
+  $('right').innerHTML = view === 'tasks' || view === 'waiting' ? taskDetail(view) : view === 'people' ? personDetail() : `<h1 style="font-size:20px">${proj(state.projects.sel)?.name ?? ''}</h1><div class="faint" style="margin-top:20px">(Project page, unchanged)</div>`
+  const q = $('q')
+  if (q) q.oninput = () => { state[view].q = q.value; const pos = q.selectionStart; render(); const n = $('q'); n.focus(); n.setSelectionRange(pos, pos) }
+  if ($('history')) $('history').onclick = historyDialog
+  if ($('newPerson')) $('newPerson').onclick = () => { state.people.newPerson = true; render() }
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-view]'); if (t) { view = t.dataset.view; render(); return }
+  const s = state[view]
+  const m = e.target.closest('[data-mode]'); if (m) { s.mode = m.dataset.mode; s.sel = null; render(); return }
+  const pr = e.target.closest('[data-project]'); if (pr) { s.project = pr.dataset.project === 'all' || pr.dataset.project === 'none' ? pr.dataset.project : Number(pr.dataset.project); render(); return }
+  const tk = e.target.closest('[data-task]'); if (tk) { s.sel = Number(tk.dataset.task); render(); return }
+  const ro = e.target.closest('[data-reopen]'); if (ro) { const x = TASKS.find((y) => y.id === Number(ro.dataset.reopen)); x.status = x.status === 'done-waiting' ? 'waiting' : 'open'; x.score = 30; x.why = 'Reopened'; x.days = 0; s.sel = null; toast(`Reopened on ${x.status === 'waiting' ? 'Waiting' : 'Tasks'}`); render(); return }
+  const pe = e.target.closest('[data-person]'); if (pe) { state.people.sel = Number(pe.dataset.person); state.people.newPerson = false; render(); return }
+  const pj = e.target.closest('[data-proj]'); if (pj) { state.projects.sel = Number(pj.dataset.proj); render() }
+})
+window.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') { e.preventDefault(); $('q')?.focus() }
+  if (e.key === 'Escape') $('dialog').innerHTML = ''
+})
+$('theme').onclick = () => { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme = dark ? 'light' : 'dark' }
+render()
+</script>
+</body>
+</html>
