@@ -133,10 +133,16 @@ export class SuggestionService {
           taskId = task.id
           break
         }
-        case 'brief_update':
-          this.appendBrief(p.briefScope, p.briefOwnerId, p.details, sourceTitle)
+        case 'brief_update': {
+          // Person context can also fill in or correct their role and company.
+          const person = p.briefScope === 'person' ? this.people.list().find((x) => x.id === p.briefOwnerId) : undefined
+          const role = p.role?.trim() || null
+          const company = p.company?.trim() || null
+          if (p.details.trim() || !person || !(role || company)) this.appendBrief(p.briefScope, p.briefOwnerId, p.details, sourceTitle)
+          if (person && (role || company)) this.people.save({ ...person, role: role ?? person.role, company: company ?? person.company })
           taskId = p.briefScope === 'task' ? p.briefOwnerId : null
           break
+        }
       }
       if (taskId) this.db.prepare('INSERT OR IGNORE INTO task_sources (work_item_id, source_id) VALUES (?, ?)').run(taskId, sourceId)
       this.db

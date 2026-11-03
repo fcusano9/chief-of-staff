@@ -203,11 +203,6 @@ export function ReviewScreen() {
                     ) : (
                       <Summary s={s} pending={items} onOpenTask={(id) => openTask({ id })} />
                     )}
-                    {s.evidence && (
-                      <div className="faint" style={{ fontSize: 12, marginTop: 4, fontStyle: 'italic', overflowWrap: 'anywhere' }}>
-                        “{s.evidence}”
-                      </div>
-                    )}
                   </div>
                   <div className="row" style={{ gap: 4 }}>
                     <button className="btn" onClick={() => void accept(s, isEditing ? draft! : undefined)}>
@@ -250,6 +245,15 @@ function NewProjectChip({ s }: { s: Suggestion }) {
   )
 }
 
+/** The body under a suggestion's title: smaller, grey, and two lines at most (hover for all of it). */
+function Details({ text }: { text: string }) {
+  return text ? (
+    <div className="s-details" title={text}>
+      {text}
+    </div>
+  ) : null
+}
+
 function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestion[]; onOpenTask: (id: number) => void }) {
   const { projects, people } = useApp()
   const p = s.payload
@@ -258,7 +262,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
   const newRequester = linked(pending, p.requesterSuggestionId)
   const requester = people.find((x) => x.id === p.requesterId)?.name ?? (newRequester ? `${newRequester.payload.title} (new)` : p.requesterName)
   const taskLink = p.taskId ? (
-    <button className="btn ghost" style={{ padding: 0, fontWeight: 500 }} onClick={() => onOpenTask(p.taskId!)}>
+    <button className="btn ghost s-title" style={{ padding: 0 }} onClick={() => onOpenTask(p.taskId!)}>
       {s.taskTitle ?? p.title}
     </button>
   ) : null
@@ -269,10 +273,10 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
       <div>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <span className="dot" style={{ background: p.color ?? PROJECT_COLORS[0] }} />
-          <span style={{ fontWeight: 500 }}>{p.title}</span>
+          <span className="s-title">{p.title}</span>
         </div>
-        {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
-        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+        <Details text={p.details} />
+        <div className="faint" style={{ fontSize: 12, marginTop: 3 }}>
           Summary goes into the project's brief{links ? ` · ${links} suggestion${links === 1 ? '' : 's'} below link to it` : ''}
         </div>
       </div>
@@ -284,11 +288,11 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
       <div>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <Avatar person={{ name: p.title, color: 'var(--k-person)' }} />
-          <span style={{ fontWeight: 500 }}>{p.title}</span>
+          <span className="s-title">{p.title}</span>
           <span className="muted">{[p.role || 'No role', p.company, p.email].filter(Boolean).join(' · ')}</span>
         </div>
-        {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
-        <div className="muted row" style={{ fontSize: 12, marginTop: 2, gap: 4, flexWrap: 'wrap' }}>
+        <Details text={p.details} />
+        <div className="faint row" style={{ fontSize: 12, marginTop: 3, gap: 4, flexWrap: 'wrap' }}>
           Starts at <Stars value={3} /> · context goes into their brief{links ? ` · ${links} suggestion${links === 1 ? '' : 's'} below involve them` : ''}
         </div>
       </div>
@@ -297,15 +301,21 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
   if (s.kind === 'brief_update') {
     const owner =
       p.briefScope === 'project' ? <ProjectChip project={projects.find((x) => x.id === p.briefOwnerId) ?? null} />
-      : p.briefScope === 'person' ? <span style={{ fontWeight: 500 }}>{people.find((x) => x.id === p.briefOwnerId)?.name}</span>
+      : p.briefScope === 'person' ? <span className="s-title">{people.find((x) => x.id === p.briefOwnerId)?.name}</span>
       : taskLink
+    const changes = p.briefScope === 'person' ? personChanges(p, people.find((x) => x.id === p.briefOwnerId)) : null
     return (
       <div>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           {owner}
-          <span className="muted">add to context</span>
+          <span className="muted">{p.details ? 'add to context' : 'update details'}</span>
         </div>
-        {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
+        <Details text={p.details} />
+        {changes && (
+          <div className="faint" style={{ fontSize: 12, marginTop: 3 }}>
+            {changes}
+          </div>
+        )}
       </div>
     )
   }
@@ -319,17 +329,26 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        {createsTask(s.kind, p) ? <span style={{ fontWeight: 500 }}>{p.title}</span> : taskLink}
+        {createsTask(s.kind, p) ? <span className="s-title">{p.title}</span> : taskLink}
         {newProject && !project ? <NewProjectChip s={newProject} /> : <ProjectChip project={project} />}
       </div>
-      {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
+      <Details text={p.details} />
       {meta.length > 0 && (
-        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+        <div className="faint" style={{ fontSize: 12, marginTop: 3 }}>
           {meta.join(' · ')}
         </div>
       )}
     </div>
   )
+}
+
+/** "Role: UX lead → UX director · Company: Northwind" for person context that also fills in their details. */
+function personChanges(p: SuggestionPayload, person: { role: string | null; company: string | null } | undefined): string | null {
+  const parts = [
+    p.role && p.role !== person?.role ? `Role: ${person?.role ? `${person.role} → ` : ''}${p.role}` : null,
+    p.company && p.company !== person?.company ? `Company: ${person?.company ? `${person.company} → ` : ''}${p.company}` : null,
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : null
 }
 
 function Editor({ kind, draft, setDraft, pending }: { kind: Suggestion['kind']; draft: SuggestionPayload; setDraft: (d: SuggestionPayload) => void; pending: Suggestion[] }) {
@@ -361,6 +380,17 @@ function Editor({ kind, draft, setDraft, pending }: { kind: Suggestion['kind']; 
           <input className="inp" value={draft.email ?? ''} placeholder="Email (optional)" onChange={(e) => set({ email: e.target.value || null })} />
         </div>
         <textarea className="inp" style={{ minHeight: 48 }} value={draft.details} placeholder="What to remember about them" onChange={(e) => set({ details: e.target.value })} />
+      </div>
+    )
+  }
+  if (kind === 'brief_update' && draft.briefScope === 'person') {
+    return (
+      <div className="grid" style={{ gap: 6 }}>
+        <textarea className="inp" autoFocus style={{ minHeight: 48 }} value={draft.details} placeholder="What to add to their context (optional)" onChange={(e) => set({ details: e.target.value })} />
+        <div className="row">
+          <input className="inp" value={draft.role ?? ''} placeholder="Role (leave empty to keep theirs)" onChange={(e) => set({ role: e.target.value || null })} />
+          <input className="inp" value={draft.company ?? ''} placeholder="Company (leave empty to keep theirs)" onChange={(e) => set({ company: e.target.value || null })} />
+        </div>
       </div>
     )
   }

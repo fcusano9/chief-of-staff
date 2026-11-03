@@ -51,7 +51,7 @@ try {
   check('four suggestions of the right kinds', JSON.stringify(kinds) === JSON.stringify(['New task', 'Looks done', 'Waiting on', 'New task']), JSON.stringify(kinds))
   check('review tab badge', (await app.eval(`return [...document.querySelectorAll('.tab')].find(t => t.textContent.startsWith('Review'))?.querySelector('.count')?.textContent`)) === '4')
   check('nothing applied yet', (await app.eval(`return (await window.cos['tasks.listActive']()).length`)) === 2)
-  check('evidence quotes shown', (await app.eval(`return document.querySelector('[data-suggestion]').textContent`)).includes('“Frank to send'))
+  check('no evidence quotes in Review (they stay in the AI log)', !(await app.eval(`return document.querySelector('[data-suggestion]').textContent`)).includes('“'))
   await app.screenshot(join(shots, 'm2-02-review.png'))
 
   // E opens the editor with the cursor in the title (and no stray "e"); Esc cancels from inside the field
