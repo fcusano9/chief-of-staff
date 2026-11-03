@@ -33,7 +33,7 @@ export interface OllamaOptions {
  */
 export const DEFAULT_OLLAMA_OPTIONS: Required<OllamaOptions> = { reasoning: 'low', passes: 'split' }
 
-const TASK_KINDS: SuggestionKind[] = ['new_task', 'status_update', 'mark_done', 'waiting_on']
+const TASK_KINDS: SuggestionKind[] = ['new_task', 'needs_reply', 'status_update', 'mark_done', 'waiting_on']
 const DIRECTORY_KINDS: SuggestionKind[] = ['new_project', 'new_person', 'brief_update']
 
 /** True for addresses on this computer, so the UI can say truthfully whether data leaves it. */
@@ -194,7 +194,7 @@ export class OllamaProvider implements AiProvider {
     const directory = await this.suggest(buildOllamaRequest(this.model, ctx, source, reasoning, DIRECTORY_KINDS), 'Pass 2 of 3: projects, people, context', log)
     const projects = directory.filter((s) => s.kind === 'new_project').map((s) => s.title)
     const people = directory.filter((s) => s.kind === 'new_person').map((s) => s.title)
-    const creating = tasks.filter((t) => t.kind === 'new_task' || (t.kind === 'waiting_on' && t.task_id == null))
+    const creating = tasks.filter((t) => t.kind === 'new_task' || t.kind === 'needs_reply' || (t.kind === 'waiting_on' && t.task_id == null))
     if (creating.length && (projects.length || people.length)) {
       const body = await this.chat(buildLinkRequest(this.model, source, creating, projects, people, reasoning), 'Pass 3 of 3: link new tasks to new projects and people', log)
       const parsed = LinkSchema.safeParse(this.parseJson(body))

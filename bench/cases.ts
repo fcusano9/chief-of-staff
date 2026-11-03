@@ -104,7 +104,7 @@ Thanks,
 Dana`,
     },
     expect: [{ kinds: ['status_update'], taskId: 1, due: ['2026-11-12'] }],
-    ok: [{ kinds: ['brief_update'] }],
+    ok: [{ kinds: ['brief_update'] }, { kinds: ['needs_reply'], text: /dana/i }],
     forbid: [
       { kinds: ['new_task'], text: /roadmap slides/i, why: 'duplicates an open task' },
       { kinds: ['new_task'], text: /usability study/i, why: "Marcus's task, not Frank's" },
@@ -130,6 +130,7 @@ Dana`,
     ok: [{ kinds: ['brief_update'] }],
     forbid: [
       { kinds: ['new_task'], text: /set up a call|call with/i, why: "Tom's task, not Frank's" },
+      { kinds: ['needs_reply'], text: /tom|price list/i, why: 'Frank already answered Tom' },
       { kinds: ['mark_done'], taskId: 4, why: 'the FAQ is not finished' },
     ],
   },
@@ -270,6 +271,68 @@ Account Manager, Northwind AV`,
       { kinds: ['new_person'], text: /jordan kim/i, company: /northwind/i },
     ],
     ok: [{ kinds: ['brief_update'] }],
+  },
+  // Outlook conversations, in the format the app builds them (src/main/mail/plan.ts).
+  {
+    name: 'Outlook conversation waiting on Frank’s reply',
+    source: {
+      kind: 'email',
+      title: 'Tier 3 rebate',
+      fromName: 'Priya Shah',
+      occurredAt: at,
+      content: `Email conversation: RE: Tier 3 rebate
+2 messages below, oldest first.
+The latest message is from Priya Shah; Frank Cusano has not replied after it.
+
+=== Message 1 of 2 · sent by Frank Cusano · Fri, Oct 30, 2026, 4:10 PM
+From: Frank Cusano (you)
+To: Priya Shah
+Subject: Tier 3 rebate
+
+Priya, the new tiers are attached. Tier 3 dealers stay at the current discount.
+
+=== Message 2 of 2 · received · Mon, Nov 2, 2026, 9:20 AM
+From: Priya Shah <priya.shah@example.com>
+To: Frank Cusano
+Subject: RE: Tier 3 rebate
+
+Thanks Frank. Does tier 3 still get the 5% volume rebate on top of that? I need to know by Wednesday to finish the margin model.`,
+    },
+    expect: [{ kinds: ['needs_reply'], text: /rebate|tier 3/i, due: ['2026-11-04'] }],
+    ok: [{ kinds: ['status_update'], taskId: 3 }, { kinds: ['brief_update'] }],
+    forbid: [{ kinds: ['new_task'], text: /^(reply|respond|answer|confirm)/i, why: 'replying is a needs_reply, not a separate task' }],
+  },
+  {
+    name: 'Outlook conversation where Frank asked and is waiting',
+    source: {
+      kind: 'email',
+      title: 'EMEA forecast',
+      fromName: 'Tom Alvarez',
+      occurredAt: at,
+      content: `Email conversation: RE: EMEA forecast
+2 messages below, oldest first.
+Frank Cusano sent the latest message in this conversation, so nobody is waiting on Frank Cusano's reply.
+
+=== Message 1 of 2 · received · Thu, Oct 29, 2026, 11:02 AM
+From: Tom Alvarez <tom.alvarez@example.com>
+To: Frank Cusano
+Subject: EMEA forecast
+
+Frank, can we move our forecast review to next week? Thanks.
+
+=== Message 2 of 2 · sent by Frank Cusano · Thu, Oct 29, 2026, 2:45 PM
+From: Frank Cusano (you)
+To: Tom Alvarez
+Subject: RE: EMEA forecast
+
+Sure, next week works. Could you send me the updated Q1 EMEA forecast numbers by Friday so I can review them before we meet?`,
+    },
+    expect: [{ kinds: ['waiting_on'], text: /forecast/i, waitingOn: /tom/i }],
+    ok: [{ kinds: ['brief_update'] }],
+    forbid: [
+      { kinds: ['needs_reply'], why: 'Frank already replied' },
+      { kinds: ['new_task'], text: /reschedule|move.*review/i, why: 'Frank already answered that' },
+    ],
   },
 ]
 

@@ -26,7 +26,7 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 | 2.5 | Projects: hand-written overview, AI status brief from the history, History window | ✅ Built |
 | 2.6 | AI log: the exact requests and responses for each import, plus why suggestions were dropped | ✅ Built (`ai-log` e2e suite). Not yet seen with a real Claude or Ollama run |
 | 3 | Priorities and briefings | Next |
-| 4 | Outlook | Planned |
+| 4 | Outlook | Mail import built (`mail` e2e suite; checked against real Outlook, AI reading not yet tried on real mail). Calendar and draft replies planned |
 | 5 | Knowledge archive and meeting prep | Planned |
 | 6 | Graph and Copilot connectors | Blocked on IT approval |
 
@@ -42,8 +42,9 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 
 ## Milestone 4: Outlook
 
-- Classic Outlook on Windows through COM, via a small helper, since Electron can't call COM directly.
-- Mail ingest by date range and folder, and a calendar read for meeting prep.
+- Classic Outlook on Windows through COM, via a small helper, since Electron can't call COM directly. ✅ A bundled PowerShell script (`src/main/mail/outlook.ps1`); no security prompt on Frank's PC.
+- ✅ **Mail import** (Import → Outlook mail): a button, not a schedule. "Check Outlook" reads Inbox, its subfolders and Sent Items since the last import (7 days on the first run, or any date) and shows what it found and skipped; "Read" sends each new conversation to the AI. Review gets "Needs reply" tasks, action items, waiting-on items from sent mail (flagged for follow-up after 3 business days), and "Reply arrived" to clear them.
+- A calendar read for meeting prep.
 - "Draft reply" saves to Outlook Drafts with `MailItem.Save()` and is **never sent**.
 - **Test early:** Outlook's programmatic-access security prompt may appear, depending on Crestron's antivirus and policy.
 - **Mac:** the new Outlook for Mac has no scripting (Microsoft cancelled the AppleScript roadmap item RM88537 in August 2026), so Mac mail needs Graph (milestone 6).

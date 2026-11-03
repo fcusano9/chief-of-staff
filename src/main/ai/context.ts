@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { ACTIVE_STATUSES, SOURCE_KIND_LABELS, type SourceKind, type SuggestionKind } from '@shared/types'
 
-export const ALL_KINDS: SuggestionKind[] = ['new_task', 'status_update', 'mark_done', 'waiting_on', 'new_project', 'new_person', 'brief_update']
+export const ALL_KINDS: SuggestionKind[] = ['new_task', 'needs_reply', 'status_update', 'mark_done', 'waiting_on', 'new_project', 'new_person', 'brief_update']
 
 export interface ExtractionContext {
   today: string
@@ -84,9 +84,10 @@ export function buildSystemPrompt(ctx: ExtractionContext, kinds: SuggestionKind[
   const name = ctx.userName
   const defs: Record<SuggestionKind, string> = {
     new_task: `something ${name} personally needs to do (assigned to them, volunteered by them, or clearly theirs). Skip tasks owned by other people unless ${name} must follow up, and skip anything already on the open-task list. If it belongs to a project you propose with new_project, set project_name to that project's name.`,
+    needs_reply: `someone asked ${name} a direct question, or for a decision, approval or information, and is waiting for ${name}'s answer, which ${name} hasn't given later in the item. Title is "Reply to <their name>: <topic>" (under 80 characters); requester_name is who is waiting; due_date only if they gave a deadline. Don't propose a separate new_task just for replying; propose a new_task only for work beyond the reply. Skip it for FYIs, thank-yous and questions sent to a group that someone else answered.`,
     status_update: `meaningful progress, a decision, or a changed date on an existing open task. Use its task_id.`,
-    mark_done: `an existing open task that the source shows is finished. Use its task_id.`,
-    waiting_on: `${name} is now waiting on someone else for an existing task (task_id) or a new item (task_id null, title set).`,
+    mark_done: `an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id.`,
+    waiting_on: `${name} is now waiting on someone else for an existing task (task_id) or a new item (task_id null, title set). This includes ${name} asking someone, in a message ${name} sent, for an answer, file or decision they haven't delivered yet in the item; title says what is owed, and waiting_on is that person's name. Skip it if the open-task list already waits on them for the same thing.`,
     new_project: `a named, ongoing initiative with its own goal or several pieces of work (for example "the dealer training program") that is not in the project list. Title is the project's name; details is a one- or two-sentence summary of its goal, timing and who is involved. One-off requests are tasks, not projects.`,
     new_person: `someone ${name} works with who is not in the people list: they ask ${name} for something, ${name} is waiting on them, or they own a decision or piece of work ${name} cares about. Title is their full name as written; set role, company and email only if the source states them; details is what's worth remembering about them. Skip people only mentioned in passing, and never propose ${name}.`,
     brief_update: `new context about an existing project, person, or task that will still matter later: a decision with its date, a change in scope, goal or timeline, who now owns what, or a stakeholder's preference. Use brief_scope and brief_owner_id from the lists. Put the text to add in details, written so it makes sense on its own months later. Propose one whenever the source contains such a fact; don't repeat what the brief already says.`,
@@ -101,6 +102,7 @@ ${kinds.map((k) => `- ${k}: ${defs[k]}`).join('\n')}
 Rules:
 - Use only task_id, project_id, and brief_owner_id values from the lists below. If nothing matches, use null (or skip the suggestion).
 - When a new task was asked for by, or is waiting on, a person you propose with new_person, use the same name in requester_name or waiting_on.
+- In an email conversation, messages marked "sent by ${name}" are ${name}'s own. Don't propose tasks for things ${name} already did in them.
 - Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") against today's date. If no deadline is stated, use null.
 - Every suggestion needs a short verbatim quote from the source as evidence.
 - Titles are short and start with a verb, except new_project and new_person titles, which are names. Write details in plain, factual language.

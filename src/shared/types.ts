@@ -118,6 +118,8 @@ export interface SourceRef {
   kind: SourceKind
   title: string
   occurredAt: string
+  /** True for conversations read from Outlook, which can be opened there. */
+  fromOutlook?: boolean
 }
 
 export const SOURCE_KIND_LABELS: Record<SourceKind, string> = {
@@ -157,9 +159,10 @@ export interface ImportResult {
   error: string | null
 }
 
-export type SuggestionKind = 'new_task' | 'status_update' | 'mark_done' | 'waiting_on' | 'brief_update' | 'new_project' | 'new_person'
+export type SuggestionKind = 'new_task' | 'needs_reply' | 'status_update' | 'mark_done' | 'waiting_on' | 'brief_update' | 'new_project' | 'new_person'
 export const SUGGESTION_LABELS: Record<SuggestionKind, string> = {
   new_task: 'New task',
+  needs_reply: 'Needs reply',
   status_update: 'Status update',
   mark_done: 'Looks done',
   waiting_on: 'Waiting on',
@@ -202,6 +205,8 @@ export interface SuggestionPayload {
   projectSuggestionId?: number | null
   requesterSuggestionId?: number | null
   waitingOnSuggestionId?: number | null
+  /** waiting_on from email: when the user sent the ask, so the wait counts from then rather than from accepting. */
+  waitingSince?: string | null
 }
 
 export interface Suggestion {
@@ -213,8 +218,9 @@ export interface Suggestion {
   evidence: string
   createdAt: string
   source: SourceRef
-  /** Title of the existing task referenced by payload.taskId, for display. */
+  /** Title and status of the existing task referenced by payload.taskId, for display. */
   taskTitle: string | null
+  taskStatus: TaskStatus | null
 }
 
 export type AiProviderId = 'demo' | 'claude' | 'local'
@@ -256,6 +262,8 @@ export interface TaskInput {
   priorityOverride: number | null
   followUpCount: number
   waitingOn: string | null
+  /** When entering Waiting on, the time the wait started (defaults to now). */
+  waitingSince?: string | null
   subtasks: Subtask[]
 }
 
@@ -397,6 +405,60 @@ export interface BackupInfo {
   reason: string | null
   schemaVersion: number | null
   openTasks: number | null
+}
+
+/** One email conversation found in Outlook (only the messages not read before). */
+export interface MailConversation {
+  key: string
+  subject: string
+  /** The other people in it, e.g. "Dana Lee, Marcus Webb". */
+  people: string
+  messageCount: number
+  lastAt: string
+  /** Why it won't be read unless chosen with "Read anyway"; null when it will be read. */
+  skipReason: string | null
+}
+
+/** What "Check Outlook" found. Nothing has been sent to the AI yet. */
+export interface MailCheck {
+  id: number
+  since: string
+  checkedAt: string
+  received: number
+  sent: number
+  /** Messages found that an earlier import already read, so they're left out. */
+  alreadyRead: number
+  conversations: MailConversation[]
+}
+
+export interface MailJobStatus {
+  state: 'idle' | 'reading' | 'done' | 'stopped'
+  done: number
+  total: number
+  suggestions: number
+  failed: number
+  /** Subject of the conversation being read. */
+  current: string | null
+}
+
+/** One "Read" of Outlook mail, shown as one row in Recent imports. */
+export interface MailImportRun {
+  id: number
+  since: string
+  startedAt: string
+  finishedAt: string | null
+  provider: string | null
+  /** False when stopped early; the rest is offered again next time. */
+  complete: boolean
+  conversations: SourceItem[]
+}
+
+export interface MailInfo {
+  /** Reading Outlook needs classic Outlook on Windows. */
+  supported: boolean
+  /** Where the next check starts by default: the last finished import, or 7 days ago. */
+  defaultSince: string
+  lastImportAt: string | null
 }
 
 /** Project colors (tasks are themed with their project's color). */

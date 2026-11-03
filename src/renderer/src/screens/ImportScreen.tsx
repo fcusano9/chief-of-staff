@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ImportResult, SourceItem, SourceKind } from '@shared/types'
+import type { ImportResult, MailImportRun, SourceItem, SourceKind } from '@shared/types'
 import { SOURCE_KIND_LABELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { ConfirmButton } from '../components/bits'
+import { OutlookImport } from '../components/OutlookImport'
 import { useApp } from '../context'
 
 const KINDS: SourceKind[] = ['copilot_summary', 'meeting_transcript', 'teams_chat', 'email', 'note']
@@ -14,7 +15,7 @@ const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, {
 
 /** Paste or drop text; the AI turns it into suggestions for the review queue. */
 export function ImportScreen() {
-  const { ai, go, toast, refresh, version, openAiLog } = useApp()
+  const { ai, go, toast, refresh, version } = useApp()
   const [kind, setKind] = useState<SourceKind>('copilot_summary')
   const [title, setTitle] = useState('')
   const [fromName, setFromName] = useState('')
@@ -23,10 +24,19 @@ export function ImportScreen() {
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<ImportResult | null>(null)
   const [recent, setRecent] = useState<SourceItem[]>([])
+  const [mailRuns, setMailRuns] = useState<MailImportRun[]>([])
+  const [openRun, setOpenRun] = useState<number | null>(null)
   const [dragging, setDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => void cos['sources.list']().then(setRecent), [version])
+  useEffect(() => {
+    void cos['sources.list']().then(setRecent)
+    void cos['mail.imports']().then(setMailRuns)
+  }, [version])
+  // Mail imports and other imports, newest first.
+  const rows: (SourceItem | MailImportRun)[] = [...recent, ...mailRuns].sort((a, b) =>
+    ('conversations' in b ? b.startedAt : b.importedAt).localeCompare('conversations' in a ? a.startedAt : a.importedAt),
+  )
 
   const loadFile = async (file: File) => {
     if (file.size > 5_000_000) return toast('That file is over 5 MB. Paste the relevant part instead.', true)
@@ -87,7 +97,9 @@ export function ImportScreen() {
         <span className="muted">everything lands in the review queue first</span>
       </div>
 
-      <div className="card" style={{ marginBottom: 12 }}>
+      <OutlookImport onFinished={refresh} />
+
+      <div className="card" style={{ marginBottom: 16 }}>
         <div className="row" style={{ gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
           {KINDS.map((k) => (
             <button key={k} className={`pill ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>
@@ -155,56 +167,107 @@ export function ImportScreen() {
         )}
       </div>
 
-      <div className="card" style={{ marginBottom: 16, color: 'var(--muted)' }}>
-        <b style={{ fontWeight: 500, color: 'var(--text)' }}>Scan Outlook</b> · reading your Inbox and calendar directly comes in milestone 4.
-      </div>
-
       <h2>Recent imports</h2>
       <div className="list">
-        {recent.map((s) => (
-          <div key={s.id} className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto auto auto', paddingLeft: 12, cursor: 'default' }}>
-            <div className="ttl">
-              {s.title}
-              <span className="why">
-                {SOURCE_KIND_LABELS[s.kind]} · {shortDate(s.occurredAt)}
-                {s.fromName ? ` · ${s.fromName}` : ''}
-              </span>
-            </div>
-            <span style={{ fontSize: 12 }} className={s.extractError ? '' : 'muted'}>
-              {s.extractError ? (
-                <span style={{ color: 'var(--danger)' }} title={s.extractError}>
-                  Failed
-                </span>
-              ) : s.pendingCount > 0 ? (
-                <button className="btn ghost" style={{ padding: '0 6px', color: 'var(--accent)' }} onClick={() => go('review')}>
-                  {s.pendingCount} to review
-                </button>
-              ) : s.extractedAt ? (
-                `${s.totalSuggestions} suggestion${s.totalSuggestions === 1 ? '' : 's'} · ${s.extractedBy}`
-              ) : (
-                'Not read yet'
-              )}
-            </span>
-            <button className="btn ghost" title="See exactly what was sent to the AI and what came back" onClick={() => openAiLog(s.id, 'import')}>
-              AI log
-            </button>
-            <button className="btn ghost" disabled={busy} title="Ask the AI to read it again" onClick={() => void rerun(s.id)}>
-              Run again
-            </button>
-            <ConfirmButton
-              label="Delete"
-              confirmLabel="Delete import?"
-              onConfirm={() =>
-                void cos['sources.delete'](s.id).then(() => {
-                  toast('Import deleted. Tasks created from it are kept.')
-                  refresh()
-                })
-              }
-            />
-          </div>
-        ))}
-        {recent.length === 0 && <div className="empty">Nothing imported yet.</div>}
+        {rows.map((row) =>
+          'conversations' in row ? (
+            <MailRunRow key={`m${row.id}`} run={row} open={openRun === row.id} onToggle={() => setOpenRun(openRun === row.id ? null : row.id)} busy={busy} rerun={rerun} />
+          ) : (
+            <SourceRow key={row.id} s={row} busy={busy} rerun={rerun} />
+          ),
+        )}
+        {rows.length === 0 && <div className="empty">Nothing imported yet.</div>}
       </div>
+    </div>
+  )
+}
+
+/** One Outlook mail import: a summary row that opens to show each conversation it read. */
+function MailRunRow({ run, open, onToggle, busy, rerun }: { run: MailImportRun; open: boolean; onToggle: () => void; busy: boolean; rerun: (id: number) => void }) {
+  const { go } = useApp()
+  const pending = run.conversations.reduce((n, s) => n + s.pendingCount, 0)
+  const total = run.conversations.reduce((n, s) => n + s.totalSuggestions, 0)
+  const failed = run.conversations.filter((s) => s.extractError).length
+  const n = run.conversations.length
+  return (
+    <>
+      <div className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto', paddingLeft: 12, cursor: 'default' }}>
+        <div className="ttl">
+          Outlook mail · {n} conversation{n === 1 ? '' : 's'}
+          <span className="why">
+            Email · {shortDate(run.startedAt)}
+            {run.provider ? ` · ${run.provider}` : ''}
+            {run.finishedAt == null ? ' · reading…' : run.complete ? '' : ' · stopped early'}
+          </span>
+        </div>
+        <span style={{ fontSize: 12 }} className="muted">
+          {failed > 0 && <span style={{ color: 'var(--danger)' }}>{failed} failed · </span>}
+          {pending > 0 ? (
+            <button className="btn ghost" style={{ padding: '0 6px', color: 'var(--accent)' }} onClick={() => go('review')}>
+              {pending} to review
+            </button>
+          ) : (
+            `${total} suggestion${total === 1 ? '' : 's'}`
+          )}
+        </span>
+        <button className="btn ghost" onClick={onToggle}>
+          {open ? 'Hide conversations' : 'Conversations'}
+        </button>
+      </div>
+      {open && run.conversations.map((s) => <SourceRow key={s.id} s={s} busy={busy} rerun={rerun} nested />)}
+    </>
+  )
+}
+
+function SourceRow({ s, busy, rerun, nested }: { s: SourceItem; busy: boolean; rerun: (id: number) => void; nested?: boolean }) {
+  const { go, toast, refresh, openAiLog } = useApp()
+  return (
+    <div className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto auto auto auto', paddingLeft: nested ? 32 : 12, cursor: 'default', background: nested ? 'var(--bg)' : undefined }}>
+      <div className="ttl">
+        {s.title}
+        <span className="why">
+          {SOURCE_KIND_LABELS[s.kind]} · {shortDate(s.occurredAt)}
+          {s.fromName ? ` · ${s.fromName}` : ''}
+        </span>
+      </div>
+      <span style={{ fontSize: 12 }} className={s.extractError ? '' : 'muted'}>
+        {s.extractError ? (
+          <span style={{ color: 'var(--danger)' }} title={s.extractError}>
+            Failed
+          </span>
+        ) : s.pendingCount > 0 ? (
+          <button className="btn ghost" style={{ padding: '0 6px', color: 'var(--accent)' }} onClick={() => go('review')}>
+            {s.pendingCount} to review
+          </button>
+        ) : s.extractedAt ? (
+          `${s.totalSuggestions} suggestion${s.totalSuggestions === 1 ? '' : 's'} · ${s.extractedBy}`
+        ) : (
+          'Not read yet'
+        )}
+      </span>
+      {s.fromOutlook ? (
+        <button className="btn ghost" title="Show this conversation's newest message in Outlook" onClick={() => void cos['mail.open'](s.id).catch((err) => toast(errorMessage(err), true))}>
+          Open in Outlook
+        </button>
+      ) : (
+        <span />
+      )}
+      <button className="btn ghost" title="See exactly what was sent to the AI and what came back" onClick={() => openAiLog(s.id, 'import')}>
+        AI log
+      </button>
+      <button className="btn ghost" disabled={busy} title="Ask the AI to read it again" onClick={() => void rerun(s.id)}>
+        Run again
+      </button>
+      <ConfirmButton
+        label="Delete"
+        confirmLabel="Delete import?"
+        onConfirm={() =>
+          void cos['sources.delete'](s.id).then(() => {
+            toast(s.fromOutlook ? 'Import deleted. Tasks created from it are kept, and the email stays in Outlook.' : 'Import deleted. Tasks created from it are kept.')
+            refresh()
+          })
+        }
+      />
     </div>
   )
 }

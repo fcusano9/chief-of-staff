@@ -76,6 +76,11 @@ export class DemoProvider implements AiProvider {
       .filter((l) => l.length > 6 && !/^\d{2}:\d{2}/.test(l) && !/^webvtt/i.test(l))
 
     const out: RawSuggestion[] = []
+    // Email conversations (see mail/plan.ts): who wrote each message, and whether the user wrote last.
+    const subject = source.content.match(/^Email conversation: (.+)$/m)?.[1]?.trim() ?? source.title
+    const iWroteLast = source.content.includes(`${ctx.userName} sent the latest message`)
+    let sender: { name: string; me: boolean } | null = null
+    let recipient: string | null = null
     for (const raw of lines) {
       const line = raw.replace(/^([-*•]|\d+[.)]|\[ ?\])\s+/, '')
       const lower = line.toLowerCase()
@@ -84,6 +89,28 @@ export class DemoProvider implements AiProvider {
       const actiony = /\b(action item|todo|to do|follow up|follow-up|need to|needs to|will send|will share|please|owner:|assigned to)\b/.test(lower)
       const task = this.matchTask(line, ctx)
       const base = { task_id: null, due_date: findDueDate(line, ctx.today), project_id: null, project_name: null, requester_name: findRequester(line), waiting_on: null, brief_scope: null, brief_owner_id: null, role: null, company: null, email: null, evidence: line.slice(0, 300) }
+
+      const from = line.match(/^From: (.+?)(?: <[^>]*>)?$/)
+      if (from) {
+        sender = { name: from[1]!.replace(/ \(you\)$/, ''), me: from[1]!.endsWith('(you)') }
+        continue
+      }
+      const to = line.match(/^To: ([^;]+)/)
+      if (to) {
+        recipient = to[1]!.trim()
+        continue
+      }
+      if (/^(Cc|Subject): |^=== Message |^Email conversation: |^\d+ messages? below|^The latest message is from |sent the latest message/.test(line)) continue
+      const asks = /\?$/.test(line) && /\b(can|could|would|will) you\b|\byour (thoughts|input|approval|sign-?off)\b/i.test(line)
+      if (sender && asks) {
+        if (!sender.me && !iWroteLast && !out.some((s) => s.kind === 'needs_reply')) {
+          const who = sender.name.split(/\s+/)[0]
+          out.push({ ...base, kind: 'needs_reply', title: `Reply to ${who}: ${subject}`.slice(0, 80), details: '', requester_name: sender.name })
+        } else if (sender.me && iWroteLast && recipient) {
+          out.push({ ...base, kind: 'waiting_on', title: toTitle(line.replace(/^.*?\b(can|could|would|will) you\s+/i, '').replace(/\?$/, '')), details: line, waiting_on: recipient })
+        }
+        continue
+      }
 
       const waiting = line.match(/\bwaiting (?:on|for) ([^.,;:]+)/i)
       if (waiting) {

@@ -2,6 +2,35 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-03 · Real data is never opened from inside Claude Desktop's sandbox (Frank)
+**What happened:** Claude Desktop is a packaged (MSIX) Windows app. Programs started from it inherit its file redirection, so whatever they save under AppData quietly goes to `%LOCALAPPDATA%\Packages\Claude_…\LocalCache\Roaming\…`. The installed app, started from a Claude session, read and wrote that private copy. Frank's morning import (7 tasks, a project, his API key) was saved there, while the Start-menu app kept using the real folder. His data looked lost until the two folders were compared. The OneDrive backup folder isn't redirected, so its backups were real. Every check made from inside Claude also saw only the private copy, which misled the first diagnosis.
+
+**Decided:** on startup, the installed app (real data only) writes a probe file to its data folder and checks whether it landed in any package's private copy (`findRedirectingPackage` in `paths.ts`). If it did, the app shows "Open Chief of Staff from the Start menu" and quits before touching the database. Dev and test runs, which use their own folders, are unaffected.
+
+**For AI assistants:** don't launch the installed app from a Claude session to check real data, and don't read `%APPDATA%\Chief of Staff` from one and treat it as real. The OneDrive backups are the reliable view.
+
+### 2026-11-03 · Outlook mail import (Frank)
+Frank wants the app to read his mail since the last import, find action items and emails that need his reply, and track who owes him an answer from his sent mail. **Frank's choices** (asked up front; mockup `design/outlook-mail-import.html` approved):
+- **Trigger:** a button only, no schedule.
+- **Folders:** Inbox and all its subfolders, plus Sent Items.
+- **Start:** the last finished import. The first run goes back 7 days, and he can pick 30 days or any date to go further while proving it out.
+- **AI:** whichever provider is selected, as with other imports.
+- **Skipped:** newsletters and mailing lists, automated senders, meeting invites and automatic replies. "Read anyway" overrides a skip.
+- **Needs reply:** a task "Reply to <name>: <topic>", ranked like any task.
+- **Sent mail:** a waiting-on item right away, counted from when he sent it. After 3 business days with no answer it shows "Follow up" on Waiting and climbs in priority. When the answer comes, Review offers "Reply arrived" to clear it.
+
+**How it works:**
+- **Reading Outlook:** a PowerShell script talks to classic Outlook over COM (Electron can't), writes JSON to a temp file, and is deleted afterwards. It only reads, apart from showing one message for "Open in Outlook". It never sends, moves or flags anything. It uses the running Outlook and says so if Outlook is closed, rather than starting it.
+- **Two steps:** "Check Outlook" sends nothing to the AI. "Read" sends one conversation at a time in the background while the screen polls for progress. Stop finishes the current conversation, and the rest is offered next time. A stopped run doesn't move the start date.
+- **One import per conversation:** received and sent messages are read together, oldest first, with quoted history removed (kept only under the first message, for context). On a week of Frank's real mail that cut the text sent from about 1.6 million to 390,000 characters. Each conversation is a normal import with its own AI log and Run again; Recent imports shows one row per mail import.
+- **Never read twice:** every message read is recorded by its Internet message id (`mail_messages`), so going back further only adds older mail.
+- **App rules over AI guesses:** if Frank wrote the newest message, any "needs reply" is dropped (shown in the AI log), and a waiting-on starts at the time he sent the ask.
+- **A new suggestion kind**, `needs_reply`. "Reply arrived" is a "Looks done" on a waiting-on task from an email, relabeled in Review.
+
+**A change from the mockup:** the mockup also skipped conversations where Frank replied last. Those are now read, because they're exactly where his sent asks are, and only "needs reply" is suppressed.
+
+**Not done yet:** draft replies, calendar, and a benchmark of real models on the new email cases (no Ollama or Claude key on the Windows PC).
+
 ### 2026-11-03 · Database versions 5–7 after parallel work
 The project overview (PR 9) and the AI log (PR 10) were built in parallel, and both added schema version 5. Frank's Windows database had already applied the AI log as version 5, from an installed development build.
 - **Resolution:**

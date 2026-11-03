@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Outlook mail import</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --reply: #c23e70; --wait: #2a74c4; --done: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+    --reply: #ef86ac; --wait: #6aa8ee; --done: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+  --reply: #ef86ac; --wait: #6aa8ee; --done: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); display: flex; gap: 6px; align-items: center; white-space: nowrap; cursor: pointer; }
+.tab:hover { background: var(--hover); color: var(--text); }
+.tab.on { color: var(--text); background: var(--sel); }
+.count { font: 500 11px var(--mono); background: var(--accent-bg); color: var(--accent); padding: 0 5px; border-radius: 4px; }
+.spacer { flex: 1; }
+.page { max-width: 1080px; margin: 0 auto; padding: 22px 28px 40px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; }
+h2 { font-size: 12px; font-weight: 500; color: var(--muted); margin: 22px 0 6px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); }
+.mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 14px 16px; }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 4px 8px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.r { display: grid; grid-template-columns: 100px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 12px; border-top: 1px solid var(--border); }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.thread { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg); border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.thread:first-child { border-top: 0; }
+.thread b { color: var(--text); font-weight: 500; }
+.chip { font-size: 11px; padding: 1px 7px; border-radius: 4px; white-space: nowrap; display: inline-block; }
+.k-task { background: var(--accent-bg); color: var(--accent); }
+.k-reply { background: color-mix(in srgb, var(--reply) 14%, transparent); color: var(--reply); }
+.k-wait { background: color-mix(in srgb, var(--wait) 14%, transparent); color: var(--wait); }
+.k-done { background: color-mix(in srgb, var(--done) 14%, transparent); color: var(--done); }
+.meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.evidence { font-size: 12px; margin-top: 4px; font-style: italic; color: var(--faint); }
+.actions { display: flex; gap: 4px; }
+.bar { height: 4px; border-radius: 2px; background: var(--sel); overflow: hidden; margin: 10px 0 6px; }
+.bar > div { height: 100%; background: var(--accent); transition: width .25s; }
+.stat { display: flex; gap: 22px; flex-wrap: wrap; margin: 10px 0; }
+.stat div { display: grid; }
+.stat b { font: 500 18px var(--mono); }
+.stat span { font-size: 12px; color: var(--muted); }
+.skip { display: grid; grid-template-columns: minmax(0, 1fr) 170px auto; gap: 10px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--border); font-size: 12px; }
+.skip:first-child { border-top: 0; }
+.notice { padding: 8px 10px; border-radius: 6px; font-size: 12px; background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.mockbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--faint); margin-bottom: 12px; }
+[hidden] { display: none !important; }
+@media (max-width: 760px) {
+  .page { padding: 16px; }
+  .r { grid-template-columns: minmax(0, 1fr); }
+  .skip { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button><button class="tab">Tasks</button>
+  <button class="tab" data-view="review">Review <span class="count" id="count">0</span></button>
+  <button class="tab">Waiting</button><button class="tab">Projects</button><button class="tab">People</button>
+  <button class="tab on" data-view="import">Import</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<!-- IMPORT -->
+<div class="page" id="v-import">
+  <div class="mockbar">Mockup: <button class="btn sm" id="firstRun">Show first run</button><button class="btn sm" id="laterRun">Show a later run</button><button class="btn sm" id="promptCase">Show Outlook not open</button></div>
+  <div class="head">
+    <h1>Import</h1>
+    <span class="muted">everything lands in the review queue first</span>
+  </div>
+
+  <div class="card" id="outlook">
+    <div class="row" style="flex-wrap:wrap">
+      <b style="font-weight:600">Outlook mail</b>
+      <span class="muted" id="lastRun"></span>
+    </div>
+
+    <!-- idle -->
+    <div id="s-idle">
+      <div class="row" style="margin-top:10px;flex-wrap:wrap">
+        <span class="muted">Read mail since</span>
+        <select class="inp" id="since"></select>
+        <input class="inp" type="date" id="customDate" hidden>
+        <div class="spacer"></div>
+        <span class="muted" style="font-size:12px">Inbox and its subfolders, plus Sent Items</span>
+        <button class="btn primary" id="check">Check Outlook</button>
+      </div>
+      <div class="notice" id="notOpen" hidden style="margin-top:10px">Outlook isn't running. Open Outlook, then try again.</div>
+    </div>
+
+    <!-- checking -->
+    <div id="s-checking" hidden>
+      <div class="bar"><div style="width:35%"></div></div>
+      <span class="muted">Looking through Outlook… nothing is sent to the AI yet</span>
+    </div>
+
+    <!-- ready to read -->
+    <div id="s-ready" hidden>
+      <div class="stat">
+        <div><b id="nRecv">0</b><span>received</span></div>
+        <div><b id="nSent">0</b><span>sent</span></div>
+        <div><b id="nThreads">0</b><span>conversations</span></div>
+        <div><b id="nSkip">0</b><span>skipped</span></div>
+        <div><b id="nRead" style="color:var(--accent)">0</b><span>to read</span></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap">
+        <span class="muted" style="font-size:12px" id="provNote"></span>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="cancel">Cancel</button>
+        <button class="btn primary" id="read"></button>
+      </div>
+    </div>
+
+    <!-- reading -->
+    <div id="s-reading" hidden>
+      <div class="bar"><div id="progress" style="width:0"></div></div>
+      <div class="row"><span class="muted" id="readingText"></span><div class="spacer"></div><button class="btn" id="stop">Stop</button></div>
+    </div>
+
+    <!-- done -->
+    <div id="s-done" hidden>
+      <div class="row" style="margin-top:10px;flex-wrap:wrap">
+        <span id="doneText"></span>
+        <div class="spacer"></div>
+        <button class="btn" id="again">Check again</button>
+        <button class="btn primary" id="toReview">Go to Review</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="skippedWrap" hidden>
+    <h2><button class="btn ghost sm" id="toggleSkip">▸ Skipped conversations (<span id="skipCount">0</span>)</button></h2>
+    <div class="list" id="skipped" hidden></div>
+  </div>
+
+  <h2>Recent imports</h2>
+  <div class="list" id="recent"></div>
+
+  <div class="notes">
+    <h3>Mockup notes (not part of the app)</h3>
+    <ul>
+      <li><b>Two steps:</b> "Check Outlook" only looks (nothing goes to the AI). You see the counts and what was skipped, then click "Read" to send it to the selected AI. That way you can prove it out before spending time or tokens.</li>
+      <li><b>Since:</b> defaults to your last import (7 days on the first run). Pick "Last 30 days" or a custom date to go further back. Mail that was already read is never read twice, so going back only adds the older mail.</li>
+      <li><b>Per conversation:</b> the AI reads each conversation as a whole (received and sent messages together), so it knows whether you already replied and who still owes you an answer.</li>
+      <li><b>Skipped:</b> newsletters and automated senders, meeting invites, and conversations where your reply is the latest message (unless something in them is still open). "Read anyway" sends a skipped one through.</li>
+      <li><b>Recent imports:</b> each mail import is one row, so 40 conversations don't push your pasted imports off the list. Every conversation is still kept in the archive with its own AI log.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- REVIEW -->
+<div class="page" id="v-review" hidden>
+  <div class="head">
+    <h1>Review queue</h1>
+    <span class="muted" id="sub"></span>
+    <div class="spacer"></div>
+    <button class="btn" id="reset">Reset mockup</button>
+  </div>
+  <div class="list" id="queue"></div>
+
+  <div class="notes">
+    <h3>Mockup notes (not part of the app)</h3>
+    <ul>
+      <li><b>Grouped by conversation:</b> each grey header is one email conversation. "Open in Outlook" opens that message in Outlook.</li>
+      <li><b>Needs reply</b> is a normal task ("Reply to …") with its own pink chip, so it's ranked by the priority score with your other work. The requester is the sender.</li>
+      <li><b>Waiting on</b> comes from your sent mail when you asked someone for something. After 3 business days with no reply it climbs in priority as a follow-up (the score already counts staleness).</li>
+      <li><b>Reply arrived:</b> when someone answers a question you're waiting on, Review proposes clearing it, and may add a task if their answer gives you something to do.</li>
+      <li>Keys still work: J/K to move, A accept, R reject, Enter edit.</li>
+    </ul>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id)
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+function toast(text) { const t = $('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1800) }
+
+const THREADS = [
+  { id: 'a', subject: 'Q1 dealer pricing sheet', who: 'Dana Lee', msgs: 4, when: 'Nov 3' },
+  { id: 'b', subject: 'Firmware 3.2 build date', who: 'Marcus Webb', msgs: 2, when: 'Nov 2' },
+  { id: 'c', subject: 'Partner portal launch checklist', who: 'Priya Shah', msgs: 3, when: 'Nov 2' },
+  { id: 'd', subject: 'Spec review for touch panel refresh', who: 'You → Tom Alvarez', msgs: 1, when: 'Oct 30' },
+]
+const SUGGESTIONS = () => [
+  { id: 1, thread: 'a', kind: 'reply', title: 'Reply to Dana Lee: Q1 dealer pricing sheet', meta: 'Asked by Dana Lee · Due Wed, Nov 4', evidence: 'Can you confirm the tier 2 discount before I send this to the dealers Wednesday?' },
+  { id: 2, thread: 'a', kind: 'task', title: 'Update tier 2 discount in the pricing model', meta: 'Asked by Dana Lee · Project: Dealer pricing', evidence: 'Also, the model still shows 12% for tier 2; it should be 15%.' },
+  { id: 3, thread: 'b', kind: 'done', title: 'Clear "Waiting on Marcus Webb: firmware 3.2 build date"', meta: 'Marcus replied Nov 2 · waiting since Oct 28', evidence: 'Build is locked for Nov 14, release notes to follow.' },
+  { id: 4, thread: 'b', kind: 'task', title: 'Draft release notes outline for firmware 3.2', meta: 'Due Fri, Nov 13', evidence: 'Frank, can you get me an outline of the release notes the day before?' },
+  { id: 5, thread: 'c', kind: 'task', title: 'Sign off on portal launch checklist', meta: 'Asked by Priya Shah · Project: Partner portal · Due Fri, Nov 6', evidence: 'Need your sign-off on items 4–7 by Friday.' },
+  { id: 6, thread: 'd', kind: 'wait', title: 'Waiting on Tom Alvarez: comments on touch panel spec', meta: 'You asked Oct 30 · no reply in 3 business days · follow-up', evidence: 'Tom, could you send your comments on sections 2 and 3 by end of week?' },
+]
+const LABEL = { reply: 'Needs reply', task: 'New task', wait: 'Waiting on', done: 'Reply arrived' }
+const CHIP = { reply: 'k-reply', task: 'k-task', wait: 'k-wait', done: 'k-done' }
+const SKIPPED = [
+  ['Your weekly digest from the industry newsletter', 'Newsletter'],
+  ['Build server: nightly build succeeded', 'Automated sender'],
+  ['Accepted: Pricing sync', 'Meeting invite reply'],
+  ['Updated invitation: Portal standup', 'Meeting invite'],
+  ['Lunch Thursday?', 'You replied last'],
+  ['Expense report approved', 'No-reply sender'],
+]
+
+let mode = 'first', items, state, cursor, readTimer, reviewCount = 0
+const view = { import: $('v-import'), review: $('v-review') }
+function show(v) {
+  Object.entries(view).forEach(([k, el]) => (el.hidden = k !== v))
+  document.querySelectorAll('[data-view]').forEach((t) => t.classList.toggle('on', t.dataset.view === v))
+}
+document.querySelectorAll('[data-view]').forEach((t) => (t.onclick = () => show(t.dataset.view)))
+
+function stage(s) { ['idle', 'checking', 'ready', 'reading', 'done'].forEach((k) => ($('s-' + k).hidden = k !== s)) }
+
+function setupImport(m) {
+  mode = m
+  clearInterval(readTimer)
+  $('notOpen').hidden = true
+  $('lastRun').textContent = m === 'first' ? '· never imported' : '· last imported today at 9:14 AM'
+  $('since').innerHTML = (m === 'first' ? '' : '<option value="last">Last import (today, 9:14 AM)</option>') +
+    `<option value="7" ${m === 'first' ? 'selected' : ''}>Last 7 days</option><option value="30">Last 30 days</option><option value="custom">Pick a date…</option>`
+  $('customDate').hidden = true
+  $('skippedWrap').hidden = true
+  stage('idle')
+  renderRecent(false)
+}
+$('since').onchange = () => ($('customDate').hidden = $('since').value !== 'custom')
+
+function counts() {
+  const s = $('since').value
+  if (s === 'last') return { recv: 9, sent: 3, threads: 7, skip: 3, read: 4 }
+  if (s === '30') return { recv: 781, sent: 142, threads: 236, skip: 121, read: 115, older: true }
+  return { recv: 202, sent: 36, threads: 74, skip: 33, read: 41 }
+}
+
+$('check').onclick = () => {
+  if (mode === 'closed') { $('notOpen').hidden = false; return }
+  stage('checking')
+  setTimeout(() => {
+    const c = counts()
+    $('nRecv').textContent = c.recv; $('nSent').textContent = c.sent; $('nThreads').textContent = c.threads
+    $('nSkip').textContent = c.skip; $('nRead').textContent = c.read
+    $('provNote').textContent = `Claude Opus 5.5 · sent to Anthropic · about ${Math.ceil(c.read * 8 / 60)} min` + (c.older ? ' · mail read before is not read again' : '')
+    $('read').textContent = `Read ${c.read} conversations`
+    $('skipCount').textContent = c.skip
+    $('skipped').innerHTML = SKIPPED.map(([t, why]) => `<div class="skip"><span>${esc(t)}</span><span class="muted">${why}</span><button class="btn ghost sm">Read anyway</button></div>`).join('') +
+      (c.skip > SKIPPED.length ? `<div class="skip"><span class="faint">and ${c.skip - SKIPPED.length} more</span><span></span><span></span></div>` : '')
+    $('skippedWrap').hidden = false
+    stage('ready')
+  }, 900)
+}
+$('cancel').onclick = () => setupImport(mode)
+$('read').onclick = () => {
+  const total = counts().read
+  let n = 0
+  stage('reading')
+  const tick = () => {
+    n = Math.min(total, n + Math.ceil(total / 12))
+    $('progress').style.width = `${(n / total) * 100}%`
+    $('readingText').textContent = `Reading conversation ${n} of ${total}… suggestions appear in Review as each one finishes`
+    if (n >= total) finish(total)
+  }
+  tick()
+  readTimer = setInterval(tick, 350)
+}
+$('stop').onclick = () => { clearInterval(readTimer); finish(null) }
+function finish(total) {
+  clearInterval(readTimer)
+  reviewCount = SUGGESTIONS().length
+  $('count').textContent = reviewCount
+  $('doneText').innerHTML = total == null
+    ? `Stopped. What was read so far is in Review; the rest will be offered next time.`
+    : `<b style="font-weight:500">${total} conversations read</b> <span class="muted">· ${reviewCount} suggestions to review · 0 failed</span>`
+  $('lastRun').textContent = '· last imported just now'
+  stage('done')
+  renderRecent(true)
+}
+$('again').onclick = () => setupImport('later')
+$('toReview').onclick = () => show('review')
+$('toggleSkip').onclick = () => {
+  const l = $('skipped'); l.hidden = !l.hidden
+  $('toggleSkip').firstChild.textContent = (l.hidden ? '▸' : '▾') + ' Skipped conversations ('
+}
+$('firstRun').onclick = () => setupImport('first')
+$('laterRun').onclick = () => setupImport('later')
+$('promptCase').onclick = () => { setupImport('first'); mode = 'closed' }
+
+function renderRecent(withNew) {
+  const rows = [
+    withNew ? { t: 'Outlook mail · 41 conversations', w: 'Email · Nov 3 · Claude Opus 5.5', s: '<span style="color:var(--accent)">6 to review</span>', open: true } : null,
+    mode !== 'first' ? { t: 'Outlook mail · 12 conversations', w: 'Email · Nov 3, 9:14 AM · Claude Opus 5.5', s: '4 suggestions' } : null,
+    { t: 'Dealer training kickoff', w: 'Meeting transcript · Nov 2', s: '8 suggestions · Claude Opus 5.5' },
+    { t: 'Copilot summary, week of Oct 26', w: 'Copilot summary · Oct 30', s: '11 suggestions · Claude Opus 5.5' },
+  ].filter(Boolean)
+  $('recent').innerHTML = rows.map((r) => `<div class="r" style="grid-template-columns:minmax(0,1fr) auto auto"><div>${esc(r.t)}<div class="meta">${esc(r.w)}</div></div><span style="font-size:12px" class="muted">${r.s}</span><span class="actions">${r.open !== undefined || r.t.startsWith('Outlook') ? '<button class="btn ghost sm">Conversations</button>' : '<button class="btn ghost sm">AI log</button>'}</span></div>`).join('')
+}
+
+// Review
+function resetReview() { items = SUGGESTIONS(); state = {}; cursor = 0; renderQueue() }
+function renderQueue() {
+  const visible = items.filter((i) => !state[i.id])
+  cursor = Math.min(cursor, Math.max(0, visible.length - 1))
+  $('count').textContent = visible.length
+  $('sub').textContent = visible.length ? `${visible.length} suggestions from Outlook mail · nothing changes until you accept` : "You're all caught up"
+  let html = ''
+  THREADS.forEach((t) => {
+    const rows = visible.filter((i) => i.thread === t.id)
+    if (!rows.length) return
+    html += `<div class="thread"><span class="chip" style="background:var(--sel)">Email</span><b>${esc(t.subject)}</b><span>${esc(t.who)} · ${t.msgs} message${t.msgs > 1 ? 's' : ''} · ${t.when}</span><div class="spacer"></div><button class="btn ghost sm">Open in Outlook</button><button class="btn ghost sm">AI log</button></div>`
+    rows.forEach((i) => {
+      const idx = visible.indexOf(i)
+      html += `<div class="r ${idx === cursor ? 'sel' : ''}" data-id="${i.id}">
+        <div><span class="chip ${CHIP[i.kind]}">${LABEL[i.kind]}</span></div>
+        <div style="min-width:0"><b style="font-weight:500">${esc(i.title)}</b><div class="meta">${esc(i.meta)}</div><div class="evidence">“${esc(i.evidence)}”</div></div>
+        <div class="actions"><button class="btn" data-act="accept">${i.kind === 'done' ? 'Clear it' : 'Accept'} <span class="kbd">A</span></button><button class="btn ghost" data-act="edit">Edit</button><button class="btn ghost" data-act="reject">Reject <span class="kbd">R</span></button></div>
+      </div>`
+    })
+  })
+  $('queue').innerHTML = html || '<div class="r"><div></div><div class="muted">Nothing left. Use "Reset mockup" to try again.</div><div></div></div>'
+}
+function decide(i, how) {
+  state[i.id] = how
+  if (how === 'accepted') toast({ reply: 'Reply task created', task: 'Task created', wait: 'Added to Waiting', done: 'Waiting item cleared' }[i.kind])
+  renderQueue()
+}
+$('queue').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-id]')
+  if (!row) return
+  const i = items.find((x) => x.id === Number(row.dataset.id))
+  cursor = items.filter((x) => !state[x.id]).indexOf(i)
+  const act = e.target.closest('[data-act]')?.dataset.act
+  if (act === 'accept') decide(i, 'accepted')
+  else if (act === 'reject') decide(i, 'rejected')
+  else if (act === 'edit') toast('Edit works as it does today')
+  else renderQueue()
+})
+window.addEventListener('keydown', (e) => {
+  if ($('v-review').hidden || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return
+  const visible = items.filter((x) => !state[x.id])
+  const i = visible[cursor]
+  if (e.key === 'j' || e.key === 'ArrowDown') { cursor = Math.min(cursor + 1, visible.length - 1); renderQueue() }
+  else if (e.key === 'k' || e.key === 'ArrowUp') { cursor = Math.max(cursor - 1, 0); renderQueue() }
+  else if (i && e.key === 'a') decide(i, 'accepted')
+  else if (i && e.key === 'r') decide(i, 'rejected')
+})
+$('reset').onclick = resetReview
+$('theme').onclick = () => {
+  const root = document.documentElement
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+  root.dataset.theme = dark ? 'light' : 'dark'
+}
+setupImport('first')
+resetReview()
+$('count').textContent = 0
+</script>
+</body>
+</html>

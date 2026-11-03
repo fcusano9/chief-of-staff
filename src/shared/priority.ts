@@ -5,12 +5,31 @@ export const DUE_HORIZON_DAYS = 14
 /** Days without activity at which staleness maxes out. */
 export const STALE_HORIZON_DAYS = 14
 
+/** Business days of waiting after which a waiting-on item is due a follow-up. */
+export const FOLLOW_UP_BUSINESS_DAYS = 3
+
 export interface PriorityInput {
   dueDate: string | null
   requester: { name: string; priorityWeight: number } | null
   followUpCount: number
   lastActivityAt: string
+  status?: string
+  waitingSince?: string | null
 }
+
+/** Weekdays (Monday to Friday) from the day after `fromIso` through `now`, in local time. */
+export function businessDaysSince(fromIso: string, now: Date): number {
+  const from = new Date(fromIso)
+  const day = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 1)
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  let n = 0
+  for (; day <= end; day.setDate(day.getDate() + 1)) if (day.getDay() !== 0 && day.getDay() !== 6) n++
+  return n
+}
+
+/** True when a waiting-on item has gone FOLLOW_UP_BUSINESS_DAYS without an answer. */
+export const needsFollowUp = (t: { status?: string; waitingSince?: string | null }, now: Date): boolean =>
+  t.status === 'waiting_on' && !!t.waitingSince && businessDaysSince(t.waitingSince, now) >= FOLLOW_UP_BUSINESS_DAYS
 
 export interface PriorityResult {
   score: number
@@ -60,9 +79,15 @@ export function scorePriority(item: PriorityInput, weights: PriorityWeights, now
   }
 
   const idleDays = Math.max(0, (now.getTime() - Date.parse(item.lastActivityAt)) / DAY_MS)
-  const stale = Math.min(1, idleDays / STALE_HORIZON_DAYS + item.followUpCount * 0.25)
+  let stale = Math.min(1, idleDays / STALE_HORIZON_DAYS + item.followUpCount * 0.25)
   if (item.followUpCount > 0) reasons.push({ impact: stale, text: plural(item.followUpCount, 'follow-up') })
   else if (idleDays >= 7) reasons.push({ impact: stale, text: `no activity for ${Math.round(idleDays)} days` })
+  // A wait with no answer after a few business days is due a follow-up, and climbs from there.
+  if (needsFollowUp(item, now)) {
+    const days = businessDaysSince(item.waitingSince!, now)
+    stale = Math.max(stale, Math.min(1, 0.6 + (days - FOLLOW_UP_BUSINESS_DAYS) * 0.1))
+    reasons.push({ impact: stale, text: `no reply in ${plural(days, 'business day')}` })
+  }
 
   const total = weights.dueDate + weights.requester + weights.staleness
   const score = total <= 0 ? 0 : (weights.dueDate * due + weights.requester * requester + weights.staleness * stale) / total
