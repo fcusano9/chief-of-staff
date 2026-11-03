@@ -22,6 +22,7 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 | 2.1 | Local AI: Ollama provider, extraction benchmark (`npm run bench:ai`) | ✅ Built. Local models benchmarked on the Mac; Claude and the Windows PC not yet |
 | 2.2 | AI-proposed projects and people, linked tasks, clearer context suggestions | ✅ Built. Benchmarked with gpt-oss:20b only |
 | 2.3 | People: company, Company and Open asks filters, one-line AI brief with Regenerate | ✅ Built. Benchmark not rerun yet |
+| 2.4 | Projects: hand-written overview, AI status brief from the history, History window | ✅ Built |
 | 3 | Priorities and briefings | Next |
 | 4 | Outlook | Planned |
 | 5 | Knowledge archive and meeting prep | Planned |

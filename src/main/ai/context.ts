@@ -7,7 +7,7 @@ export interface ExtractionContext {
   today: string
   userName: string
   tasks: { id: number; title: string; status: string; dueDate: string | null; project: string | null; requester: string | null; waitingOn: string | null }[]
-  projects: { id: number; name: string; brief: string; instructions: string }[]
+  projects: { id: number; name: string; overview: string; brief: string; instructions: string }[]
   people: { id: number; name: string; role: string | null; company: string | null; brief: string }[]
 }
 
@@ -33,7 +33,7 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
     .all() as Record<string, unknown>[]
   const projects = db
     .prepare(
-      `SELECT p.id, p.name, IFNULL(b.summary, '') AS brief, IFNULL(b.standing_instructions, '') AS instructions
+      `SELECT p.id, p.name, p.overview, p.brief, IFNULL(b.summary, '') AS history, IFNULL(b.standing_instructions, '') AS instructions
        FROM projects p LEFT JOIN context_briefs b ON b.scope = 'project' AND b.owner_id = p.id
        WHERE p.status <> 'archived' ORDER BY p.name`,
     )
@@ -57,7 +57,14 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
       requester: (t.requester as string) ?? null,
       waitingOn: (t.waiting_on as string) ?? null,
     })),
-    projects: projects.map((p) => ({ id: Number(p.id), name: String(p.name), brief: String(p.brief), instructions: String(p.instructions) })),
+    // A project's overview and status brief; without a brief, the newest notes in its history.
+    projects: projects.map((p) => ({
+      id: Number(p.id),
+      name: String(p.name),
+      overview: (p.overview as string) ?? '',
+      brief: (p.brief as string) || newest(String(p.history), 400),
+      instructions: String(p.instructions),
+    })),
     // A person's one-line brief; without one, the newest notes in their context history.
     people: people.map((p) => ({
       id: Number(p.id),
@@ -126,7 +133,7 @@ export function buildUserPrompt(ctx: ExtractionContext, source: SourceForExtract
         .join('\n')
     : '(none)'
   const projects = ctx.projects.length
-    ? ctx.projects.map((p) => `- [${p.id}] ${p.name}${p.brief ? `: ${oneLine(p.brief, 400)}` : ''}${p.instructions ? ` (Instructions: ${oneLine(p.instructions, 200)})` : ''}`).join('\n')
+    ? ctx.projects.map((p) => `- [${p.id}] ${p.name}${p.overview ? `: ${oneLine(p.overview, 300)}` : ''}${p.brief ? ` (Status: ${oneLine(p.brief, 500)})` : ''}${p.instructions ? ` (Instructions: ${oneLine(p.instructions, 200)})` : ''}`).join('\n')
     : '(none)'
   const people = ctx.people.length
     ? ctx.people.map((p) => `- [${p.id}] ${p.name}${p.role ? `, ${p.role}` : ''}${p.company ? `, ${p.company}` : ''}${p.brief ? `: ${oneLine(p.brief, 300)}` : ''}`).join('\n')

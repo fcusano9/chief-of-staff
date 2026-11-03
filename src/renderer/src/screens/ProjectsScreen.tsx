@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { ProjectStatus, Task } from '@shared/types'
+import { useEffect, useRef, useState } from 'react'
+import type { BriefSuggestion, ProjectStatus, ProjectSummary, Task } from '@shared/types'
 import { PROJECT_COLORS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { ConfirmButton, TaskRow } from '../components/bits'
@@ -18,42 +18,68 @@ interface Draft {
   name: string
   color: string
   status: ProjectStatus
-  summary: string
   standingInstructions: string
 }
+
+const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+/** The date stamp history notes use, matching notes added from Review: "Nov 3, 2026". */
+const noteStamp = () => new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
 export function ProjectsScreen() {
   const { projects, openTask, refresh, toast, version } = useApp()
   const [selected, setSelected] = useState<number | 'new' | null>(projects[0]?.id ?? null)
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [history, setHistory] = useState('')
   const [tasks, setTasks] = useState<Task[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  // The project the draft was loaded for, so a refresh (e.g. after keeping a brief) keeps unsaved edits.
+  const loadedFor = useRef<number | null>(null)
 
   useEffect(() => {
-    if (selected === null) return setDraft(null)
+    if (selected === null) {
+      loadedFor.current = null
+      return setDraft(null)
+    }
     if (selected === 'new') {
+      loadedFor.current = null
       setTasks([])
-      return setDraft({ id: 0, name: '', color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length]!, status: 'active', summary: '', standingInstructions: '' })
+      setHistory('')
+      return setDraft({ id: 0, name: '', color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length]!, status: 'active', standingInstructions: '' })
     }
     const p = projects.find((x) => x.id === selected)
     if (!p) return setDraft(null) // just created: wait for the refreshed list
-    void cos['briefs.get']('project', p.id).then((b) =>
-      setDraft({ id: p.id, name: p.name, color: p.color, status: p.status, summary: b.summary, standingInstructions: b.standingInstructions }),
-    )
     void cos['tasks.listActive']({ projectId: p.id }).then(setTasks)
+    const first = loadedFor.current !== p.id
+    loadedFor.current = p.id
+    void cos['briefs.get']('project', p.id).then((b) => {
+      setHistory(b.summary)
+      if (first) setDraft({ id: p.id, name: p.name, color: p.color, status: p.status, standingInstructions: b.standingInstructions })
+    })
   }, [selected, projects, version])
+
+  const select = (id: number | 'new' | null) => {
+    setShowHistory(false)
+    setSelected(id)
+  }
 
   const save = async () => {
     if (!draft) return
     try {
       const saved = await cos['projects.save']({ id: draft.id, name: draft.name, color: draft.color, status: draft.status })
-      await cos['briefs.save']({ scope: 'project', ownerId: saved.id, summary: draft.summary, standingInstructions: draft.standingInstructions, updatedAt: null })
+      // Read the history fresh, so notes added from Review or the History window aren't overwritten.
+      const current = await cos['briefs.get']('project', saved.id)
+      await cos['briefs.save']({ ...current, standingInstructions: draft.standingInstructions })
       toast('Project saved')
-      setSelected(saved.status === 'archived' ? null : saved.id)
+      if (saved.status === 'archived') select(null)
+      else if (draft.id === 0) select(saved.id)
       refresh()
     } catch (err) {
       toast(errorMessage(err), true)
     }
   }
+
+  const project = draft && draft.id !== 0 ? projects.find((p) => p.id === draft.id) : undefined
+  const noteCount = history.split('\n').filter((l) => l.trim()).length
 
   const left = (
     <>
@@ -61,15 +87,22 @@ export function ProjectsScreen() {
         <h1>Projects</h1>
         <span className="muted">{projects.length}</span>
         <div className="spacer" />
-        <button className="btn primary" onClick={() => setSelected('new')}>
+        <button className="btn primary" onClick={() => select('new')}>
           New project
         </button>
       </div>
       <div className="list">
         {projects.map((p) => (
-          <div key={p.id} className={`r ${selected === p.id ? 'sel' : ''}`} style={{ gridTemplateColumns: '3px minmax(0, 1fr) auto auto' }} onClick={() => setSelected(p.id)}>
+          <div key={p.id} className={`r ${selected === p.id ? 'sel' : ''}`} style={{ gridTemplateColumns: '3px minmax(0, 1fr) auto auto' }} onClick={() => select(p.id)}>
             <div className="stripe" style={{ background: p.color }} />
-            <div className="ttl">{p.name}</div>
+            <div className="ttl">
+              {p.name}
+              {p.overview && (
+                <div className="faint ttl" style={{ fontSize: 11 }}>
+                  {p.overview}
+                </div>
+              )}
+            </div>
             <span className="faint" style={{ fontSize: 12 }}>{p.status === 'active' ? '' : STATUSES.find(([s]) => s === p.status)?.[1]}</span>
             <span className="mono muted" title="Open tasks">{p.openCount}</span>
           </div>
@@ -83,10 +116,9 @@ export function ProjectsScreen() {
     <div>
       <div className="editor-stripe" style={{ background: draft.color }} />
       <div className="editor">
-        <div className="row" style={{ marginBottom: 12 }}>
-          <input className="inp title-inp" value={draft.name} placeholder="Project name" autoFocus={draft.id === 0} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-        </div>
-        <div className="row" style={{ gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
+        <input className="inp title-inp big" value={draft.name} placeholder="Project name" autoFocus={draft.id === 0} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+        {project && <ProjectOverview key={project.id} project={project} />}
+        <div className="row" style={{ gap: 16, margin: '0 0 14px', flexWrap: 'wrap' }}>
           <label className="row">
             <span className="muted">Status</span>
             <select className="inp" style={{ width: 'auto' }} value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as ProjectStatus })}>
@@ -103,8 +135,18 @@ export function ProjectsScreen() {
             ))}
           </div>
         </div>
-        <div className="label">Project brief · what the AI always knows about this project</div>
-        <textarea className="inp" style={{ margin: '4px 0 10px', minHeight: 96 }} value={draft.summary} placeholder="Goals, background, key decisions with dates, stakeholders, timeline, open questions" onChange={(e) => setDraft({ ...draft, summary: e.target.value })} />
+        {project && (
+          <>
+            <div className="row" style={{ marginBottom: 4 }}>
+              <span className="label">Project brief</span>
+              <div className="spacer" />
+              <button className="btn sm" onClick={() => setShowHistory(true)}>
+                History <span className="mono muted">{noteCount}</span>
+              </button>
+            </div>
+            <ProjectBrief key={project.id} project={project} hasHistory={noteCount > 0} />
+          </>
+        )}
         <div className="label">Standing instructions</div>
         <textarea className="inp" style={{ margin: '4px 0 12px', minHeight: 48 }} value={draft.standingInstructions} placeholder="e.g. Always cc Marcus on engineering dates" onChange={(e) => setDraft({ ...draft, standingInstructions: e.target.value })} />
         <div className="row" style={{ marginBottom: 18 }}>
@@ -115,7 +157,7 @@ export function ProjectsScreen() {
               onConfirm={() =>
                 void cos['projects.delete'](draft.id).then(() => {
                   toast('Project deleted. Its tasks now have no project.')
-                  setSelected(null)
+                  select(null)
                   refresh()
                 })
               }
@@ -143,10 +185,348 @@ export function ProjectsScreen() {
           </>
         )}
       </div>
+      {project && showHistory && <ProjectHistory project={project} history={history} onClose={() => setShowHistory(false)} />}
     </div>
   ) : (
     <div className="empty" style={{ marginTop: 80 }}>Select a project, or create one.</div>
   )
 
   return <SplitView left={left} right={right} />
+}
+
+/** The one-line overview under the project name. Written by hand only; saves on its own. */
+function ProjectOverview({ project }: { project: ProjectSummary }) {
+  const { refresh, toast } = useApp()
+  const [editing, setEditing] = useState<string | null>(null)
+
+  const save = async (text: string) => {
+    try {
+      await cos['projects.saveOverview'](project.id, text)
+      setEditing(null)
+      toast('Overview updated')
+      refresh()
+    } catch (err) {
+      toast(errorMessage(err), true)
+    }
+  }
+
+  if (editing !== null) {
+    return (
+      <div style={{ margin: '0 0 14px' }}>
+        <textarea
+          className="inp"
+          aria-label="Overview"
+          autoFocus
+          rows={2}
+          style={{ fontSize: 14, minHeight: 52 }}
+          value={editing}
+          placeholder="One sentence on what this project is"
+          onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)}
+          onChange={(e) => setEditing(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+              e.preventDefault()
+              void save(editing)
+            } else if (e.key === 'Escape') {
+              setEditing(null)
+            }
+          }}
+        />
+        <div className="row" style={{ marginTop: 6 }}>
+          <button className="btn primary" onClick={() => void save(editing)}>
+            Save <span className="kbd">Ctrl ↵</span>
+          </button>
+          <button className="btn ghost" onClick={() => setEditing(null)}>
+            Cancel <span className="kbd">Esc</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="ov-line">
+      <span data-overview className="ov-text" onClick={() => setEditing(project.overview ?? '')}>
+        {project.overview ?? <span className="faint">Add a one-line overview</span>}
+      </span>
+      <button className="pencil" title="Edit overview" aria-label="Edit overview" onClick={() => setEditing(project.overview ?? '')}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
+          <path d="M11.2 2.3l2.5 2.5-8.4 8.4-3.2.7.7-3.2 8.4-8.4z" />
+          <path d="M9.8 3.7l2.5 2.5" />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
+/**
+ * The project's status brief. Regenerate asks the AI for a new one from the history, shown as a
+ * suggestion to keep or discard; Edit rewrites it by hand. Either saves on its own, apart from
+ * the project's Save button.
+ */
+function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHistory: boolean }) {
+  const { refresh, toast } = useApp()
+  const [editing, setEditing] = useState<string | null>(null)
+  const [suggestion, setSuggestion] = useState<BriefSuggestion | null>(null)
+  const [writing, setWriting] = useState(false)
+
+  const write = async () => {
+    setWriting(true)
+    setSuggestion(null)
+    setEditing(null)
+    try {
+      setSuggestion(await cos['projects.suggestBrief'](project.id))
+    } catch (err) {
+      toast(errorMessage(err), true)
+    } finally {
+      setWriting(false)
+    }
+  }
+  const keep = async (text: string, by: 'ai' | 'user') => {
+    try {
+      await cos['projects.saveBrief'](project.id, text, by)
+      setEditing(null)
+      setSuggestion(null)
+      toast('Brief updated')
+      refresh()
+    } catch (err) {
+      toast(errorMessage(err), true)
+    }
+  }
+  const byline = project.brief && project.briefAt ? `${project.briefBy === 'ai' ? 'Written by AI' : 'Edited by you'} on ${dayLabel(project.briefAt)}` : null
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {editing !== null ? (
+        <>
+          <textarea
+            className="inp"
+            aria-label="Project brief"
+            autoFocus
+            rows={6}
+            style={{ fontSize: 13, minHeight: 130 }}
+            value={editing}
+            placeholder="Where the project stands, recent decisions, what's next, what's open"
+            onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)}
+            onChange={(e) => setEditing(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault()
+                void keep(editing, 'user')
+              } else if (e.key === 'Escape') {
+                setEditing(null)
+              }
+            }}
+          />
+          <div className="row" style={{ marginTop: 6 }}>
+            <button className="btn primary" onClick={() => void keep(editing, 'user')}>
+              Save <span className="kbd">Ctrl ↵</span>
+            </button>
+            <button className="btn ghost" onClick={() => setEditing(null)}>
+              Cancel <span className="kbd">Esc</span>
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div data-brief className="brief-box">
+            {project.brief ?? (
+              <span className="faint">
+                No brief yet.{' '}
+                {hasHistory ? 'Click Write brief, or Edit to write one yourself.' : 'Imports add history here as you accept them in Review. You can also Edit to write one yourself.'}
+              </span>
+            )}
+          </div>
+          <div className="row" style={{ marginTop: 4, flexWrap: 'wrap' }}>
+            {byline && <span className="faint" style={{ fontSize: 11 }}>{byline}</span>}
+            {project.brief && project.newNotes > 0 && (
+              <span className="note">
+                {project.newNotes} new note{project.newNotes === 1 ? '' : 's'} since this brief
+              </span>
+            )}
+            <div className="spacer" />
+            <button
+              className="btn ghost sm"
+              onClick={() => {
+                setSuggestion(null)
+                setEditing(project.brief ?? '')
+              }}
+            >
+              Edit
+            </button>
+            {hasHistory && (
+              <button className="btn sm" disabled={writing} onClick={() => void write()}>
+                {writing ? 'Writing…' : project.brief ? '✦ Regenerate' : '✦ Write brief'}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {suggestion && (
+        <div className="ai" style={{ marginTop: 8 }}>
+          <div className="row" style={{ marginBottom: 4 }}>
+            <span className="label">Suggested brief</span>
+            <div className="spacer" />
+            <span className="faint" style={{ fontSize: 11 }}>{suggestion.writtenBy}</span>
+          </div>
+          <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{suggestion.text}</div>
+          <div className="row" style={{ marginTop: 8 }}>
+            <button className="btn primary" onClick={() => void keep(suggestion.text, 'ai')}>
+              Keep
+            </button>
+            <button className="btn ghost" onClick={() => setSuggestion(null)}>
+              Discard
+            </button>
+            <div className="spacer" />
+            <button className="btn ghost" disabled={writing} onClick={() => void write()}>
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface Note {
+  date: string
+  text: string
+  source: string | null
+}
+
+/** Splits a history line from Review ('Nov 2, 2026: text (from “Title”)'); other lines are kept whole. */
+function parseNote(line: string): Note {
+  const m = line.match(/^([A-Z][a-z]{2,8}\.? \d{1,2}, \d{4}): ([\s\S]*?)(?: \(from “(.*)”\))?$/)
+  return m ? { date: m[1]!, text: m[2]!, source: m[3] ?? null } : { date: '', text: line, source: null }
+}
+
+/**
+ * Every dated note about the project, newest first, in a window over the page. Notes added since
+ * the brief was written are marked. Add appends a note; Edit changes the whole history as text.
+ */
+function ProjectHistory({ project, history, onClose }: { project: ProjectSummary; history: string; onClose: () => void }) {
+  const { refresh, toast } = useApp()
+  const [adding, setAdding] = useState('')
+  const [editing, setEditing] = useState<string | null>(null)
+  const lines = history.split('\n').map((l) => l.trim()).filter(Boolean)
+  // Notes arrive at the end, so the ones since the brief are the last few.
+  const firstNew = project.brief ? lines.length - project.newNotes : lines.length
+  const year = String(new Date().getFullYear())
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && editing === null) onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [editing, onClose])
+
+  const write = async (summary: string, message: string) => {
+    try {
+      const current = await cos['briefs.get']('project', project.id)
+      await cos['briefs.save']({ ...current, summary })
+      toast(message)
+      refresh()
+      return true
+    } catch (err) {
+      toast(errorMessage(err), true)
+      return false
+    }
+  }
+  const add = async () => {
+    const text = adding.replace(/\s+/g, ' ').trim()
+    if (!text) return
+    if (await write([...lines, `${noteStamp()}: ${text}`].join('\n'), 'Note added')) setAdding('')
+  }
+  const saveEdit = async () => {
+    if (editing !== null && (await write(editing.trim(), 'History saved'))) setEditing(null)
+  }
+
+  return (
+    <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="dialog" role="dialog" aria-label="Project history">
+        <div className="dialog-head">
+          <span style={{ width: 3, height: 18, borderRadius: 2, background: project.color }} />
+          <b>{project.name}</b>
+          <span className="muted">
+            history · {lines.length} note{lines.length === 1 ? '' : 's'}
+          </span>
+          <div className="spacer" />
+          {editing === null && (
+            <button className="btn ghost sm" onClick={() => setEditing(lines.join('\n'))}>
+              Edit
+            </button>
+          )}
+          <button className="btn ghost sm" onClick={onClose}>
+            Close <span className="kbd">Esc</span>
+          </button>
+        </div>
+        <div className="dialog-body">
+          {editing !== null ? (
+            <textarea
+              className="inp"
+              aria-label="History"
+              autoFocus
+              style={{ minHeight: 320, marginTop: 10, fontSize: 12 }}
+              value={editing}
+              onChange={(e) => setEditing(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                  e.preventDefault()
+                  void saveEdit()
+                } else if (e.key === 'Escape') {
+                  e.stopPropagation()
+                  setEditing(null)
+                }
+              }}
+            />
+          ) : (
+            <>
+              <div className="row" style={{ margin: '10px 0 6px' }}>
+                <input
+                  className="inp"
+                  aria-label="New note"
+                  autoFocus
+                  value={adding}
+                  placeholder="Add a note, e.g. Launch moved to April"
+                  onChange={(e) => setAdding(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void add()}
+                />
+                <button className="btn" disabled={!adding.trim()} onClick={() => void add()}>
+                  Add
+                </button>
+              </div>
+              {lines.length === 0 && <div className="empty">No history yet. Accepted "Project context" suggestions from imports land here, newest first.</div>}
+              {lines
+                .map((line, i) => ({ note: parseNote(line), isNew: i >= firstNew, i }))
+                .reverse()
+                .map(({ note, isNew, i }) => (
+                  <div key={i} className="hist" data-note>
+                    <span className="mono muted" style={{ fontSize: 11, paddingTop: 2 }}>
+                      {note.date.endsWith(`, ${year}`) ? note.date.slice(0, -(year.length + 2)) : note.date}
+                      {isNew && <span className="hist-new"> new</span>}
+                    </span>
+                    <div>
+                      {note.text}
+                      {note.source && <div className="faint" style={{ fontSize: 11 }}>from “{note.source}”</div>}
+                    </div>
+                  </div>
+                ))}
+            </>
+          )}
+        </div>
+        {editing !== null && (
+          <div className="dialog-foot">
+            <span className="faint" style={{ fontSize: 12 }}>One note per line. The AI reads this when it writes the brief.</span>
+            <div className="spacer" />
+            <button className="btn ghost" onClick={() => setEditing(null)}>
+              Cancel
+            </button>
+            <button className="btn primary" onClick={() => void saveEdit()}>
+              Save <span className="kbd">Ctrl ↵</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }

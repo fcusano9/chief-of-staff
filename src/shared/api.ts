@@ -14,6 +14,7 @@ import type {
   PersonInput,
   PersonSummary,
   Project,
+  ProjectInput,
   ProjectSummary,
   Task,
   TaskFilter,
@@ -36,7 +37,11 @@ export interface Api {
   'tasks.delete': (id: number) => void
   'tasks.summary': () => TodaySummary
   'projects.list': () => ProjectSummary[]
-  'projects.save': (project: Pick<Project, 'id' | 'name' | 'color' | 'status'>) => Project
+  'projects.save': (project: ProjectInput) => Project
+  'projects.saveOverview': (id: number, text: string) => Project
+  /** Asks the AI for a new status brief from the project's history. Changes nothing; the UI saves it with projects.saveBrief if kept. */
+  'projects.suggestBrief': (id: number) => BriefSuggestion
+  'projects.saveBrief': (id: number, text: string, by: 'ai' | 'user') => Project
   'projects.delete': (id: number) => void
   'people.list': () => PersonSummary[]
   'people.save': (person: PersonInput) => Person
@@ -81,6 +86,9 @@ export const API_CHANNELS: ApiChannel[] = [
   'tasks.summary',
   'projects.list',
   'projects.save',
+  'projects.saveOverview',
+  'projects.suggestBrief',
+  'projects.saveBrief',
   'projects.delete',
   'people.list',
   'people.save',

@@ -115,6 +115,16 @@ const MIGRATIONS: string[] = [
   ALTER TABLE people ADD COLUMN brief_at TEXT;
   ALTER TABLE people ADD COLUMN brief_context TEXT;
   `,
+  // Projects: a one-line overview written by hand, and a short status brief the AI writes from the
+  // project's history (its context_briefs.summary, which keeps every dated note). brief_context is
+  // the history the brief was written from, so notes added since can be counted.
+  `
+  ALTER TABLE projects ADD COLUMN overview TEXT;
+  ALTER TABLE projects ADD COLUMN brief TEXT;
+  ALTER TABLE projects ADD COLUMN brief_by TEXT;
+  ALTER TABLE projects ADD COLUMN brief_at TEXT;
+  ALTER TABLE projects ADD COLUMN brief_context TEXT;
+  `,
 ]
 
 /** Opens (creating if needed) the database and brings its schema up to date. */

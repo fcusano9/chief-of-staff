@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { SuggestionKind } from '@shared/types'
-import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
+import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
 import { ALL_KINDS, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
 import { AiError, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
@@ -138,6 +138,14 @@ export function buildOllamaBriefRequest(model: string, input: PersonBriefInput, 
   return chatRequest(model, system, user, format, reasoning)
 }
 
+/** The request for a project's status brief. */
+export function buildOllamaProjectBriefRequest(model: string, input: ProjectBriefInput, reasoning: Reasoning = 'low') {
+  const { system, user } = buildProjectBriefPrompt(input)
+  const format = z.toJSONSchema(ProjectBriefSchema) as Record<string, unknown>
+  delete format.$schema
+  return chatRequest(model, system, user, format, reasoning)
+}
+
 /** Totals for the last extract() call, for the benchmark. */
 export interface OllamaStats {
   requests: number
@@ -203,6 +211,12 @@ export class OllamaProvider implements AiProvider {
 
   async writePersonBrief(input: PersonBriefInput): Promise<string> {
     const parsed = PersonBriefSchema.safeParse(this.parseJson(await this.chat(buildOllamaBriefRequest(this.model, input, this.options.reasoning))))
+    if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
+    return parsed.data.brief
+  }
+
+  async writeProjectBrief(input: ProjectBriefInput): Promise<string> {
+    const parsed = ProjectBriefSchema.safeParse(this.parseJson(await this.chat(buildOllamaProjectBriefRequest(this.model, input, this.options.reasoning))))
     if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
     return parsed.data.brief
   }

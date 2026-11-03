@@ -93,6 +93,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".
 - **Context briefs:** every project, task and person has a summary and standing instructions, so the AI never needs things re-explained. The AI request includes these briefs.
 - **People** also have a one-line brief (`people.brief`), shown under their name. The AI writes it only when Frank clicks Regenerate, as a suggestion he keeps or discards, and he can edit it by hand. Their context summary is labeled "Context history" and keeps every dated note. Imports send the one-line brief, or the newest notes when there's none.
+- **Projects** have a one-line overview (`projects.overview`) that Frank writes by hand (pencil icon, no AI), and a short status brief (`projects.brief`: status, "Next:", "Open:") that the AI writes from the history only when he clicks Regenerate, kept or discarded like the People brief. The project's context summary is its history of dated notes; it isn't on the page but opens from the History button. Imports send the overview and status brief, or the newest history when there's no brief.
 
 ## Data and privacy
 

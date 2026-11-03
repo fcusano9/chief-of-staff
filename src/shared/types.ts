@@ -22,10 +22,21 @@ export interface Project {
   color: string
   status: ProjectStatus
   createdAt: string
+  /** One or two sentences on what the project is, written by hand. */
+  overview: string | null
+  /** A short status: where it stands, recent decisions, what's next, what's open. Written by the AI on request or by hand. */
+  brief: string | null
+  briefBy: 'ai' | 'user' | null
+  briefAt: string | null
 }
+
+/** What the UI sends to create (id 0) or update a project. The overview and brief are saved separately. */
+export type ProjectInput = Pick<Project, 'id' | 'name' | 'color' | 'status'>
 
 export interface ProjectSummary extends Project {
   openCount: number
+  /** Notes added to the project's history since the brief was written. */
+  newNotes: number
 }
 
 export interface Person {

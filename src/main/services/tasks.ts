@@ -24,6 +24,7 @@ const ACTIVE_SQL = `w.status IN (${ACTIVE_STATUSES.map((s) => `'${s}'`).join(', 
 const SELECT = `
   SELECT w.*,
          p.id AS p_id, p.name AS p_name, p.color AS p_color, p.status AS p_status, p.created_at AS p_created_at,
+         p.overview AS p_overview, p.brief AS p_brief, p.brief_by AS p_brief_by, p.brief_at AS p_brief_at,
          r.id AS r_id, r.name AS r_name, r.role AS r_role, r.company AS r_company, r.email AS r_email, r.priority_weight AS r_weight,
          r.brief AS r_brief, r.brief_by AS r_brief_by, r.brief_at AS r_brief_at
   FROM work_items w
@@ -34,7 +35,17 @@ function toTask(row: Row): Task {
   const project: Project | null =
     row.p_id == null
       ? null
-      : { id: Number(row.p_id), name: String(row.p_name), color: String(row.p_color), status: row.p_status as Project['status'], createdAt: String(row.p_created_at) }
+      : {
+          id: Number(row.p_id),
+          name: String(row.p_name),
+          color: String(row.p_color),
+          status: row.p_status as Project['status'],
+          createdAt: String(row.p_created_at),
+          overview: (row.p_overview as string) ?? null,
+          brief: (row.p_brief as string) ?? null,
+          briefBy: (row.p_brief_by as Project['briefBy']) ?? null,
+          briefAt: (row.p_brief_at as string) ?? null,
+        }
   const requester: Person | null =
     row.r_id == null
       ? null
