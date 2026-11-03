@@ -54,8 +54,17 @@ try {
   check('evidence quotes shown', (await app.eval(`return document.querySelector('[data-suggestion]').textContent`)).includes('“Frank to send'))
   await app.screenshot(join(shots, 'm2-02-review.png'))
 
-  // Edit the first suggestion, then accept with A
+  // E opens the editor with the cursor in the title (and no stray "e"); Esc cancels from inside the field
   await app.eval(`document.activeElement?.blur()`)
+  await app.key('e')
+  await app.waitFor('[data-suggestion] input.inp')
+  const opened = await app.eval(`const i = document.querySelector('[data-suggestion] input.inp'); return { value: i.value, focused: document.activeElement === i, title: (await window.cos['suggestions.listPending']())[0].payload.title }`)
+  check('E opens the editor in the title field', opened.focused && opened.value === opened.title, JSON.stringify(opened))
+  check('edit button shows its key', (await app.eval(`return [...document.querySelectorAll('[data-suggestion] button')].some(b => b.textContent === 'Cancel Esc')`)) === true)
+  await app.key('Escape')
+  check('Esc cancels the edit', (await app.eval(`return !document.querySelector('[data-suggestion] input.inp')`)) === true)
+
+  // Edit the first suggestion, then accept with A
   await app.key('Enter')
   await app.waitFor('[data-suggestion] input.inp')
   await app.eval(setValue('[data-suggestion] input.inp', 'Send pricing deck to EMEA distributors'))
@@ -80,6 +89,15 @@ try {
   check('rejected waiting-on leaves task open', margin === 'open', margin)
   const left = await app.eval(`return document.querySelectorAll('[data-suggestion]').length`)
   check('one suggestion left', left === 1, String(left))
+
+  // Ctrl+Enter accepts edits straight from the field
+  await app.key('e')
+  await app.waitFor('[data-suggestion] input.inp')
+  await app.eval(setValue('[data-suggestion] input.inp', 'Book spring launch customer visits'))
+  await app.key('Enter', { ctrl: true })
+  await app.sleep(500)
+  const visits = await app.eval(`return (await window.cos['tasks.listActive']()).some(t => t.title === 'Book spring launch customer visits')`)
+  check('Ctrl+Enter accepts the edited suggestion', visits && (await app.eval(`return document.querySelectorAll('[data-suggestion]').length`)) === 0)
 
   // Open the created task and see the linked source
   await app.eval(`window.__id = (await window.cos['tasks.listActive']()).find(t => t.title.startsWith('Send pricing')).id`)
