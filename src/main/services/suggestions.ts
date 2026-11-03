@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { PROJECT_COLORS, type BriefScope, type SourceKind, type Suggestion, type SuggestionKind, type SuggestionPayload } from '@shared/types'
+import { PROJECT_COLORS, type BriefScope, type SourceKind, type Suggestion, type SuggestionKind, type SuggestionPayload, type TaskStatus } from '@shared/types'
 import { nowIso, transaction } from '../db'
 import type { BriefService, PersonService, ProjectService } from './directory'
 import type { TaskService } from './tasks'
@@ -12,8 +12,15 @@ function toSuggestion(r: Record<string, unknown>): Suggestion {
     payload: JSON.parse(String(r.payload)) as SuggestionPayload,
     evidence: String(r.evidence),
     createdAt: String(r.created_at),
-    source: { id: Number(r.source_id), kind: r.source_kind as SourceKind, title: String(r.source_title), occurredAt: String(r.source_occurred_at) },
+    source: {
+      id: Number(r.source_id),
+      kind: r.source_kind as SourceKind,
+      title: String(r.source_title),
+      occurredAt: String(r.source_occurred_at),
+      fromOutlook: Number(r.source_from_outlook) === 1,
+    },
     taskTitle: (r.task_title as string) ?? null,
+    taskStatus: (r.task_status as TaskStatus) ?? null,
   }
 }
 
@@ -33,7 +40,8 @@ export class SuggestionService {
   listPending(): Suggestion[] {
     const rows = this.db
       .prepare(
-        `SELECT g.*, s.kind AS source_kind, s.title AS source_title, s.occurred_at AS source_occurred_at, w.title AS task_title
+        `SELECT g.*, s.kind AS source_kind, s.title AS source_title, s.occurred_at AS source_occurred_at, s.mail_meta IS NOT NULL AS source_from_outlook,
+                w.title AS task_title, w.status AS task_status
          FROM suggestions g JOIN source_items s ON s.id = g.source_id
          LEFT JOIN work_items w ON w.id = json_extract(g.payload, '$.taskId')
          WHERE g.status = 'pending' ORDER BY s.imported_at DESC, s.id DESC, g.id`,
@@ -70,7 +78,7 @@ export class SuggestionService {
     return transaction(this.db, () => {
       let taskId: number | null = null
       let refId: number | null = null
-      if (kind === 'new_task' || (kind === 'waiting_on' && !p.taskId)) {
+      if (kind === 'new_task' || kind === 'needs_reply' || (kind === 'waiting_on' && !p.taskId)) {
         if (!p.projectId && p.projectSuggestionId) p.projectId = this.createdBy(p.projectSuggestionId)
         if (!p.requesterId && p.requesterSuggestionId) p.requesterId = this.createdBy(p.requesterSuggestionId)
         if (p.waitingOnSuggestionId) this.createdBy(p.waitingOnSuggestionId)
@@ -99,12 +107,13 @@ export class SuggestionService {
           break
         }
         case 'new_task':
+        case 'needs_reply':
           taskId = this.createTask(p, 'open')
           break
         case 'waiting_on':
           if (p.taskId) {
             const task = this.requireTask(p.taskId)
-            this.tasks.save({ ...task, status: 'waiting_on', waitingOn: p.waitingOn || task.waitingOn || 'someone' })
+            this.tasks.save({ ...task, status: 'waiting_on', waitingOn: p.waitingOn || task.waitingOn || 'someone', waitingSince: p.waitingSince ?? null })
             taskId = task.id
           } else {
             taskId = this.createTask(p, 'waiting_on')
@@ -191,6 +200,7 @@ export class SuggestionService {
       priorityOverride: null,
       followUpCount: 0,
       waitingOn: status === 'waiting_on' ? p.waitingOn || 'someone' : null,
+      waitingSince: status === 'waiting_on' ? (p.waitingSince ?? null) : null,
       subtasks: [],
     }).id
   }

@@ -139,7 +139,7 @@ export class TaskService {
         priorityOverride: input.priorityOverride,
         followUpCount: input.followUpCount,
         waitingOn: input.status === 'waiting_on' ? input.waitingOn?.trim() || null : null,
-        waitingSince: input.status !== 'waiting_on' ? null : enteringWaiting ? now : (existing?.waitingSince ?? now),
+        waitingSince: input.status !== 'waiting_on' ? null : enteringWaiting ? (input.waitingSince ?? now) : (existing?.waitingSince ?? now),
         completedAt: input.status !== 'done' ? null : enteringDone ? now : (existing?.completedAt ?? now),
         now,
       }

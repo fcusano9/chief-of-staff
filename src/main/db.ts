@@ -165,6 +165,31 @@ export const MIGRATIONS: Migration[] = [
     addMissingColumns(db, 'projects', ['overview', 'brief', 'brief_by', 'brief_at', 'brief_context'])
     addMissingColumns(db, 'extraction_runs', ['dropped_output'])
   },
+  // Milestone 4: Outlook mail. Each conversation read becomes a source_item tied to its import;
+  // mail_messages records every message read, so the same email is never read twice.
+  `
+  CREATE TABLE mail_imports (
+    id INTEGER PRIMARY KEY,
+    since TEXT NOT NULL,
+    checked_at TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    finished_at TEXT,
+    complete INTEGER NOT NULL DEFAULT 0,
+    provider TEXT
+  );
+  CREATE TABLE mail_messages (
+    message_key TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL,
+    source_id INTEGER REFERENCES source_items(id) ON DELETE SET NULL,
+    direction TEXT NOT NULL,
+    sent_at TEXT NOT NULL,
+    entry_id TEXT,
+    store_id TEXT
+  );
+  CREATE INDEX ix_mail_messages_source ON mail_messages(source_id);
+  ALTER TABLE source_items ADD COLUMN mail_import_id INTEGER REFERENCES mail_imports(id) ON DELETE SET NULL;
+  ALTER TABLE source_items ADD COLUMN mail_meta TEXT;
+  `,
 ]
 
 /** Adds TEXT columns that aren't there yet (SQLite has no ADD COLUMN IF NOT EXISTS). */

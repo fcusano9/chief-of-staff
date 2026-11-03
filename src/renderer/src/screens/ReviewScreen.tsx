@@ -8,14 +8,22 @@ import { useApp } from '../context'
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
 
 /** Each type of suggestion has its own chip color: projects, people, tasks and their context. */
-const chipColor = (kind: SuggestionKind, briefScope: BriefScope | null) =>
-  kind === 'new_project' ? 'var(--k-project)'
+const chipColor = (kind: SuggestionKind, briefScope: BriefScope | null, replyArrived = false) =>
+  replyArrived ? 'var(--ok)'
+  : kind === 'needs_reply' ? 'var(--k-reply)'
+  : kind === 'new_project' ? 'var(--k-project)'
   : kind === 'new_person' ? 'var(--k-person)'
   : kind === 'brief_update' ? (briefScope === 'project' ? 'var(--k-project-ctx)' : briefScope === 'person' ? 'var(--k-person-ctx)' : 'var(--k-task-ctx)')
   : 'var(--k-task)'
 
+/** "Looks done" on something waiting on someone, from an email: their answer came in. */
+const isReplyArrived = (s: Suggestion) => s.kind === 'mark_done' && s.source.kind === 'email' && s.taskStatus === 'waiting_on'
+/** New tasks of any kind: plain, "Reply to …", or a new waiting-on item. */
+const createsTask = (kind: SuggestionKind, p: SuggestionPayload) => kind === 'new_task' || kind === 'needs_reply' || (kind === 'waiting_on' && !p.taskId)
+
 const ACCEPTED: Record<SuggestionKind, string> = {
   new_task: 'Task created',
+  needs_reply: 'Reply task created',
   waiting_on: 'Task updated',
   status_update: 'Task updated',
   mark_done: 'Task updated',
@@ -30,7 +38,7 @@ function alsoCreates(s: Suggestion, p: SuggestionPayload): string {
     !p.projectId && p.projectSuggestionId ? 'project' : null,
     (!p.requesterId && p.requesterSuggestionId) || p.waitingOnSuggestionId ? 'person' : null,
   ].filter(Boolean)
-  return s.kind === 'new_task' || (s.kind === 'waiting_on' && !p.taskId) ? (made.length ? `, with its new ${made.join(' and ')}` : '') : ''
+  return createsTask(s.kind, p) ? (made.length ? `, with its new ${made.join(' and ')}` : '') : ''
 }
 
 /** AI suggestions waiting for a decision. Nothing changes until one is accepted. */
@@ -51,7 +59,8 @@ export function ReviewScreen() {
     try {
       const taskId = await cos['suggestions.accept'](s.id, edits)
       setEditing(null)
-      toast(`${s.kind === 'waiting_on' && !s.payload.taskId ? 'Task created' : ACCEPTED[s.kind]}${alsoCreates(s, edits ?? s.payload)}`, false)
+      const what = isReplyArrived(s) ? 'Waiting item cleared' : s.kind === 'waiting_on' && !s.payload.taskId ? 'Added to Waiting' : ACCEPTED[s.kind]
+      toast(`${what}${alsoCreates(s, edits ?? s.payload)}`, false)
       refresh()
       return taskId
     } catch (err) {
@@ -142,6 +151,11 @@ export function ReviewScreen() {
               {new Date(g.source.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
             <div className="spacer" />
+            {g.source.fromOutlook && (
+              <button className="btn ghost" style={{ fontSize: 12 }} title="Show this conversation's newest message in Outlook" onClick={() => void cos['mail.open'](g.source.id).catch((err) => toast(errorMessage(err), true))}>
+                Open in Outlook
+              </button>
+            )}
             <button className="btn ghost" style={{ fontSize: 12 }} title="See exactly what was sent to the AI and what came back" onClick={() => openAiLog(g.source.id, 'review')}>
               AI log
             </button>
@@ -173,8 +187,14 @@ export function ReviewScreen() {
                   onClick={() => setCursor(index)}
                 >
                   <div>
-                    <span className="chip" style={{ background: `color-mix(in srgb, ${chipColor(s.kind, s.payload.briefScope)} 14%, transparent)`, color: chipColor(s.kind, s.payload.briefScope) }}>
-                      {suggestionLabel(s.kind, s.payload.briefScope)}
+                    <span
+                      className="chip"
+                      style={{
+                        background: `color-mix(in srgb, ${chipColor(s.kind, s.payload.briefScope, isReplyArrived(s))} 14%, transparent)`,
+                        color: chipColor(s.kind, s.payload.briefScope, isReplyArrived(s)),
+                      }}
+                    >
+                      {isReplyArrived(s) ? 'Reply arrived' : suggestionLabel(s.kind, s.payload.briefScope)}
                     </span>
                   </div>
                   <div style={{ minWidth: 0 }}>
@@ -191,7 +211,7 @@ export function ReviewScreen() {
                   </div>
                   <div className="row" style={{ gap: 4 }}>
                     <button className="btn" onClick={() => void accept(s, isEditing ? draft! : undefined)}>
-                      Accept <span className="kbd">{isEditing ? 'Ctrl ↵' : 'A'}</span>
+                      {isReplyArrived(s) ? 'Clear it' : 'Accept'} <span className="kbd">{isEditing ? 'Ctrl ↵' : 'A'}</span>
                     </button>
                     {isEditing ? (
                       <button className="btn ghost" onClick={() => setEditing(null)}>
@@ -299,7 +319,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
   return (
     <div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        {s.kind === 'new_task' || (s.kind === 'waiting_on' && !p.taskId) ? <span style={{ fontWeight: 500 }}>{p.title}</span> : taskLink}
+        {createsTask(s.kind, p) ? <span style={{ fontWeight: 500 }}>{p.title}</span> : taskLink}
         {newProject && !project ? <NewProjectChip s={newProject} /> : <ProjectChip project={project} />}
       </div>
       {p.details && <div style={{ marginTop: 2 }}>{p.details}</div>}
@@ -345,7 +365,7 @@ function Editor({ kind, draft, setDraft, pending }: { kind: Suggestion['kind']; 
     )
   }
 
-  const creates = kind === 'new_task' || (kind === 'waiting_on' && !draft.taskId)
+  const creates = createsTask(kind, draft)
   // Projects and people proposed in the same import can be picked before they exist; "s:" marks a suggestion id.
   const newProjects = pending.filter((x) => x.kind === 'new_project')
   const newPeople = pending.filter((x) => x.kind === 'new_person')
@@ -356,7 +376,7 @@ function Editor({ kind, draft, setDraft, pending }: { kind: Suggestion['kind']; 
   return (
     <div className="grid" style={{ gap: 6 }}>
       {creates && <input className="inp" autoFocus value={draft.title} placeholder="Task title" onChange={(e) => set({ title: e.target.value })} />}
-      <textarea className="inp" style={{ minHeight: 48 }} value={draft.details} placeholder={kind === 'new_task' ? 'Notes (optional)' : 'Text'} onChange={(e) => set({ details: e.target.value })} />
+      <textarea className="inp" style={{ minHeight: 48 }} value={draft.details} placeholder={kind === 'new_task' || kind === 'needs_reply' ? 'Notes (optional)' : 'Text'} onChange={(e) => set({ details: e.target.value })} />
       {(creates || kind === 'status_update') && (
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <input className="inp" style={{ width: 150 }} type="date" value={draft.dueDate ?? ''} onChange={(e) => set({ dueDate: e.target.value || null })} />

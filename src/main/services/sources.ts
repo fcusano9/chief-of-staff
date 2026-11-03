@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { AiRun, ImportRequest, ImportResult, SourceItem, SourceKind } from '@shared/types'
 import { buildExtractionContext } from '../ai/context'
 import type { AiProvider } from '../ai/provider'
-import { validateSuggestions, type DroppedSuggestion } from '../ai/schema'
+import { validateSuggestions, type DroppedSuggestion, type SuggestionDraft } from '../ai/schema'
 import { nowIso, transaction } from '../db'
 import { AiLogService } from './ai-log'
 
@@ -23,7 +23,7 @@ export const contentHash = (content: string) => createHash('sha256').update(cont
 
 const SOURCE_SELECT = `
   SELECT s.id, s.kind, s.title, s.from_name, s.occurred_at, s.imported_at, s.extracted_at, s.extracted_by, s.extract_error,
-         LENGTH(s.content) AS length,
+         LENGTH(s.content) AS length, s.mail_meta IS NOT NULL AS from_outlook,
          (SELECT COUNT(*) FROM suggestions g WHERE g.source_id = s.id AND g.status = 'pending') AS pending_count,
          (SELECT COUNT(*) FROM suggestions g WHERE g.source_id = s.id) AS total_count
   FROM source_items s`
@@ -42,7 +42,21 @@ function toSource(r: Record<string, unknown>): SourceItem {
     length: Number(r.length),
     pendingCount: Number(r.pending_count),
     totalSuggestions: Number(r.total_count),
+    fromOutlook: Number(r.from_outlook) === 1,
   }
+}
+
+/** What's stored with a conversation read from Outlook (source_items.mail_meta). */
+export interface MailMeta {
+  conversationId: string
+  /** The newest message, which "Open in Outlook" shows. */
+  entryId: string
+  storeId: string
+  messageCount: number
+  people: string
+  /** The user wrote last, so nobody is waiting on their reply. */
+  lastFromMe: boolean
+  lastSentByMeAt: string | null
 }
 
 /**
@@ -65,8 +79,19 @@ export class SourceService {
     return this.aiLog.runsFor(sourceId)
   }
 
+  /** Recent imports, except Outlook mail, which is listed by mail import instead (see forMailImport). */
   list(limit = 30): SourceItem[] {
-    return (this.db.prepare(`${SOURCE_SELECT} ORDER BY s.imported_at DESC, s.id DESC LIMIT ?`).all(limit) as Record<string, unknown>[]).map(toSource)
+    return (this.db.prepare(`${SOURCE_SELECT} WHERE s.mail_import_id IS NULL ORDER BY s.imported_at DESC, s.id DESC LIMIT ?`).all(limit) as Record<string, unknown>[]).map(toSource)
+  }
+
+  /** The conversations one Outlook mail import read, newest first. */
+  forMailImport(importId: number): SourceItem[] {
+    return (this.db.prepare(`${SOURCE_SELECT} WHERE s.mail_import_id = ? ORDER BY s.occurred_at DESC, s.id DESC`).all(importId) as Record<string, unknown>[]).map(toSource)
+  }
+
+  mailMeta(sourceId: number): MailMeta | null {
+    const row = this.db.prepare('SELECT mail_meta FROM source_items WHERE id = ?').get(sourceId) as { mail_meta: string | null } | undefined
+    return row?.mail_meta ? (JSON.parse(row.mail_meta) as MailMeta) : null
   }
 
   get(id: number): SourceItem | null {
@@ -113,7 +138,7 @@ export class SourceService {
         this.aiLog.logFor(runId),
       )
       const dropped: DroppedSuggestion[] = []
-      const drafts = validateSuggestions(raw, ctx, dropped)
+      const drafts = applyMailRules(validateSuggestions(raw, ctx, dropped), this.mailMeta(sourceId), dropped)
       this.aiLog.finishRun(runId, { raw, kept: drafts, dropped })
       const now = nowIso()
       transaction(this.db, () => {
@@ -147,6 +172,21 @@ export class SourceService {
   delete(id: number): void {
     this.db.prepare('DELETE FROM source_items WHERE id = ?').run(id)
   }
+}
+
+/**
+ * Email facts the app knows better than the AI: if the user wrote last, nobody is waiting on
+ * their reply; and a wait on someone starts when the user sent the ask, not when it's accepted.
+ */
+export function applyMailRules(drafts: SuggestionDraft[], meta: MailMeta | null, dropped: DroppedSuggestion[]): SuggestionDraft[] {
+  if (!meta) return drafts
+  return drafts.flatMap((d) => {
+    if (d.kind === 'needs_reply' && meta.lastFromMe) {
+      dropped.push({ kind: d.kind, title: d.payload.title, reason: 'You sent the latest message in this conversation' })
+      return []
+    }
+    return d.kind === 'waiting_on' && meta.lastSentByMeAt ? [{ ...d, payload: { ...d.payload, waitingSince: meta.lastSentByMeAt } }] : [d]
+  })
 }
 
 function defaultTitle(content: string): string {

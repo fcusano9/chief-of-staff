@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Task } from '@shared/types'
+import { FOLLOW_UP_BUSINESS_DAYS, needsFollowUp } from '@shared/priority'
 import { NO_PROJECT_COLOR } from '@shared/types'
 import { cos } from '../api'
 import { daysSince, ProjectChip } from '../components/bits'
@@ -25,6 +26,11 @@ export function WaitingScreen() {
               <div className="ttl">
                 {t.title}
                 <span className="why">{t.waitingOn ? `waiting on ${t.waitingOn}` : ''}</span>
+                {needsFollowUp(t, new Date()) && (
+                  <span className="chip" style={{ marginLeft: 8, background: 'color-mix(in srgb, var(--warn) 14%, transparent)', color: 'var(--warn)' }} title={`No reply in ${FOLLOW_UP_BUSINESS_DAYS} or more business days`}>
+                    Follow up
+                  </span>
+                )}
               </div>
               <ProjectChip project={t.project} />
               <span className="muted" style={{ fontSize: 12 }}>{t.requester ? `for ${t.requester.name}` : ''}</span>

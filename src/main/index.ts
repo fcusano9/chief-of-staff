@@ -10,9 +10,11 @@ import { DemoProvider } from './ai/demo'
 import { isLoopbackUrl, OllamaProvider } from './ai/ollama'
 import { AiError, type AiProvider } from './ai/provider'
 import { openDatabase, SCHEMA_VERSION } from './db'
-import { chooseDataLocation } from './paths'
+import { chooseDataLocation, findRedirectingPackage } from './paths'
 import { applyPendingRestore, createBackup, listBackups, requestRestore, snapshotNow } from './services/backup'
+import { FixtureOutlook, PowerShellOutlook } from './mail/outlook'
 import { BriefService, PersonService, ProjectService } from './services/directory'
+import { MailService } from './services/mail'
 import { KeyStore } from './services/secrets'
 import { SettingsStore } from './services/settings'
 import { SourceService } from './services/sources'
@@ -32,6 +34,18 @@ app.setPath('userData', location.dataFolder)
 const { dataFolder, defaultBackupFolder, isSeparateData } = location
 mkdirSync(dataFolder, { recursive: true })
 const databasePath = join(dataFolder, 'chiefofstaff.db')
+
+// Real data must never be opened from inside another app's file redirection (e.g. started from
+// Claude Desktop): it would read and write a private copy instead, and the two would drift apart.
+const redirectedBy = isSeparateData ? null : findRedirectingPackage(dataFolder, app.getPath('appData'), process.env.LOCALAPPDATA)
+if (redirectedBy) {
+  dialog.showErrorBox(
+    'Open Chief of Staff from the Start menu',
+    `Chief of Staff was started from inside another app (${redirectedBy.split('_')[0]}). Windows would save your data into that app's private copy instead of your real data folder, so the two would no longer match.\n\nNothing was opened or changed. Close this and start Chief of Staff from the Start menu.`,
+  )
+  app.exit(1)
+  process.exit(1)
+}
 
 // A second copy of the app must quit before it opens (or restores) the database.
 if (!app.requestSingleInstanceLock()) {
@@ -103,6 +117,15 @@ function currentProvider(): AiProvider {
   return new DemoProvider()
 }
 const sources = new SourceService(db, currentProvider, () => settings.current.userName)
+// Test data folders can read mail from a fixture file instead of Outlook (see e2e/README.md).
+const outlookFixture = isSeparateData ? process.env.COS_OUTLOOK_FIXTURE : undefined
+const mail = new MailService(
+  db,
+  sources,
+  outlookFixture ? new FixtureOutlook(outlookFixture) : process.platform === 'win32' ? new PowerShellOutlook() : null,
+  () => settings.current.userName,
+  () => aiStatus().label,
+)
 
 function aiStatus(): AiStatus {
   const { aiProvider, aiModel, localModel, localUrl, localThoroughness } = settings.current
@@ -218,6 +241,13 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'sources.list': () => sources.list(),
   'sources.delete': (id) => sources.delete(id),
   'sources.aiRuns': (sourceId) => sources.aiRuns(sourceId),
+  'mail.info': () => mail.info(),
+  'mail.check': (since) => mail.check(since),
+  'mail.read': (checkId, keys) => mail.read(checkId, keys),
+  'mail.status': () => mail.status(),
+  'mail.stop': () => mail.stop(),
+  'mail.imports': () => mail.imports(),
+  'mail.open': (sourceId) => mail.open(sourceId),
   'suggestions.listPending': () => suggestions.listPending(),
   'suggestions.count': () => suggestions.pendingCount(),
   'suggestions.accept': (id, edits) => suggestions.accept(id, edits),

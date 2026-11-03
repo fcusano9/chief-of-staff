@@ -44,6 +44,7 @@ src/main/        Electron main process
   services/      tasks, directory (projects/people/briefs), sources (import), suggestions
                  (review queue), settings (JSON), backup, secrets (KeyStore)
   ai/            provider.ts (interface), claude.ts, ollama.ts, demo.ts, context.ts (prompt), schema.ts (Zod + validation)
+  mail/          outlook.ps1 (reads classic Outlook over COM), outlook.ts (runs it), plan.ts (skips, conversations, AI text)
 src/preload/     Exposes the API as window.cos (CommonJS, sandboxed)
 src/renderer/    React UI: App.tsx (shell, shortcuts), screens/, components/
 tests/           Vitest: priority, data services, AI and review queue
@@ -76,7 +77,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 
   The preload exposes exactly the listed channels.
 - **Schema change:** append a new SQL string to `MIGRATIONS` in `src/main/db.ts`. Never edit a shipped migration. `transaction()` calls nest by joining the outer transaction.
-- **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, the prompt in `ai/context.ts`, `SuggestionService.accept`, and `ReviewScreen`.
+- **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, the prompt and `ALL_KINDS` in `ai/context.ts`, the split passes in `ai/ollama.ts`, `SuggestionService.accept`, and `ReviewScreen`.
 - **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]` from `extract` (validation is shared) and a sentence from `writePersonBrief`. Wrap every request in `logged()` with the `log` that `extract` receives, so the AI log shows it exactly as sent and received. Never put the API key in the logged request.
 - **Claude API changes:** use the official SDK only. Check current model ids and parameters against Anthropic's docs; don't rely on memory, because the API changes often. The default model is `claude-opus-5-5` (Frank can choose Sonnet or Haiku 5.5 in Settings).
 
@@ -112,6 +113,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **Demo AI:** the default provider. It runs locally and sends nothing anywhere.
 - **Local model (Ollama):** runs on this computer, so nothing is sent anywhere. If the Ollama address points at another machine, the app says data is sent there.
 - **Claude:** when selected, each import's text plus open-task titles, briefs and names are sent to Anthropic. The Settings screen says so explicitly.
+- **Outlook mail** (`services/mail.ts`): only read when Frank clicks, never on a schedule. "Check Outlook" sends nothing anywhere; "Read" sends each new conversation to the selected AI like any other import. The script never sends, moves or flags mail. Messages read are recorded in `mail_messages` so none is read twice. Tests and e2e use `COS_OUTLOOK_FIXTURE` (honored only for test data folders), never the real mailbox.
 - **Prompt injection:** imported content is fenced as data in the prompt, and the system prompt tells the model to ignore instructions inside it.
 - **AI log** (Import or Review → "AI log"):
   - Each extraction run is stored in `extraction_runs`, and each request in `ai_calls` (`services/ai-log.ts`). That covers the exact request, the raw response, timing, tokens, everything proposed, what reached Review, and what was dropped and why (`validateSuggestions`' `dropped` list).
@@ -123,4 +125,5 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **Node.js:** Node 26 LTS, installed with winget. In shells started before that install, refresh PATH; in Git Bash, add `/c/Program Files/nodejs`.
 - **npm install scripts:** npm holds these back. Electron downloads its binary on first run, or run `node node_modules/electron/install.js`.
 - **OneDrive:** the repo lives inside OneDrive, so `node_modules` syncs there. Moving the repo out of OneDrive is a known nice-to-have.
+- **Claude Desktop sandbox:** Claude Desktop is a packaged Windows app, so anything run from a Claude session sees a private, redirected copy of `%APPDATA%` and `%LOCALAPPDATA%`, not the real folders. Reading `%APPDATA%\Chief of Staff` from a session shows that copy, not Frank's data. The installed app refuses to start in the sandbox (see DECISIONS.md, "Real data is never opened from inside Claude Desktop's sandbox"). The OneDrive backup folder is real.
 - **Mac:** Mac packaging (`npm run package:mac`) must run on a Mac and hasn't been tested.

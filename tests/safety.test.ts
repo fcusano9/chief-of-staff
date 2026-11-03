@@ -1,10 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MIGRATIONS, openDatabase, SCHEMA_VERSION, schemaVersion } from '../src/main/db'
-import { chooseDataLocation } from '../src/main/paths'
+import { chooseDataLocation, findRedirectingPackage } from '../src/main/paths'
 import { applyPendingRestore, createBackup, inspectBackup, listBackups, pruneBackups, requestRestore, SAFETY_COPIES_KEPT, snapshotNow } from '../src/main/services/backup'
 import { TaskService } from '../src/main/services/tasks'
 import { DEFAULT_SETTINGS } from '@shared/types'
@@ -197,5 +197,32 @@ describe('data safety', () => {
     expect(dev.isSeparateData).toBe(true)
     const test = chooseDataLocation({ ...base, isPackaged: true, envDataDir: 'C:/Temp/cos' })
     expect(test).toEqual({ dataFolder: 'C:/Temp/cos', defaultBackupFolder: join('C:/Temp/cos', 'backups'), isSeparateData: true })
+  })
+})
+
+describe('refusing to open real data from inside another app', () => {
+  let root: string
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'cos-redirect-'))
+    mkdirSync(join(root, 'Roaming', 'Chief of Staff'), { recursive: true })
+    mkdirSync(join(root, 'Local', 'Packages', 'Other.App_abc'), { recursive: true })
+  })
+  afterEach(() => rmSync(root, { recursive: true, force: true }))
+  const data = () => join(root, 'Roaming', 'Chief of Staff')
+
+  it('finds the package whose private copy receives what the app saves, and cleans up its probe', () => {
+    // A junction stands in for Windows redirection: the package's private copy shows what is saved in the data folder.
+    const copy = join(root, 'Local', 'Packages', 'Claude_pzs8sxrjxfjjc', 'LocalCache', 'Roaming')
+    mkdirSync(copy, { recursive: true })
+    symlinkSync(data(), join(copy, 'Chief of Staff'), 'junction')
+    expect(findRedirectingPackage(data(), join(root, 'Roaming'), join(root, 'Local'))).toBe('Claude_pzs8sxrjxfjjc')
+    expect(readdirSync(data())).toEqual([])
+  })
+
+  it('finds nothing when the data folder is real, or not under AppData', () => {
+    expect(findRedirectingPackage(data(), join(root, 'Roaming'), join(root, 'Local'))).toBeNull()
+    expect(findRedirectingPackage(data(), join(root, 'Elsewhere'), join(root, 'Local'))).toBeNull()
+    expect(findRedirectingPackage(data(), join(root, 'Roaming'), undefined)).toBeNull()
+    expect(readdirSync(data())).toEqual([])
   })
 })

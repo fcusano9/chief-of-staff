@@ -3,6 +3,10 @@ import type {
   AiStatus,
   ImportRequest,
   ImportResult,
+  MailCheck,
+  MailImportRun,
+  MailInfo,
+  MailJobStatus,
   SourceItem,
   Suggestion,
   SuggestionPayload,
@@ -69,6 +73,16 @@ export interface Api {
   'sources.delete': (id: number) => void
   /** Every time the AI read this import: the exact requests sent and responses received. */
   'sources.aiRuns': (sourceId: number) => AiRun[]
+  'mail.info': () => MailInfo
+  /** Looks through Outlook for mail since an ISO time. Nothing is sent to the AI. */
+  'mail.check': (since: string) => MailCheck
+  /** Starts reading the chosen conversations from a check, in the background. */
+  'mail.read': (checkId: number, keys: string[]) => MailJobStatus
+  'mail.status': () => MailJobStatus
+  'mail.stop': () => void
+  'mail.imports': () => MailImportRun[]
+  /** Shows an imported conversation's newest message in Outlook. */
+  'mail.open': (sourceId: number) => void
   'suggestions.listPending': () => Suggestion[]
   'suggestions.count': () => number
   'suggestions.accept': (id: number, edits?: Partial<SuggestionPayload>) => number | null
@@ -118,6 +132,13 @@ export const API_CHANNELS: ApiChannel[] = [
   'sources.list',
   'sources.delete',
   'sources.aiRuns',
+  'mail.info',
+  'mail.check',
+  'mail.read',
+  'mail.status',
+  'mail.stop',
+  'mail.imports',
+  'mail.open',
   'suggestions.listPending',
   'suggestions.count',
   'suggestions.accept',

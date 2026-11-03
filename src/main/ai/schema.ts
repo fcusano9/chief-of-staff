@@ -4,7 +4,7 @@ import type { ExtractionContext } from './context'
 
 /** The JSON shape the AI must return (enforced with structured outputs for Claude). */
 export const RawSuggestionSchema = z.object({
-  kind: z.enum(['new_task', 'status_update', 'mark_done', 'waiting_on', 'brief_update', 'new_project', 'new_person']),
+  kind: z.enum(['new_task', 'needs_reply', 'status_update', 'mark_done', 'waiting_on', 'brief_update', 'new_project', 'new_person']),
   task_id: z.number().int().nullable().describe('ID of the existing task this is about, from the open-task list; null for new tasks'),
   title: z.string().describe("New task title (imperative, under 80 characters); the project's name for new_project; the person's full name for new_person; else a short headline"),
   details: z.string().describe('Status update text, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task'),
@@ -151,7 +151,7 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
       drop(r, 'No update text')
       continue
     }
-    if (r.kind === 'new_task' && !title) {
+    if ((r.kind === 'new_task' || r.kind === 'needs_reply') && !title) {
       drop(r, 'No task title')
       continue
     }
@@ -169,7 +169,7 @@ export function validateSuggestions(raw: RawSuggestion[], ctx: ExtractionContext
 
     const projectId = r.project_id != null && projectIds.has(r.project_id) ? r.project_id : null
     const waitingOn = r.kind === 'waiting_on' ? clean(r.waiting_on, 200) || null : null
-    const creates = r.kind === 'new_task' || (r.kind === 'waiting_on' && taskId == null)
+    const creates = r.kind === 'new_task' || r.kind === 'needs_reply' || (r.kind === 'waiting_on' && taskId == null)
     const links = creates
       ? {
           project: projectId == null && r.project_name ? newProjects.get(lower(r.project_name)) : undefined,
