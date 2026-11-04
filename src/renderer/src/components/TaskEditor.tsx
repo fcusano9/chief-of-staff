@@ -363,7 +363,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
           )}
           {!isNew && form.input.status !== 'done' && (
             <button className="btn" data-action="done" onClick={() => void save({ status: 'done' }).then((t) => t && onDone(t))}>
-              Mark done <span className="kbd">E</span>
+              Mark done
             </button>
           )}
           {!isNew && form.input.status === 'done' && (
@@ -381,7 +381,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             </button>
           )}
           <button className="btn primary" onClick={() => void save().then((t) => t && (toast('Saved'), onSaved(t)))}>
-            Save <span className="kbd">Ctrl ↵</span>
+            Save
           </button>
         </div>
       </div>

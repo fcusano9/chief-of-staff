@@ -3,6 +3,7 @@ import type { BriefScope, Suggestion, SuggestionKind, SuggestionPayload } from '
 import { PROJECT_COLORS, SOURCE_KIND_LABELS, suggestionLabel } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { Avatar, dueLabel, ProjectChip, Stars } from '../components/bits'
+import { useShortcutHints } from '../components/hints'
 import { useApp } from '../context'
 
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
@@ -48,6 +49,8 @@ export function ReviewScreen() {
   const [cursor, setCursor] = useState(0)
   const [editing, setEditing] = useState<number | null>(null)
   const [draft, setDraft] = useState<SuggestionPayload | null>(null)
+  useShortcutHints([['↑ ↓', 'move'], ['A', 'accept'], ['R', 'reject'], ['↵', 'edit']])
+  useShortcutHints(editing !== null ? [['Ctrl ↵', 'accept'], ['Esc', 'cancel']] : null, 1)
 
   useEffect(() => void cos['suggestions.listPending']().then(setItems), [version])
   useEffect(() => setCursor((c) => Math.min(c, Math.max(0, items.length - 1))), [items])
@@ -206,19 +209,19 @@ export function ReviewScreen() {
                   </div>
                   <div className="row" style={{ gap: 4 }}>
                     <button className="btn" onClick={() => void accept(s, isEditing ? draft! : undefined)}>
-                      {isReplyArrived(s) ? 'Clear it' : 'Accept'} <span className="kbd">{isEditing ? 'Ctrl ↵' : 'A'}</span>
+                      {isReplyArrived(s) ? 'Clear it' : 'Accept'}
                     </button>
                     {isEditing ? (
                       <button className="btn ghost" onClick={() => setEditing(null)}>
-                        Cancel <span className="kbd">Esc</span>
+                        Cancel
                       </button>
                     ) : (
                       <button className="btn ghost" onClick={() => startEdit(s)}>
-                        Edit <span className="kbd">↵</span>
+                        Edit
                       </button>
                     )}
                     <button className="btn ghost" onClick={() => void reject(s)}>
-                      Reject <span className="kbd">R</span>
+                      Reject
                     </button>
                   </div>
                 </div>
