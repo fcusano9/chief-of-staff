@@ -6,6 +6,7 @@ import { ConfirmButton, SearchBox, TaskRow } from '../components/bits'
 import { HistoryWindow } from '../components/HistoryWindow'
 import { SplitView } from '../components/SplitView'
 import { useAutosave } from '../components/useAutosave'
+import { useShortcutHints } from '../components/hints'
 import { useListKeys } from '../components/listKeys'
 import { useApp } from '../context'
 
@@ -133,6 +134,7 @@ export function ProjectsScreen() {
   const inMode = mode === 'archived' ? archived : projects
   const shown = q ? inMode.filter((p) => [p.name, p.overview].some((f) => f?.toLowerCase().includes(q))) : inMode
   useListKeys(shown.map((p) => p.id), selected, select)
+  useShortcutHints([['↑ ↓', 'move'], ['↵', 'edit name'], ['/', 'search'], ['N', 'new task']])
 
   const noteCount = history.split('\n').filter((l) => l.trim()).length
 
@@ -297,6 +299,7 @@ export function ProjectsScreen() {
 function ProjectOverview({ project }: { project: ProjectSummary }) {
   const { refresh, toast } = useApp()
   const [editing, setEditing] = useState<string | null>(null)
+  useShortcutHints(editing !== null ? [['Ctrl ↵', 'save'], ['Esc', 'cancel']] : null, 1)
 
   const save = async (text: string) => {
     try {
@@ -333,10 +336,10 @@ function ProjectOverview({ project }: { project: ProjectSummary }) {
         />
         <div className="row" style={{ marginTop: 6 }}>
           <button className="btn primary" onClick={() => void save(editing)}>
-            Save <span className="kbd">Ctrl ↵</span>
+            Save
           </button>
           <button className="btn ghost" onClick={() => setEditing(null)}>
-            Cancel <span className="kbd">Esc</span>
+            Cancel
           </button>
         </div>
       </div>
@@ -365,6 +368,7 @@ function ProjectOverview({ project }: { project: ProjectSummary }) {
 function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHistory: boolean }) {
   const { refresh, toast } = useApp()
   const [editing, setEditing] = useState<string | null>(null)
+  useShortcutHints(editing !== null ? [['Ctrl ↵', 'save'], ['Esc', 'cancel']] : null, 1)
   const [suggestion, setSuggestion] = useState<BriefSuggestion | null>(null)
   const [writing, setWriting] = useState(false)
 
@@ -418,10 +422,10 @@ function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHis
           />
           <div className="row" style={{ marginTop: 6 }}>
             <button className="btn primary" onClick={() => void keep(editing, 'user')}>
-              Save <span className="kbd">Ctrl ↵</span>
+              Save
             </button>
             <button className="btn ghost" onClick={() => setEditing(null)}>
-              Cancel <span className="kbd">Esc</span>
+              Cancel
             </button>
           </div>
         </>

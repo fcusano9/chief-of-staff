@@ -104,7 +104,7 @@ export function AiSettings() {
             </label>
           )}
           <p className="faint" style={{ fontSize: 'var(--fs-sm)', margin: '8px 0 0' }}>
-            The AI only proposes. Every suggestion waits in Review until you accept it, and nothing is ever sent on your behalf. Microsoft 365 Copilot can be added once IT approves an app registration.
+            The AI only proposes. Every suggestion waits in Review until you accept it, and nothing is ever sent on your behalf.
           </p>
         </div>
 
@@ -162,11 +162,6 @@ export function AiSettings() {
                 </button>
                 {testResult && <span style={{ fontSize: 'var(--fs-sm)', color: testResult.ok ? 'var(--ok)' : 'var(--danger)' }}>{testResult.text}</span>}
               </div>
-              <p className="muted" style={{ fontSize: 'var(--fs-sm)', margin: '10px 0 0', lineHeight: 1.6 }}>
-                With Claude selected, each import's text, plus your open task titles, project and person briefs, and names, is sent to Anthropic to produce suggestions.
-                Writing a person's brief sends their context history and open items.
-                Confirm this is allowed by Crestron's policy before importing work content. Use a key from the Anthropic Console; usage is billed per token.
-              </p>
             </>
           ) : (
             <p className="muted" style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.6, margin: 0 }}>

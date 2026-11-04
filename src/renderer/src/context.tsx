@@ -32,6 +32,8 @@ export interface AppContextValue {
   openAiLog: (sourceId: number, from: View) => void
   /** The import the AI log shows, and the screen to go back to. */
   aiLog: { sourceId: number; from: View } | null
+  /** Registers (or with null, removes) shortcut hints for the bottom bar; see useShortcutHints. */
+  setHints: (id: string, set: { level: number; hints: [string, string][] } | null) => void
 }
 
 export const AppContext = createContext<AppContextValue | null>(null)

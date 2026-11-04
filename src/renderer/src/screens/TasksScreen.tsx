@@ -4,6 +4,7 @@ import { cos, errorMessage } from '../api'
 import { DoneRow, SearchBox, TaskRow } from '../components/bits'
 import { SplitView } from '../components/SplitView'
 import { TaskEditor } from '../components/TaskEditor'
+import { type Hint, useShortcutHints } from '../components/hints'
 import { useApp } from '../context'
 
 type ProjectFilter = 'all' | 'none' | number
@@ -24,6 +25,9 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
   const [mode, setMode] = useState<Mode>('open')
   const [cursor, setCursor] = useState(0)
   const rightRef = useRef<HTMLElement>(null)
+  const done: Hint[] = mode === 'open' ? [['E', 'done']] : []
+  useShortcutHints([['↑ ↓', 'move'], ['↵', 'open'], ...done, ['N', 'new'], ['/', 'search']])
+  useShortcutHints(selection ? [['Ctrl ↵', 'save'], ...(selection.id === 'new' ? [] : done), ['Esc', 'close']] : null, 1)
 
   useEffect(() => {
     const f: TaskFilter = { search, list }
@@ -102,7 +106,7 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
         <span className="muted">{subtitle}</span>
         <div className="spacer" />
         <button className="btn primary" onClick={() => openTask({ id: 'new', projectId: typeof filter === 'number' ? filter : null, waiting })}>
-          New {noun} <span className="kbd">N</span>
+          New {noun}
         </button>
       </div>
       <div className="row" style={{ gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>

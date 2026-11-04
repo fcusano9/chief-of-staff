@@ -154,7 +154,7 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
             <div className="progress">
               <div className="indeterminate" />
             </div>
-            <span className="muted">Looking through Outlook… nothing is sent to the AI yet</span>
+            <span className="muted">Looking through Outlook…</span>
           </>
         )}
 

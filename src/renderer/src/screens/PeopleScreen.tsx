@@ -6,6 +6,7 @@ import { Avatar, ConfirmButton, SearchBox, Stars, TaskRow } from '../components/
 import { HistoryWindow } from '../components/HistoryWindow'
 import { SplitView } from '../components/SplitView'
 import { useAutosave } from '../components/useAutosave'
+import { useShortcutHints } from '../components/hints'
 import { useListKeys } from '../components/listKeys'
 import { useApp } from '../context'
 
@@ -103,6 +104,7 @@ export function PeopleScreen() {
       (!q || [p.name, p.role, p.company, p.brief].some((f) => f?.toLowerCase().includes(q))),
   )
   useListKeys(shown.map((p) => p.id), selected, select)
+  useShortcutHints([['↑ ↓', 'move'], ['↵', 'edit name'], ['/', 'search'], ['N', 'new task']])
   const filtering = !!filter.company || filter.openOnly
   const clearFilters = () => setFilter({ company: '', openOnly: false })
 
@@ -218,9 +220,6 @@ export function PeopleScreen() {
           <button className="btn sm" onClick={() => setShowHistory(true)}>
             History <span className="mono muted">{history.split('\n').filter((l) => l.trim()).length}</span>
           </button>
-          <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>
-            everything the AI has learned about them, newest first
-          </span>
         </div>
       )}
       <div className="row" style={{ marginBottom: 18 }}>
@@ -282,6 +281,7 @@ export function PeopleScreen() {
 function PersonBrief({ person, hasContext }: { person: PersonSummary; hasContext: boolean }) {
   const { refresh, toast } = useApp()
   const [editing, setEditing] = useState<string | null>(null)
+  useShortcutHints(editing !== null ? [['Ctrl ↵', 'save'], ['Esc', 'cancel']] : null, 1)
   const [suggestion, setSuggestion] = useState<BriefSuggestion | null>(null)
   const [writing, setWriting] = useState(false)
 
@@ -335,10 +335,10 @@ function PersonBrief({ person, hasContext }: { person: PersonSummary; hasContext
           />
           <div className="row" style={{ marginTop: 6 }}>
             <button className="btn primary" onClick={() => void keep(editing, 'user')}>
-              Save <span className="kbd">Ctrl ↵</span>
+              Save
             </button>
             <button className="btn ghost" onClick={() => setEditing(null)}>
-              Cancel <span className="kbd">Esc</span>
+              Cancel
             </button>
           </div>
         </>

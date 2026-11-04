@@ -54,6 +54,12 @@ try {
   check('no evidence quotes in Review (they stay in the AI log)', !(await app.eval(`return document.querySelector('[data-suggestion]').textContent`)).includes('“'))
   await app.screenshot(join(shots, 'm2-02-review.png'))
 
+  // The bottom bar shows Review's keys, and the buttons no longer carry them
+  const hints = () => app.eval(`return [...document.querySelectorAll('.statusbar [data-hint]')].map(h => h.textContent.replace(/\\s+/g, ' ').trim())`)
+  const reviewHints = await hints()
+  check('bar shows Review keys', ['Ctrl K commands', '↑ ↓ move', 'A accept', 'R reject', '↵ edit'].every((h) => reviewHints.includes(h)), JSON.stringify(reviewHints))
+  check('buttons have no key labels', (await app.eval(`return document.querySelectorAll('[data-suggestion] button .kbd').length`)) === 0)
+
   // E no longer edits; Enter opens the editor with the cursor in the title, and Esc cancels from inside the field
   await app.eval(`document.activeElement?.blur()`)
   await app.key('e')
@@ -62,9 +68,11 @@ try {
   await app.waitFor('[data-suggestion] input.inp')
   const opened = await app.eval(`const i = document.querySelector('[data-suggestion] input.inp'); return { value: i.value, focused: document.activeElement === i, title: (await window.cos['suggestions.listPending']())[0].payload.title }`)
   check('Enter opens the editor in the title field', opened.focused && opened.value === opened.title, JSON.stringify(opened))
-  check('edit button shows its key', (await app.eval(`return [...document.querySelectorAll('[data-suggestion] button')].some(b => b.textContent === 'Cancel Esc')`)) === true)
+  const editHints = await hints()
+  check('bar switches to the editor keys', editHints.includes('Ctrl ↵ accept') && editHints.includes('Esc cancel') && !editHints.includes('A accept'), JSON.stringify(editHints))
   await app.key('Escape')
   check('Esc cancels the edit', (await app.eval(`return !document.querySelector('[data-suggestion] input.inp')`)) === true)
+  check('bar returns to Review keys', (await hints()).includes('A accept'))
 
   // Edit the first suggestion, then accept with A
   await app.key('Enter')

@@ -94,6 +94,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   - Tasks: E marks done, Esc closes, Ctrl+Enter saves.
   - Review: A, R, Enter to edit. While editing, Ctrl+Enter accepts and Esc cancels.
   - Settings lists every shortcut (`SHORTCUTS` in `SettingsScreen.tsx`); keep it in step.
+  - Buttons don't show keys. The bottom bar shows the keys for the current page: each screen calls `useShortcutHints` (`components/hints.ts`), and an open editor registers its own keys at a higher level, which win while it's open.
   - Global shortcuts run in the capture phase and consume their keys.
 - **Project colors:** tasks are themed with their project's color. Tasks with no project get no label and a neutral stripe.
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".
@@ -116,7 +117,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **Adding a migration:** the safety copy is automatic. Still never edit a shipped migration, and test the upgrade from the previous version's data.
 - **Demo AI:** the default provider. It runs locally and sends nothing anywhere.
 - **Local model (Ollama):** runs on this computer, so nothing is sent anywhere. If the Ollama address points at another machine, the app says data is sent there.
-- **Claude:** when selected, each import's text plus open-task titles, briefs and names are sent to Anthropic. The Settings screen says so explicitly.
+- **Claude:** when selected, each import's text plus open-task titles, briefs and names are sent to Anthropic. The Import screen names where text is sent next to the Extract button; Settings no longer carries a separate warning (Frank removed it).
 - **Outlook mail** (`services/mail.ts`): only read when Frank clicks, never on a schedule. "Check Outlook" sends nothing anywhere; "Read" sends each new conversation to the selected AI like any other import. The script never sends, moves or flags mail. Messages read are recorded in `mail_messages` so none is read twice. Tests and e2e use `COS_OUTLOOK_FIXTURE` (honored only for test data folders), never the real mailbox.
 - **Prompt injection:** imported content is fenced as data in the prompt, and the system prompt tells the model to ignore instructions inside it.
 - **AI log** (Import or Review → "AI log"):

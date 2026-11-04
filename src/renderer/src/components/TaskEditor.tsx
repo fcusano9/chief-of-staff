@@ -235,7 +235,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             <div className="label" style={{ margin: '14px 0 4px' }}>Notes</div>
             <textarea className="inp" value={form.input.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} placeholder="Anything worth remembering about this task" />
 
-            <div className="label" style={{ margin: '14px 0 4px' }}>Task brief · what the AI should always know</div>
+            <div className="label" style={{ margin: '14px 0 4px' }}>Task brief</div>
             <textarea className="inp" value={form.brief.summary} onChange={(e) => setBrief({ summary: e.target.value })} placeholder="Background, goals, decisions so far" />
             <textarea className="inp" style={{ marginTop: 6, minHeight: 44 }} value={form.brief.standingInstructions} onChange={(e) => setBrief({ standingInstructions: e.target.value })} placeholder="Standing instructions, e.g. keep replies formal" />
 
@@ -363,7 +363,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
           )}
           {!isNew && form.input.status !== 'done' && (
             <button className="btn" data-action="done" onClick={() => void save({ status: 'done' }).then((t) => t && onDone(t))}>
-              Mark done <span className="kbd">E</span>
+              Mark done
             </button>
           )}
           {!isNew && form.input.status === 'done' && (
@@ -381,7 +381,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             </button>
           )}
           <button className="btn primary" onClick={() => void save().then((t) => t && (toast('Saved'), onSaved(t)))}>
-            Save <span className="kbd">Ctrl ↵</span>
+            Save
           </button>
         </div>
       </div>

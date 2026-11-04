@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useShortcutHints } from './hints'
 import type { BriefScope } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
@@ -49,6 +50,7 @@ export function HistoryWindow({
   const { refresh, toast } = useApp()
   const [adding, setAdding] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
+  useShortcutHints(editing !== null ? [['Ctrl ↵', 'save'], ['Esc', 'cancel']] : [['Esc', 'close']], 2)
   const lines = history.split('\n').map((l) => l.trim()).filter(Boolean)
   // Notes arrive at the end, so the new ones are the last few.
   const firstNew = lines.length - newCount
@@ -98,7 +100,7 @@ export function HistoryWindow({
             </button>
           )}
           <button className="btn ghost sm" onClick={onClose}>
-            Close <span className="kbd">Esc</span>
+            Close
           </button>
         </div>
         <div className="dialog-body">
@@ -163,7 +165,7 @@ export function HistoryWindow({
               Cancel
             </button>
             <button className="btn primary" onClick={() => void saveEdit()}>
-              Save <span className="kbd">Ctrl ↵</span>
+              Save
             </button>
           </div>
         )}

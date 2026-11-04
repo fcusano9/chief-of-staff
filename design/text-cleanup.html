@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Text cleanup</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --ok: #2f855a; --cut: #e5484d; --add: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --ok: #4ade80; --cut: #ff6b6f; --add: #4ade80; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --ok: #4ade80; --cut: #ff6b6f; --add: #4ade80; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.bar { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface); z-index: 1; flex-wrap: wrap; }
+.bar b { font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.legend { font-size: 12px; color: var(--muted); }
+.legend s { color: var(--cut); background: color-mix(in srgb, var(--cut) 12%, transparent); padding: 0 3px; border-radius: 3px; }
+.legend u { color: var(--add); background: color-mix(in srgb, var(--add) 12%, transparent); padding: 0 3px; border-radius: 3px; text-decoration: none; }
+main { max-width: 960px; padding: 20px 16px 60px; margin: 0 auto; display: grid; gap: 22px; }
+h2 { font-size: 13px; font-weight: 600; margin: 10px 0 -8px; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); margin-bottom: 6px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 14px 16px; }
+.head { display: flex; align-items: baseline; gap: 10px; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; }
+.muted { color: var(--muted); } .faint { color: var(--faint); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.spacer { flex: 1; }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; white-space: nowrap; }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.mono { font-family: var(--mono); }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 8px; }
+.field { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; margin-bottom: 8px; }
+.field > span:first-child { color: var(--muted); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
+p.small { font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
+.stars { color: var(--accent); letter-spacing: 2px; }
+.progress { height: 3px; border-radius: 2px; background: var(--sel); margin-bottom: 8px; overflow: hidden; }
+.progress div { width: 35%; height: 100%; background: var(--accent); }
+.sub { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); margin: 2px 0 4px; }
+.cut { color: var(--cut); background: color-mix(in srgb, var(--cut) 12%, transparent); text-decoration: line-through; border-radius: 3px; }
+.add { color: var(--add); background: color-mix(in srgb, var(--add) 12%, transparent); border-radius: 3px; }
+body.after .cut { display: none; }
+body:not(.after) .add { display: none; }
+body.after .add { color: inherit; background: none; }
+.note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Text cleanup</b>
+  <div class="seg"><button id="b" class="on">Before</button><button id="a">After</button></div>
+  <span class="legend">Before shows text that goes away <s>struck through</s>. After shows the result, with new wording in plain text.</span>
+</div>
+
+<main>
+  <h2>Your requests</h2>
+
+  <section>
+    <div class="label">1 · Import tab header</div>
+    <div class="card">
+      <div class="head"><h1>Import</h1><span class="muted cut">everything lands in the review queue first</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">2 + 3 · Settings → AI (Claude selected)</div>
+    <div class="card">
+      <div style="font-weight:500;margin-bottom:8px">AI</div>
+      <div class="two">
+        <div>
+          <label class="field"><span>Your name</span><input class="inp" value="Frank Cusano" /></label>
+          <label class="field"><span>Provider</span><select class="inp"><option>Claude (Anthropic API)</option></select></label>
+          <label class="field"><span>Model</span><select class="inp"><option>Opus 5.5 · most capable</option></select></label>
+          <p class="small faint">The AI only proposes. Every suggestion waits in Review until you accept it, and nothing is ever sent on your behalf. <span class="cut">Microsoft 365 Copilot can be added once IT approves an app registration.</span></p>
+        </div>
+        <div>
+          <div class="field"><span>API key</span><span class="row"><span style="color:var(--ok)">✓</span><span>Stored, encrypted on this computer</span><span class="spacer"></span><button class="btn">Remove</button></span></div>
+          <div class="row" style="margin-top:6px"><button class="btn">Test connection</button></div>
+          <p class="small muted cut">With Claude selected, each import's text, plus your open task titles, project and person briefs, and names, is sent to Anthropic to produce suggestions. Writing a person's brief sends their context history and open items. Confirm this is allowed by Crestron's policy before importing work content. Use a key from the Anthropic Console; usage is billed per token.</p>
+        </div>
+      </div>
+    </div>
+    <div class="note">The "AI only proposes" sentence on the left stays. It's the one place that message remains (see B).</div>
+  </section>
+
+  <section>
+    <div class="label">3 · People → Company field, unchanged</div>
+    <div class="card">
+      <label class="field"><span>Company</span><input class="inp" placeholder="e.g. Crestron" /></label>
+    </div>
+    <div class="note">Kept as the example, as you asked. The IT sentence above is the only Crestron-specific text that goes.</div>
+  </section>
+
+  <h2>B · "The AI only proposes" said again in several places</h2>
+
+  <section>
+    <div class="label">Review queue header</div>
+    <div class="card">
+      <div class="head"><h1>Review queue</h1><span class="muted">6 suggestions<span class="cut"> · nothing changes until you accept</span></span><span class="spacer"></span><button class="btn">Import more</button></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Import → Outlook mail, while checking</div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px"><b style="font-weight:600">Outlook mail</b><span class="muted">· last imported Nov 2, 4:10 PM</span></div>
+      <div class="progress"><div></div></div>
+      <span class="muted">Looking through Outlook…<span class="cut"> nothing is sent to the AI yet</span></span>
+    </div>
+  </section>
+
+  <h2>C · Helper text that repeats the label or itself</h2>
+
+  <section>
+    <div class="label">People → person editor</div>
+    <div class="card">
+      <div class="field"><span>Weight</span><span class="row"><span class="stars">★★★★☆</span><span class="faint" style="font-size:12px">Higher weight raises the priority of their requests</span></span></div>
+      <div class="sub" style="margin-top:12px">Standing instructions</div>
+      <textarea class="inp" style="min-height:44px;margin-bottom:10px" placeholder="e.g. Lead with the ask; keep it to three bullets"></textarea>
+      <div class="row"><button class="btn sm">History <span class="mono muted">4</span></button><span class="faint cut" style="font-size:12px">everything the AI has learned about them, newest first</span></div>
+    </div>
+    <div class="note">The weight note stays, as you asked.</div>
+  </section>
+
+  <section>
+    <div class="label">Task editor → brief label</div>
+    <div class="card">
+      <div class="sub">Task brief<span class="cut"> · what the AI should always know</span></div>
+      <textarea class="inp" placeholder="Background, goals, decisions so far"></textarea>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Settings → AI, Demo AI selected (right column), unchanged</div>
+    <div class="card">
+      <p class="small muted" style="margin:0">
+        <span>The demo AI looks for action items, "waiting on", "done", and dates using simple rules. It's good for trying out the import and review flow; switch to Claude for real understanding of your emails, chats, and transcripts.</span>
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Settings → AI, Local model selected (right column), unchanged</div>
+    <div class="card">
+      <div class="row"><button class="btn">Test connection</button></div>
+      <p class="small muted">Imports are read by a model running on this computer. Nothing is sent anywhere. Install Ollama from ollama.com, then run "ollama pull gpt-oss:20b" in a terminal.<span> Local models are free but less accurate than Claude. Each import takes about 40 seconds, longer for long transcripts.</span></p>
+    </div>
+  </section>
+</main>
+
+<script>
+const b = document.getElementById('b'), a = document.getElementById('a')
+const set = (after) => { document.body.classList.toggle('after', after); a.classList.toggle('on', after); b.classList.toggle('on', !after) }
+b.onclick = () => set(false); a.onclick = () => set(true)
+</script>
+</body>
+</html>
