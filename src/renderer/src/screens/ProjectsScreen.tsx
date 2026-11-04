@@ -6,6 +6,7 @@ import { ConfirmButton, SearchBox, TaskRow } from '../components/bits'
 import { HistoryWindow } from '../components/HistoryWindow'
 import { SplitView } from '../components/SplitView'
 import { useAutosave } from '../components/useAutosave'
+import { useListKeys } from '../components/listKeys'
 import { useApp } from '../context'
 
 const STATUSES: [ProjectStatus, string][] = [
@@ -131,17 +132,8 @@ export function ProjectsScreen() {
   const q = search.trim().toLowerCase()
   const inMode = mode === 'archived' ? archived : projects
   const shown = q ? inMode.filter((p) => [p.name, p.overview].some((f) => f?.toLowerCase().includes(q))) : inMode
+  useListKeys(shown.map((p) => p.id), selected, select)
 
-  // "/" jumps to the search box, as on Tasks.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '/' || document.querySelector('.scrim') || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return
-      e.preventDefault()
-      document.querySelector<HTMLInputElement>('#list-search')?.focus()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
   const noteCount = history.split('\n').filter((l) => l.trim()).length
 
   const left = (

@@ -92,18 +92,18 @@ export function ReviewScreen() {
       if (e.key === 'Escape') return setEditing(null)
       if (isTyping() || e.ctrlKey || e.metaKey || e.altKey) return
       const s = items[cursor]
-      if (e.key === 'j' || e.key === 'ArrowDown') {
+      if (e.key === 'ArrowDown') {
         e.preventDefault()
         setCursor((c) => Math.min(c + 1, items.length - 1))
-      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+      } else if (e.key === 'ArrowUp') {
         e.preventDefault()
         setCursor((c) => Math.max(c - 1, 0))
       } else if (s && e.key === 'a') {
         void accept(s, editing === s.id && draft ? draft : undefined)
       } else if (s && e.key === 'r') {
         void reject(s)
-      } else if (s && (e.key === 'e' || e.key === 'Enter')) {
-        e.preventDefault() // keeps the "e" out of the field the editor focuses
+      } else if (s && e.key === 'Enter') {
+        e.preventDefault()
         startEdit(s)
       }
     }
@@ -214,7 +214,7 @@ export function ReviewScreen() {
                       </button>
                     ) : (
                       <button className="btn ghost" onClick={() => startEdit(s)}>
-                        Edit <span className="kbd">E</span>
+                        Edit <span className="kbd">↵</span>
                       </button>
                     )}
                     <button className="btn ghost" onClick={() => void reject(s)}>

@@ -91,15 +91,18 @@ try {
   check('context names what it adds to', text.includes('Partner portal') && text.includes('Marcus Webb') && text.includes('add to context'))
   await app.screenshot(join(shots, 'm2pp-01-review.png'))
   await app.eval(`document.activeElement?.blur()`)
-  await app.key('D', { shift: true })
-  await app.sleep(300)
+  const toggleTheme = async () => {
+    await app.key('k', { ctrl: true }); await app.type('Toggle light'); await app.key('Enter')
+    await app.sleep(300)
+  }
+  await toggleTheme()
   await app.screenshot(join(shots, 'm2pp-01b-review-other-theme.png'))
-  await app.key('D', { shift: true })
-  await app.sleep(300)
+  await toggleTheme()
+  await app.eval(`document.activeElement?.blur()`)
 
   // Accept the first task: its project and person are created with it.
   await app.eval(`document.activeElement?.blur()`)
-  for (let i = 0; i < 4; i++) await app.key('j')
+  for (let i = 0; i < 4; i++) await app.key('ArrowDown')
   await app.key('a')
   await app.sleep(600)
   check('toast says what else was created', ((await app.eval(`return document.querySelector('.toast')?.textContent`)) ?? '').includes('with its new project and person'))
@@ -117,7 +120,7 @@ try {
   check('other tasks now show the real project', after.includes('Pick three pilot dealers') && !after.includes('(new)'))
 
   // Edit a context suggestion, then accept it.
-  await app.key('k'); await app.key('k'); await app.key('k')
+  await app.key('ArrowUp'); await app.key('ArrowUp'); await app.key('ArrowUp')
   await app.sleep(200)
   await app.clickText('Accept', '[data-suggestion] button')
   await app.sleep(500)

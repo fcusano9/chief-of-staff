@@ -97,7 +97,7 @@ export function App() {
   }, [])
   const toggleTheme = useCallback(() => void saveSettings({ theme: document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark' }), [saveSettings])
 
-  // Global shortcuts run in the capture phase so screen-level shortcuts (J/K, E) never see a consumed key.
+  // Global shortcuts run in the capture phase so screen-level shortcuts (E, A, R) never see a consumed key.
   useEffect(() => {
     let gPending = false
     let gTimer = 0
@@ -112,11 +112,6 @@ export function App() {
       const consume = () => {
         e.preventDefault()
         e.stopImmediatePropagation()
-      }
-      if (e.altKey && /^[1-9]$/.test(e.key)) {
-        consume()
-        setView(TABS[Number(e.key) - 1]![0])
-        return
       }
       if (gPending) {
         gPending = false
@@ -136,14 +131,11 @@ export function App() {
       } else if (e.key === 'n') {
         consume()
         openTask({ id: 'new', waiting: viewRef.current === 'waiting' })
-      } else if (e.key === 'D' && e.shiftKey) {
-        consume()
-        toggleTheme()
       }
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [openTask, toggleTheme])
+  }, [openTask])
 
   const ctx = useMemo<AppContextValue | null>(
     () =>
@@ -176,8 +168,8 @@ export function App() {
             <span>Chief of Staff</span>
           </div>
           <nav className="tabs">
-            {TABS.map(([v, label], i) => (
-              <button key={v} className={`tab ${view === v || (view === 'ailog' && aiLog?.from === v) ? 'on' : ''}`} title={`Alt+${i + 1}`} onClick={() => setView(v)}>
+            {TABS.map(([v, label]) => (
+              <button key={v} className={`tab ${view === v || (view === 'ailog' && aiLog?.from === v) ? 'on' : ''}`} onClick={() => setView(v)}>
                 {label}
                 {v === 'review' && reviewCount > 0 && <span className="count">{reviewCount}</span>}
               </button>
@@ -210,7 +202,7 @@ export function App() {
             <span className="kbd">Ctrl K</span> commands
           </span>
           <span>
-            <span className="kbd">J</span> <span className="kbd">K</span> move
+            <span className="kbd">↑</span> <span className="kbd">↓</span> move
           </span>
           <span>
             <span className="kbd">N</span> new

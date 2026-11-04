@@ -88,9 +88,11 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **Lists with details** (Tasks, Waiting, Projects, People) use `SplitView`: a draggable divider, a 360px minimum per pane, double-click for 50/50, and the position saved in settings. Each list has a search box (`SearchBox`, / to focus). Waiting is `TasksScreen` with `list="waiting"`; Tasks and Waiting have an Open / Done switch, and Reopen returns an item to the list it came from (`waited_on`).
 - **Editors save pending edits automatically** when you move away: the task editor when you switch tasks, and Projects and People (`useAutosave`) when you pick another item, start a new one, or change tabs. An empty name isn't saved, and says so. Mark-done through the editor saves edits too. Delete is a two-click `ConfirmButton`.
 - **Keyboard shortcuts:**
-  - Global: N new task, G-then-letter to go to a screen, Alt+1–9 for tabs, Shift+D for theme.
-  - Tasks: J/K, Enter, E, Esc, Ctrl+Enter.
-  - Review: J/K, A, R, E or Enter to edit. While editing, Ctrl+Enter accepts and Esc cancels.
+  - Global: Ctrl+K palette, N new task, G-then-letter to go to a screen, "/" to search the list. No tab-number or theme keys (the theme is in the palette).
+  - Lists (Tasks, Waiting, Projects, People, Review): Up/Down move, Enter opens or edits the item. No J/K.
+  - Tasks: E marks done, Esc closes, Ctrl+Enter saves.
+  - Review: A, R, Enter to edit. While editing, Ctrl+Enter accepts and Esc cancels.
+  - Settings lists every shortcut (`SHORTCUTS` in `SettingsScreen.tsx`); keep it in step.
   - Global shortcuts run in the capture phase and consume their keys.
 - **Project colors:** tasks are themed with their project's color. Tasks with no project get no label and a neutral stripe.
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".

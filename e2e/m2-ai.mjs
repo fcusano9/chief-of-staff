@@ -54,12 +54,14 @@ try {
   check('no evidence quotes in Review (they stay in the AI log)', !(await app.eval(`return document.querySelector('[data-suggestion]').textContent`)).includes('“'))
   await app.screenshot(join(shots, 'm2-02-review.png'))
 
-  // E opens the editor with the cursor in the title (and no stray "e"); Esc cancels from inside the field
+  // E no longer edits; Enter opens the editor with the cursor in the title, and Esc cancels from inside the field
   await app.eval(`document.activeElement?.blur()`)
   await app.key('e')
+  check('E does not open the editor', (await app.eval(`return !document.querySelector('[data-suggestion] input.inp')`)) === true)
+  await app.key('Enter')
   await app.waitFor('[data-suggestion] input.inp')
   const opened = await app.eval(`const i = document.querySelector('[data-suggestion] input.inp'); return { value: i.value, focused: document.activeElement === i, title: (await window.cos['suggestions.listPending']())[0].payload.title }`)
-  check('E opens the editor in the title field', opened.focused && opened.value === opened.title, JSON.stringify(opened))
+  check('Enter opens the editor in the title field', opened.focused && opened.value === opened.title, JSON.stringify(opened))
   check('edit button shows its key', (await app.eval(`return [...document.querySelectorAll('[data-suggestion] button')].some(b => b.textContent === 'Cancel Esc')`)) === true)
   await app.key('Escape')
   check('Esc cancels the edit', (await app.eval(`return !document.querySelector('[data-suggestion] input.inp')`)) === true)
@@ -91,7 +93,7 @@ try {
   check('one suggestion left', left === 1, String(left))
 
   // Ctrl+Enter accepts edits straight from the field
-  await app.key('e')
+  await app.key('Enter')
   await app.waitFor('[data-suggestion] input.inp')
   await app.eval(setValue('[data-suggestion] input.inp', 'Book spring launch customer visits'))
   await app.key('Enter', { ctrl: true })

@@ -42,6 +42,20 @@ try {
   }
   check('two people saved', (await app.eval(`return document.querySelectorAll('.pane.left .r').length`)) === 2)
 
+  // Up and Down move through People and open each one; Enter puts the cursor in the name
+  const personSel = () => app.eval(`return [document.querySelector('.pane.left .r.sel .ttl')?.firstChild.textContent, document.querySelector('.pane.right .title-inp')?.value]`)
+  await app.eval(`document.activeElement?.blur()`)
+  await app.key('ArrowUp')
+  const top = await personSel()
+  await app.key('ArrowDown')
+  const second = await personSel()
+  check('arrows move through People', top[0] === 'Dana Lee' && second[0] === 'Tom Baker' && second[1] === 'Tom Baker', JSON.stringify([top, second]))
+  await app.key('j')
+  check('J no longer moves', (await personSel())[0] === 'Tom Baker')
+  await app.key('Enter')
+  check('Enter edits the name', await app.eval(`return document.activeElement === document.querySelector('.pane.right .title-inp')`))
+  await app.eval(`document.activeElement?.blur()`)
+
   // Projects: create one with a brief
   await app.clickText('Projects', '.tab')
   await app.clickText('New project')
@@ -85,20 +99,20 @@ try {
   check('six tasks in list', count === 6, String(count))
   check('highest priority first', (await app.eval(`return document.querySelector('.pane.left .r .ttl').firstChild.textContent`)) === 'Roadmap slides for VP review')
 
-  // J/K moves selection and shows the task on the right
+  // Up and Down move the selection and show the task on the right
   await app.eval(`document.activeElement?.blur()`)
   await app.key('Escape')
-  for (let i = 0; i < 6; i++) await app.key('k')
-  await app.key('j')
+  for (let i = 0; i < 6; i++) await app.key('ArrowUp')
+  await app.key('ArrowDown')
   const sel = await app.eval(`return [document.querySelector('.pane.left .r.sel .ttl')?.firstChild.textContent, document.querySelector('.pane.right .title-inp')?.value]`)
-  check('J moves selection and right pane follows', sel[0] && sel[0] === sel[1], JSON.stringify(sel))
+  check('Down moves selection and right pane follows', sel[0] && sel[0] === sel[1], JSON.stringify(sel))
 
-  // Autosave: edit notes then press J; edit must persist
+  // Autosave: edit notes then press Down; edit must persist
   await app.click('.pane.right textarea')
   await app.type('Edited while browsing')
   const editedTitle = sel[1]
   await app.eval(`document.activeElement.blur()`)
-  await app.key('j')
+  await app.key('ArrowDown')
   await app.sleep(500)
   const note = await app.eval(`return (await window.cos['tasks.listActive']()).find(t => t.title === ${JSON.stringify(editedTitle)})?.notes`)
   check('switching tasks autosaves edits', note === 'Edited while browsing', String(note))
@@ -155,14 +169,24 @@ try {
   await app.sleep(400)
   check('palette opens a task', (await app.eval(`return document.querySelector('.pane.right .title-inp')?.value`)) === 'Submit expense report')
 
-  // Theme toggle via Shift+D
+  // Theme: Shift+D and Alt+number are gone; the command palette still toggles the theme
   await app.eval(`document.activeElement?.blur()`)
   const themeBefore = await app.eval(`return document.documentElement.dataset.theme`)
   await app.key('D', { shift: true })
   await app.sleep(300)
+  check('Shift+D does nothing', (await app.eval(`return document.documentElement.dataset.theme`)) === themeBefore)
+  const tabBefore = await app.eval(`return document.querySelector('main h1')?.textContent`)
+  await app.key('1', { alt: true })
+  await app.sleep(200)
+  check('Alt+1 does nothing', (await app.eval(`return document.querySelector('main h1')?.textContent`)) === tabBefore)
+  const toggleTheme = async () => {
+    await app.key('k', { ctrl: true }); await app.type('Toggle light'); await app.key('Enter')
+    await app.sleep(300)
+  }
+  await toggleTheme()
   const themeAfter = await app.eval(`return document.documentElement.dataset.theme`)
-  check('Shift+D toggles theme', themeBefore !== themeAfter, `${themeBefore} -> ${themeAfter}`)
-  if (themeAfter !== 'dark') await app.key('D', { shift: true })
+  check('palette toggles theme', themeBefore !== themeAfter, `${themeBefore} -> ${themeAfter}`)
+  if (themeAfter !== 'dark') await toggleTheme()
   await app.screenshot(join(shots, '03-tasks-split-dark.png'))
 
   // G-sequence navigation
