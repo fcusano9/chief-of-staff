@@ -27,7 +27,6 @@ export class SettingsStore {
       aiProvider: settings.aiProvider === 'claude' || settings.aiProvider === 'local' ? settings.aiProvider : 'demo',
       aiModel: CLAUDE_MODELS.some((m) => m.id === settings.aiModel) ? settings.aiModel : DEFAULT_SETTINGS.aiModel,
       localModel: settings.localModel?.trim() || DEFAULT_SETTINGS.localModel,
-      localThoroughness: settings.localThoroughness === 'thorough' ? 'thorough' : 'standard',
       localUrl: /^https?:\/\/[^\s]+$/.test(settings.localUrl?.trim() ?? '') ? settings.localUrl.trim().replace(/\/+$/, '') : DEFAULT_SETTINGS.localUrl,
       priorityWeights: {
         dueDate: clampWeight(settings.priorityWeights.dueDate),

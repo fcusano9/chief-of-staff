@@ -66,10 +66,6 @@ try {
   await app.sleep(400)
   const bar = await app.eval(`return document.querySelector('.statusbar')?.textContent ?? ''`)
   check('local model selected', bar.includes('fake:1b (local)'), bar.slice(-60))
-  await app.eval(`const e = ${field('Thoroughness', 'select')}; ${setInput('e', 'thorough', 'HTMLSelectElement', 'change')}`)
-  await app.sleep(400)
-  const bar2 = await app.eval(`return document.querySelector('.statusbar')?.textContent ?? ''`)
-  check('thorough shows in the status bar', bar2.includes('fake:1b (local, thorough)'), bar2.slice(-60))
 
   await app.clickText('Import', '.tab')
   await app.click('main input[placeholder^="Title"]')
@@ -79,7 +75,7 @@ try {
   await app.key('Enter', { ctrl: true })
   await app.waitFor('[data-suggestion]', 8000)
 
-  check('thorough asks the model to think, in every pass', thinkSent.length >= 2 && thinkSent.every((t) => t === true), JSON.stringify(thinkSent))
+  check('split passes, without extra thinking', thinkSent.length >= 2 && thinkSent.every((t) => t === false), JSON.stringify(thinkSent))
   const labels = await app.eval(`return [...document.querySelectorAll('[data-suggestion] > div:first-child .chip')].map(c => c.textContent)`)
   check(
     'new projects and people first, then context, then tasks',

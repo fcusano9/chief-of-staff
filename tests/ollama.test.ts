@@ -129,9 +129,6 @@ describe('local AI through Ollama', () => {
       const saved = store.save({ ...DEFAULT_SETTINGS, aiProvider: 'local', localModel: ' qwen3:8b ', localUrl: 'http://localhost:11434/' })
       expect(saved).toMatchObject({ aiProvider: 'local', localModel: 'qwen3:8b', localUrl: 'http://localhost:11434' })
       expect(store.save({ ...saved, localUrl: 'ftp://nope', localModel: '' })).toMatchObject({ localUrl: DEFAULT_SETTINGS.localUrl, localModel: DEFAULT_SETTINGS.localModel })
-      expect(saved.localThoroughness).toBe('standard')
-      expect(store.save({ ...saved, localThoroughness: 'thorough' }).localThoroughness).toBe('thorough')
-      expect(store.save({ ...saved, localThoroughness: 'extreme' as never }).localThoroughness).toBe('standard')
     } finally {
       rmSync(folder, { recursive: true, force: true })
     }

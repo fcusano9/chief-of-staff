@@ -15,7 +15,8 @@ import { scoreCase, type CaseScore } from './score'
  *
  *   npm run bench:ai                                   demo, every installed Ollama model, Claude if a key is set
  *   BENCH_MODELS=gpt-oss:20b,claude-haiku-5-5 npm run bench:ai
- *   BENCH_MODELS=gpt-oss:20b@medium+split npm run bench:ai   local model with more reasoning and split passes
+ *   BENCH_MODELS=gpt-oss:20b@medium+single npm run bench:ai   local model with other options
+ *   (flags, joined with +: low|medium|high, and single for one pass instead of split passes)
  *
  * Claude needs ANTHROPIC_API_KEY in the environment, or on a Mac a Keychain item named
  * "chief-of-staff-bench" (security add-generic-password -s chief-of-staff-bench -a anthropic -w).
@@ -40,7 +41,11 @@ function parseSpec(spec: string): { model: string; options: OllamaOptions } {
   const parts = variant.split('+').filter(Boolean)
   return {
     model,
-    options: { reasoning: (parts.find((p) => ['low', 'medium', 'high'].includes(p)) as Reasoning | undefined) ?? 'low', passes: parts.includes('split') ? 'split' : 'single' },
+    options: {
+      reasoning: (parts.find((p) => ['low', 'medium', 'high'].includes(p)) as Reasoning | undefined) ?? 'low',
+      // Without flags a local model runs as the app runs it, with split passes.
+      passes: parts.includes('single') ? 'single' : 'split',
+    },
   }
 }
 const OLLAMA = process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434'
