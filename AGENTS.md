@@ -85,7 +85,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 
 - **Design "direction B":** sharp and keyboard-first. Top tabs, a Ctrl+K command palette, mono numbers, and colors from the CSS variables in `styles.css`, which cover light and dark. Fonts are bundled (Inter, JetBrains Mono).
 - **Lists with details** (Tasks, Waiting, Projects, People) use `SplitView`: a draggable divider, a 360px minimum per pane, double-click for 50/50, and the position saved in settings. Each list has a search box (`SearchBox`, / to focus). Waiting is `TasksScreen` with `list="waiting"`; Tasks and Waiting have an Open / Done switch, and Reopen returns an item to the list it came from (`waited_on`).
-- **The task editor saves pending edits automatically** when you switch tasks. Mark-done through the editor saves edits too. Delete is a two-click `ConfirmButton`.
+- **Editors save pending edits automatically** when you move away: the task editor when you switch tasks, and Projects and People (`useAutosave`) when you pick another item, start a new one, or change tabs. An empty name isn't saved, and says so. Mark-done through the editor saves edits too. Delete is a two-click `ConfirmButton`.
 - **Keyboard shortcuts:**
   - Global: N new task, G-then-letter to go to a screen, Alt+1–9 for tabs, Shift+D for theme.
   - Tasks: J/K, Enter, E, Esc, Ctrl+Enter.
@@ -95,7 +95,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".
 - **Context briefs:** every project, task and person has a summary and standing instructions, so the AI never needs things re-explained. The AI request includes these briefs.
 - **People** also have a one-line brief (`people.brief`), shown under their name. The AI writes it only when Frank clicks Regenerate, as a suggestion he keeps or discards, and he can edit it by hand. Their context summary is labeled "Context history", keeps every dated note, and opens from a History button in the same window as Projects (`HistoryWindow`). New people start at 1 star. Imports send the one-line brief, or the newest notes when there's none.
-- **Projects** have a one-line overview (`projects.overview`) that Frank writes by hand (pencil icon, no AI), and a short status brief (`projects.brief`: status, "Next:", "Open:") that the AI writes from the history only when he clicks Regenerate, kept or discarded like the People brief. The project's context summary is its history of dated notes; it isn't on the page but opens from the History button. Imports send the overview and status brief, or the newest history when there's no brief.
+- **Projects** have a one-line overview (`projects.overview`) that Frank writes by hand (pencil icon, no AI), and a short status brief (`projects.brief`: status, "Next:", "Open:") that the AI writes from the history only when he clicks Regenerate, kept or discarded like the People brief. The project's context summary is its history of dated notes; it isn't on the page but opens from the History button. Imports send the overview and status brief, or the newest history when there's no brief. Archived projects are left out of `projects.list` (so filters, editors and the AI skip them) and shown only on the Projects tab's Archived list, which has Unarchive.
 
 ## Data and privacy
 

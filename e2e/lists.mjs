@@ -23,6 +23,7 @@ try {
   await app.eval(`
     const p = await window.cos['projects.save']({ id: 0, name: 'Pricing refresh', color: '#D85A30', status: 'active' });
     await window.cos['projects.save']({ id: 0, name: 'Partner portal', color: '#378ADD', status: 'active' });
+    await window.cos['projects.save']({ id: 0, name: 'CES 2026 booth', color: '#639922', status: 'archived' });
     await window.cos['people.save']({ id: 0, name: 'Dana Lee', role: 'VP, Product', company: 'Crestron', email: null, priorityWeight: 5 });
     await window.cos['people.save']({ id: 0, name: 'Jordan Kim', role: 'Owner', company: 'Northwind AV', email: null, priorityWeight: 2 });
     const t = (o) => window.cos['tasks.save']({ id: 0, title: 'Task', notes: null, status: 'open', dueDate: null, projectId: null, requesterId: null, priorityOverride: null, followUpCount: 0, waitingOn: null, subtasks: [], ...o });
@@ -90,6 +91,19 @@ try {
   await app.sleep(400)
   await search(app, 'portal')
   check('Projects search', JSON.stringify(await app.eval(`return [...document.querySelectorAll('.pane.left .r .ttl')].map(t => t.childNodes[0].textContent)`)) === JSON.stringify(['Partner portal']))
+  await search(app, '')
+  const projectNames = () => app.eval(`return [...document.querySelectorAll('.pane.left .r .ttl')].map(t => t.childNodes[0].textContent)`)
+  check('Active leaves out archived projects', !(await projectNames()).includes('CES 2026 booth'), JSON.stringify(await projectNames()))
+  await app.clickText('Archived', '.seg button')
+  await app.sleep(400)
+  check('Archived lists archived projects with a count', JSON.stringify(await projectNames()) === JSON.stringify(['CES 2026 booth']) && (await app.eval(`return document.querySelector('.seg .on').textContent`)).includes('1'), JSON.stringify(await projectNames()))
+  await app.waitFor('.archived-note')
+  check('archived project opens with an Unarchive note', (await app.eval(`return document.querySelector('.archived-note').textContent`)).includes('Unarchive'))
+  await app.screenshot(join(shots, 'lists-04-archived.png'))
+  await app.clickText('Unarchive', '.archived-note button')
+  await app.sleep(600)
+  check('Unarchive returns it to Active', (await projectNames()).includes('CES 2026 booth') && (await app.eval(`return document.querySelector('.seg .on').textContent`)).startsWith('Active') && !(await app.eval(`return !!document.querySelector('.archived-note')`)))
+  check('unarchived project is back in the app-wide list', (await app.eval(`return (await window.cos['projects.list']()).find(p => p.name === 'CES 2026 booth')?.status`)) === 'active')
 
   // People
   await app.clickText('People', '.tab')

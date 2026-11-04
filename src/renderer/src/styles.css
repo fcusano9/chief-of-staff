@@ -181,4 +181,5 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .search-box .clear { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }
 .chip.followup { margin-left: 8px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
 .r.done .ttl { color: var(--muted); }
-
+.archived-note { display: flex; align-items: center; gap: 10px; margin: 14px 22px 0; padding: 8px 12px; border-radius: 8px; background: var(--sel); color: var(--muted); }
+.r.done .ttl .faint { color: var(--faint); }

@@ -5,6 +5,7 @@ import { cos, errorMessage } from '../api'
 import { ConfirmButton, SearchBox, TaskRow } from '../components/bits'
 import { HistoryWindow } from '../components/HistoryWindow'
 import { SplitView } from '../components/SplitView'
+import { useAutosave } from '../components/useAutosave'
 import { useApp } from '../context'
 
 const STATUSES: [ProjectStatus, string][] = [
@@ -32,32 +33,54 @@ export function ProjectsScreen() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [search, setSearch] = useState('')
+  // Archived projects aren't in the app-wide list (filters, editors and the AI leave them out); this tab lists them.
+  const [mode, setMode] = useState<'active' | 'archived'>('active')
+  const [archived, setArchived] = useState<ProjectSummary[]>([])
+  useEffect(() => void cos['projects.listArchived']().then(setArchived), [version])
+  const all = [...projects, ...archived]
   // The project the draft was loaded for, so a refresh (e.g. after keeping a brief) keeps unsaved edits.
   const loadedFor = useRef<number | null>(null)
+
+  /** Saves the form: the project, then its standing instructions (history read fresh, so it isn't overwritten). */
+  const persist = async (d: Draft) => {
+    const saved = await cos['projects.save']({ id: d.id, name: d.name, color: d.color, status: d.status })
+    const current = await cos['briefs.get']('project', saved.id)
+    await cos['briefs.save']({ ...current, standingInstructions: d.standingInstructions })
+    return saved
+  }
+  const { markClean, flush } = useAutosave(draft, persist)
 
   useEffect(() => {
     if (selected === null) {
       loadedFor.current = null
+      markClean(null)
       return setDraft(null)
     }
     if (selected === 'new') {
       loadedFor.current = null
       setTasks([])
       setHistory('')
-      return setDraft({ id: 0, name: '', color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length]!, status: 'active', standingInstructions: '' })
+      const fresh: Draft = { id: 0, name: '', color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length]!, status: 'active', standingInstructions: '' }
+      markClean(fresh)
+      return setDraft(fresh)
     }
-    const p = projects.find((x) => x.id === selected)
+    const p = all.find((x) => x.id === selected)
     if (!p) return setDraft(null) // just created: wait for the refreshed list
     void cos['tasks.listActive']({ projectId: p.id }).then(setTasks)
     const first = loadedFor.current !== p.id
     loadedFor.current = p.id
     void cos['briefs.get']('project', p.id).then((b) => {
       setHistory(b.summary)
-      if (first) setDraft({ id: p.id, name: p.name, color: p.color, status: p.status, standingInstructions: b.standingInstructions })
+      if (!first) return
+      const loaded: Draft = { id: p.id, name: p.name, color: p.color, status: p.status, standingInstructions: b.standingInstructions }
+      markClean(loaded)
+      setDraft(loaded)
     })
-  }, [selected, projects, version])
+  }, [selected, projects, archived, version])
 
+  /** Switches the form to another project, saving pending edits first. */
   const select = (id: number | 'new' | null) => {
+    if (id !== selected) flush()
     setShowHistory(false)
     setSelected(id)
   }
@@ -65,22 +88,49 @@ export function ProjectsScreen() {
   const save = async () => {
     if (!draft) return
     try {
-      const saved = await cos['projects.save']({ id: draft.id, name: draft.name, color: draft.color, status: draft.status })
-      // Read the history fresh, so notes added from Review or the History window aren't overwritten.
-      const current = await cos['briefs.get']('project', saved.id)
-      await cos['briefs.save']({ ...current, standingInstructions: draft.standingInstructions })
-      toast('Project saved')
-      if (saved.status === 'archived') select(null)
-      else if (draft.id === 0) select(saved.id)
+      const saved = await persist(draft)
+      markClean(draft)
+      const nowArchived = saved.status === 'archived'
+      if (nowArchived !== (mode === 'archived')) {
+        // It moved to the other list: follow it there.
+        toast(nowArchived ? `${saved.name} archived` : `${saved.name} is active again`)
+        setMode(nowArchived ? 'archived' : 'active')
+        select(saved.id)
+      } else {
+        toast('Project saved')
+        if (draft.id === 0) select(saved.id)
+      }
       refresh()
     } catch (err) {
       toast(errorMessage(err), true)
     }
   }
 
-  const project = draft && draft.id !== 0 ? projects.find((p) => p.id === draft.id) : undefined
+  /** Sets the project back to Active, keeping any other edits in the form. */
+  const unarchive = async () => {
+    if (!draft) return
+    try {
+      const next = { ...draft, status: 'active' as const }
+      await persist(next)
+      markClean(next)
+      setDraft(next)
+      setMode('active')
+      toast(`${draft.name} is active again`)
+      refresh()
+    } catch (err) {
+      toast(errorMessage(err), true)
+    }
+  }
+  const switchMode = (m: 'active' | 'archived') => {
+    if (m === mode) return
+    setMode(m)
+    select((m === 'archived' ? archived : projects)[0]?.id ?? null)
+  }
+
+  const project = draft && draft.id !== 0 ? all.find((p) => p.id === draft.id) : undefined
   const q = search.trim().toLowerCase()
-  const shown = q ? projects.filter((p) => [p.name, p.overview].some((f) => f?.toLowerCase().includes(q))) : projects
+  const inMode = mode === 'archived' ? archived : projects
+  const shown = q ? inMode.filter((p) => [p.name, p.overview].some((f) => f?.toLowerCase().includes(q))) : inMode
 
   // "/" jumps to the search box, as on Tasks.
   useEffect(() => {
@@ -98,20 +148,28 @@ export function ProjectsScreen() {
     <>
       <div className="head">
         <h1>Projects</h1>
-        <span className="muted">{projects.length}</span>
+        <span className="muted">{mode === 'archived' ? `${archived.length} archived` : projects.length}</span>
         <div className="spacer" />
         <button className="btn primary" onClick={() => select('new')}>
           New project
         </button>
       </div>
-      {projects.length > 0 && (
+      {all.length > 0 && (
         <div className="toolbar">
+          <div className="seg" role="group" aria-label="Active or archived">
+            <button className={mode === 'active' ? 'on' : ''} onClick={() => switchMode('active')}>
+              Active
+            </button>
+            <button className={mode === 'archived' ? 'on' : ''} onClick={() => switchMode('archived')}>
+              Archived <span className="mono faint">{archived.length}</span>
+            </button>
+          </div>
           <SearchBox value={search} onChange={setSearch} placeholder="Search projects" />
         </div>
       )}
       <div className="list">
         {shown.map((p) => (
-          <div key={p.id} className={`r ${selected === p.id ? 'sel' : ''}`} style={{ gridTemplateColumns: '3px minmax(0, 1fr) auto auto' }} onClick={() => select(p.id)}>
+          <div key={p.id} className={`r ${selected === p.id ? 'sel' : ''} ${p.status === 'archived' ? 'done' : ''}`} style={{ gridTemplateColumns: '3px minmax(0, 1fr) auto auto' }} onClick={() => select(p.id)}>
             <div className="stripe" style={{ background: p.color }} />
             <div className="ttl">
               {p.name}
@@ -121,18 +179,31 @@ export function ProjectsScreen() {
                 </div>
               )}
             </div>
-            <span className="faint" style={{ fontSize: 12 }}>{p.status === 'active' ? '' : STATUSES.find(([s]) => s === p.status)?.[1]}</span>
+            <span className="faint" style={{ fontSize: 12 }}>{p.status === 'active' || p.status === 'archived' ? '' : STATUSES.find(([s]) => s === p.status)?.[1]}</span>
             <span className="mono muted" title="Open tasks">{p.openCount}</span>
           </div>
         ))}
-        {projects.length === 0 && <div className="empty">No projects yet. Tasks don't need one, but projects keep shared context for the AI.</div>}
-        {projects.length > 0 && shown.length === 0 && <div className="empty">Nothing matches “{search}”.</div>}
+        {inMode.length === 0 && (
+          <div className="empty">
+            {mode === 'archived' ? "No archived projects. Set a project's status to Archived to tuck it away here." : "No projects yet. Tasks don't need one, but projects keep shared context for the AI."}
+          </div>
+        )}
+        {inMode.length > 0 && shown.length === 0 && <div className="empty">Nothing matches “{search}”.</div>}
       </div>
     </>
   )
 
   const right = draft ? (
     <div>
+      {project?.status === 'archived' && (
+        <div className="archived-note">
+          <span>Archived: hidden from Tasks filters, the task editor and the AI.</span>
+          <div className="spacer" />
+          <button className="btn" onClick={() => void unarchive()}>
+            Unarchive
+          </button>
+        </div>
+      )}
       <div className="editor-stripe" style={{ background: draft.color }} />
       <div className="editor">
         <input className="inp title-inp big" value={draft.name} placeholder="Project name" autoFocus={draft.id === 0} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
@@ -174,7 +245,7 @@ export function ProjectsScreen() {
               label="Delete project"
               confirmLabel="Click again: its tasks keep going with no project"
               onConfirm={() =>
-                void cos['projects.delete'](draft.id).then(() => {
+                void (markClean(draft), cos['projects.delete'](draft.id)).then(() => {
                   toast('Project deleted. Its tasks now have no project.')
                   select(null)
                   refresh()

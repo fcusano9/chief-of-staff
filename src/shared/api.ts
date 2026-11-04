@@ -47,6 +47,8 @@ export interface Api {
   'tasks.delete': (id: number) => void
   'tasks.summary': () => TodaySummary
   'projects.list': () => ProjectSummary[]
+  /** Archived projects, which projects.list leaves out. */
+  'projects.listArchived': () => ProjectSummary[]
   'projects.save': (project: ProjectInput) => Project
   'projects.saveOverview': (id: number, text: string) => Project
   /** Asks the AI for a new status brief from the project's history. Changes nothing; the UI saves it with projects.saveBrief if kept. */
@@ -113,6 +115,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'tasks.delete',
   'tasks.summary',
   'projects.list',
+  'projects.listArchived',
   'projects.save',
   'projects.saveOverview',
   'projects.suggestBrief',

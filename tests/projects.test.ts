@@ -45,6 +45,17 @@ describe('projects: overview, status brief and history', () => {
   const newProject = (name = 'Spring pricing launch') => projects.save({ id: 0, name, color: '#7F77DD', status: 'active' })
   const history = (id: number, summary: string, standingInstructions = '') => briefs.save({ scope: 'project', ownerId: id, summary, standingInstructions, updatedAt: null })
 
+  it('lists archived projects apart, and unarchiving moves them back', () => {
+    const live = newProject('Partner portal')
+    const old = projects.save({ id: 0, name: 'CES 2026 booth', color: '#639922', status: 'archived' })
+    projects.save({ id: 0, name: 'Old launch', color: '#D85A30', status: 'archived' })
+    expect(projects.list().map((p) => p.name)).toEqual([live.name])
+    expect(projects.listArchived().map((p) => p.name)).toEqual(['CES 2026 booth', 'Old launch'])
+    projects.save({ ...old, status: 'active' })
+    expect(projects.list().map((p) => p.name)).toEqual(['CES 2026 booth', 'Partner portal'])
+    expect(projects.listArchived().map((p) => p.name)).toEqual(['Old launch'])
+  })
+
   it('starts a project with no overview or brief, and keeps existing history as it is', () => {
     const p = newProject()
     history(p.id, 'Oct 14, 2026: Kickoff.')

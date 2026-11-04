@@ -13,12 +13,21 @@ export class ProjectService {
    * since their brief was written.
    */
   list(): ProjectSummary[] {
+    return this.query(`p.status <> 'archived'`)
+  }
+
+  /** Archived projects by name. They stay out of list(), so filters, editors and the AI don't see them. */
+  listArchived(): ProjectSummary[] {
+    return this.query(`p.status = 'archived'`)
+  }
+
+  private query(where: string): ProjectSummary[] {
     const rows = this.db
       .prepare(
         `SELECT p.*, IFNULL(b.summary, '') AS history,
            (SELECT COUNT(*) FROM work_items w WHERE w.project_id = p.id AND w.status IN ${ACTIVE_IN}) AS open_count
          FROM projects p LEFT JOIN context_briefs b ON b.scope = 'project' AND b.owner_id = p.id
-         WHERE p.status <> 'archived' ORDER BY p.name COLLATE NOCASE`,
+         WHERE ${where} ORDER BY p.name COLLATE NOCASE`,
       )
       .all() as Record<string, unknown>[]
     return rows.map((r) => ({
