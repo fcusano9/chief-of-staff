@@ -144,10 +144,10 @@ export function PeopleScreen() {
           </button>
           {filtering && (
             <>
-              <span className="faint" style={{ fontSize: 12 }}>
+              <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>
                 {shown.length} of {people.length}
               </span>
-              <button className="btn ghost" style={{ fontSize: 12, padding: '2px 6px' }} onClick={clearFilters}>
+              <button className="btn ghost" style={{ fontSize: 'var(--fs-sm)', padding: '2px 6px' }} onClick={clearFilters}>
                 Clear
               </button>
             </>
@@ -160,7 +160,7 @@ export function PeopleScreen() {
             <Avatar person={p} />
             <div className="ttl">
               {p.name}
-              <div className="faint" style={{ fontSize: 11 }}>{[p.role, p.company].filter(Boolean).join(' · ')}</div>
+              <div className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{[p.role, p.company].filter(Boolean).join(' · ')}</div>
             </div>
             <Stars value={p.priorityWeight} />
             <span className="mono muted" title="Open asks and waiting on" style={{ width: 22, textAlign: 'right' }}>
@@ -210,7 +210,7 @@ export function PeopleScreen() {
         <span>Weight</span>
         <span className="row">
           <Stars value={draft.priorityWeight} onChange={(v) => setDraft({ ...draft, priorityWeight: v })} />
-          <span className="faint" style={{ fontSize: 12 }}>Higher weight raises the priority of their requests</span>
+          <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>Higher weight raises the priority of their requests</span>
         </span>
       </div>
       <div className="label" style={{ marginTop: 12 }}>Standing instructions</div>
@@ -319,7 +319,7 @@ function PersonBrief({ person, hasContext }: { person: PersonSummary; hasContext
             aria-label="Brief"
             autoFocus
             rows={3}
-            style={{ fontSize: 14, minHeight: 74 }}
+            style={{ fontSize: 'calc(var(--fs) + 1px)', minHeight: 74 }}
             value={editing}
             placeholder="One sentence about who they are and what they do"
             onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)}
@@ -344,13 +344,13 @@ function PersonBrief({ person, hasContext }: { person: PersonSummary; hasContext
         </>
       ) : (
         <>
-          <div data-brief style={{ fontSize: 14 }}>
+          <div data-brief style={{ fontSize: 'calc(var(--fs) + 1px)' }}>
             {person.brief ?? (
               <span className="faint">No brief yet. {hasContext ? 'Click Write brief, or Edit to write one yourself.' : 'Add some context below, or Edit to write one yourself.'}</span>
             )}
           </div>
           <div className="row" style={{ marginTop: 4, flexWrap: 'wrap' }}>
-            {byline && <span className="faint" style={{ fontSize: 11 }}>{byline}</span>}
+            {byline && <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{byline}</span>}
             {person.brief && person.newNotes > 0 && (
               <span className="note">
                 {person.newNotes} new note{person.newNotes === 1 ? '' : 's'} since this brief
@@ -379,9 +379,9 @@ function PersonBrief({ person, hasContext }: { person: PersonSummary; hasContext
           <div className="row" style={{ marginBottom: 4 }}>
             <span className="label">Suggested brief</span>
             <div className="spacer" />
-            <span className="faint" style={{ fontSize: 11 }}>{suggestion.writtenBy}</span>
+            <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{suggestion.writtenBy}</span>
           </div>
-          <div style={{ fontSize: 14 }}>{suggestion.text}</div>
+          <div style={{ fontSize: 'calc(var(--fs) + 1px)' }}>{suggestion.text}</div>
           <div className="row" style={{ marginTop: 8 }}>
             <button className="btn primary" onClick={() => void keep(suggestion.text, 'ai')}>
               Keep

@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en" data-density="compact">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Density levels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --raised: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --k-task: #5b5bd6; --k-project-ctx: #b5600f; --k-person-ctx: #c23e70; --k-task-ctx: #627083; --k-person: #2a74c4;
+  --font: Inter, system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --raised: #1a1a1f; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+    --k-task: #8b8bf5; --k-project-ctx: #e8a057; --k-person-ctx: #ef86ac; --k-task-ctx: #9aa7b8; --k-person: #6aa8ee;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --raised: #1a1a1f; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+  --k-task: #8b8bf5; --k-project-ctx: #e8a057; --k-person-ctx: #ef86ac; --k-task-ctx: #9aa7b8; --k-person: #6aa8ee;
+  color-scheme: dark;
+}
+
+/* ---- The three density levels. Compact is exactly today's app. ---- */
+:root, [data-density='compact'] {
+  --fs: 13px; --fs-sm: 12px; --fs-xs: 11px; --h1: 18px; --lh: 1.5;
+  --row-py: 7px; --row-gap: 10px; --stripe-h: 20px;
+  --page-py: 22px; --page-px: 28px; --page-max: 1080px; --gap: 12px; --card-py: 12px; --card-px: 14px;
+  --head-mb: 14px; --sec-mt: 22px; --field-py: 3px; --btn-py: 4px; --inp-py: 5px; --pill-py: 2px;
+}
+[data-density='comfortable'] {
+  --fs: 13.5px; --fs-sm: 12.5px; --fs-xs: 11px; --h1: 19px; --lh: 1.55;
+  --row-py: 11px; --row-gap: 12px; --stripe-h: 24px;
+  --page-py: 28px; --page-px: 28px; --page-max: 1140px; --gap: 16px; --card-py: 16px; --card-px: 18px;
+  --head-mb: 18px; --sec-mt: 28px; --field-py: 5px; --btn-py: 5px; --inp-py: 7px; --pill-py: 3px;
+}
+[data-density='spacious'] {
+  --fs: 14px; --fs-sm: 13px; --fs-xs: 11.5px; --h1: 20px; --lh: 1.6;
+  --row-py: 11px; --row-gap: 14px; --stripe-h: 28px;
+  --page-py: 34px; --page-px: 28px; --page-max: 1200px; --gap: 20px; --card-py: 20px; --card-px: 22px;
+  --head-mb: 22px; --sec-mt: 34px; --field-py: 7px; --btn-py: 6px; --inp-py: 8px; --pill-py: 4px;
+}
+/* Spacious: the priority reason moves below the title; the project tag stays on the right. */
+[data-density='spacious'] .r .why { display: block; margin: 1px 0 0; overflow: hidden; text-overflow: ellipsis; }
+[data-density='spacious'] .r .ttl { line-height: 1.35; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: var(--fs)/var(--lh) var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; overflow: hidden; transition: font-size .15s; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.mono { font-family: var(--mono); } .muted { color: var(--muted); } .faint { color: var(--faint); } .spacer { flex: 1; }
+.row { display: flex; align-items: center; gap: 8px; }
+.kbd { font: 500 var(--fs-xs) var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); white-space: nowrap; }
+
+.app { display: grid; grid-template-rows: 44px minmax(0, 1fr) 28px; height: 100vh; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); user-select: none; overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; font-size: 13px; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { white-space: nowrap; border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); cursor: pointer; display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.tab:hover { background: var(--hover); color: var(--text); }
+.tab.on { color: var(--text); background: var(--sel); }
+.count { font: 500 11px var(--mono); background: var(--accent-bg); color: var(--accent); padding: 0 5px; border-radius: 4px; }
+.search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--bg); border-radius: 7px; padding: 4px 8px 4px 10px; color: var(--faint); white-space: nowrap; font-size: 13px; }
+.iconbtn { border: 0; background: none; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; color: var(--muted); display: grid; place-items: center; font-size: 15px; flex: none; }
+.iconbtn:hover { background: var(--hover); color: var(--text); }
+@media (max-width: 1100px) { .search .stext, .logo span { display: none; } }
+main { overflow: auto; min-height: 0; }
+main.fill { overflow: hidden; }
+.page { max-width: var(--page-max); margin: 0 auto; padding: var(--page-py) var(--page-px) 90px; }
+.statusbar { display: flex; align-items: center; gap: 14px; padding: 0 14px; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; }
+
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: var(--head-mb); min-height: 28px; flex-wrap: wrap; }
+h1 { font-size: var(--h1); font-weight: 600; letter-spacing: -0.015em; margin: 0; }
+h2 { font-size: var(--fs-sm); font-weight: 500; color: var(--muted); margin: var(--sec-mt) 0 calc(var(--gap) / 2); }
+.label { font-size: var(--fs-sm); color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: var(--btn-py) 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.primary .kbd { background: none; color: inherit; border-color: currentColor; }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.danger { color: var(--danger); }
+.btn.sm { padding: 2px 8px; font-size: var(--fs-sm); }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: var(--inp-py) 8px; width: 100%; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { resize: vertical; min-height: 64px; line-height: 1.5; }
+.title-inp { font-size: calc(var(--fs) + 3px); font-weight: 500; border-color: transparent; background: none; padding-left: 0; }
+.field { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px; padding: var(--field-py) 0; }
+.field > span { color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: none; border-radius: 999px; padding: var(--pill-py) 10px; font-size: var(--fs-sm); color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.chip { font-size: var(--fs-xs); padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: var(--card-py) var(--card-px); }
+.stat { font: 500 calc(var(--fs) + 7px) var(--mono); }
+.grid { display: grid; gap: var(--gap); }
+.grid > * { min-width: 0; }
+.ai { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 45%, transparent); border-radius: 8px; padding: calc(var(--card-py) - 2px) calc(var(--card-px) - 2px); }
+
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.r { display: grid; grid-template-columns: 3px 30px minmax(0, 1fr) auto 76px; gap: var(--row-gap); align-items: center; padding: var(--row-py) 12px var(--row-py) 0; border-top: 1px solid var(--border); cursor: pointer; }
+.r:first-child { border-top: 0; }
+.r:hover { background: var(--hover); }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.stripe { height: var(--stripe-h); border-radius: 0 2px 2px 0; }
+.score { font: 500 var(--fs-sm) var(--mono); text-align: right; }
+.s-hi { color: var(--danger); } .s-mid { color: var(--warn); } .s-lo { color: var(--muted); }
+.ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.why { color: var(--faint); font-size: var(--fs-sm); margin-left: 8px; }
+.due { color: var(--muted); text-align: right; font-size: var(--fs-sm); white-space: nowrap; }
+.due.over { color: var(--danger); }
+.chip.followup { margin-left: 8px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+
+.split { display: grid; grid-template-columns: minmax(360px, 1fr) 7px minmax(360px, 1fr); height: 100%; }
+.pane { overflow: auto; min-width: 0; }
+.pane.left { padding: var(--page-py) 18px 90px var(--page-px); }
+.pane.right { background: var(--surface); container-type: inline-size; }
+.divider { position: relative; }
+.divider::before { content: ''; position: absolute; inset: 0 3px; background: var(--border); }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: calc(var(--gap) + 8px); }
+@container (max-width: 620px) { .dgrid { grid-template-columns: minmax(0, 1fr); } .dgrid .meta { order: -1; } }
+.editor { padding: calc(var(--page-py) - 6px) calc(var(--page-px) - 6px) 90px; }
+.editor-stripe { height: 4px; position: sticky; top: 0; z-index: 1; }
+.check { display: flex; gap: 8px; align-items: center; padding: calc(var(--field-py) - 1px) 0; }
+.check input { border: 0; background: none; outline: 0; flex: 1; padding: 2px 0; }
+.box { width: 15px; height: 15px; border: 1.5px solid var(--border-strong); border-radius: 4px; display: grid; place-items: center; font-size: 10px; background: none; padding: 0; color: #fff; flex: none; }
+.box.on { background: var(--accent); border-color: var(--accent); }
+.sect { margin: calc(var(--gap) + 2px) 0 4px; }
+
+.s-title { font-size: calc(var(--fs) + 1px); font-weight: 600; letter-spacing: -0.005em; }
+.s-details { color: var(--muted); font-size: var(--fs-sm); line-height: 1.45; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.toolbar { display: flex; align-items: center; gap: 8px; margin: calc(var(--gap) - 2px) 0; }
+.seg { display: inline-flex; flex: none; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: calc(var(--btn-py) - 1px) 10px; cursor: pointer; color: var(--muted); font-size: var(--fs-sm); }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.search-box { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: calc(var(--btn-py) - 1px) 8px; }
+.search-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; padding: 1px 0; }
+
+/* Settings: the new control */
+.seg.big button { padding: 6px 14px; font-size: var(--fs); }
+.density-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+.dopt { border: 1px solid var(--border); border-radius: 8px; background: var(--bg); padding: 10px; cursor: pointer; text-align: left; }
+.dopt:hover { border-color: var(--border-strong); }
+.dopt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--surface); }
+.dopt .mini { display: grid; gap: var(--g); margin-bottom: 8px; }
+.dopt .mini i { display: block; height: var(--h); border-radius: 2px; background: var(--border-strong); }
+.dopt .mini i:nth-child(odd) { width: 80%; }
+.dopt b { font-weight: 500; display: block; }
+.dopt span { font-size: var(--fs-xs); color: var(--muted); line-height: 1.35; display: block; margin-top: 2px; }
+.new-badge { font: 500 10px var(--mono); color: var(--accent); background: var(--accent-bg); padding: 1px 5px; border-radius: 4px; margin-left: 6px; vertical-align: 1px; }
+
+/* Mockup-only controls: not part of the app */
+.mock { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--raised); box-shadow: 0 10px 30px rgba(0,0,0,.16); font: 13px/1.4 var(--font); z-index: 30; white-space: nowrap; max-width: calc(100vw - 32px); overflow-x: auto; }
+.mock .tag { font: 600 10px var(--mono); letter-spacing: .06em; color: var(--accent); }
+.mock .seg button { font-size: 12px; padding: 4px 10px; }
+.mock label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.mock label.off { opacity: .45; cursor: default; }
+.notes-panel { position: fixed; right: 16px; bottom: 96px; width: min(420px, calc(100vw - 32px)); max-height: 62vh; overflow: auto; background: var(--raised); border: 1px dashed var(--accent); border-radius: 10px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.16); font: 13px/1.5 var(--font); z-index: 30; }
+.notes-panel h3 { margin: 0 0 6px; font-size: 13px; }
+.notes-panel h4 { margin: 12px 0 4px; font-size: 12px; color: var(--muted); font-weight: 500; }
+.notes-panel ul { margin: 0; padding-left: 18px; } .notes-panel li { margin: 3px 0; }
+.notes-panel table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 4px; }
+.notes-panel td, .notes-panel th { text-align: left; padding: 3px 6px 3px 0; border-top: 1px solid var(--border); font-weight: 400; }
+.notes-panel th { color: var(--muted); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+    <div class="row" style="gap:2px;min-width:0" id="tabs"></div>
+    <div class="spacer"></div>
+    <div class="search"><span>⌕</span><span class="stext">Search or jump to…</span><span class="kbd">Ctrl K</span></div>
+    <button class="iconbtn" id="theme" title="Toggle light / dark">◐</button>
+    <button class="iconbtn" data-view="settings" title="Settings">⚙</button>
+  </div>
+  <main id="main"></main>
+  <div class="statusbar"><span>● Demo AI</span><span>Last backup today 7:30</span><div class="spacer"></div><span style="color:var(--warn)">Test data</span></div>
+</div>
+
+<div class="mock" id="mock">
+  <span class="tag">MOCKUP</span>
+  <span class="muted" style="font-size:12px">Density</span>
+  <div class="seg" id="mockSeg">
+    <button data-d="compact">1 · Compact (today)</button>
+    <button data-d="comfortable">2 · Comfortable</button>
+    <button data-d="spacious">3 · Spacious</button>
+  </div>
+  <span class="muted" style="font-size:12px">Text size</span>
+  <div class="seg" id="textSeg">
+    <button data-t="auto">Follows density</button>
+    <button data-t="13">13</button>
+    <button data-t="13.5">13.5</button>
+    <button data-t="14">14</button>
+    <button data-t="15">15</button>
+  </div>
+  <button class="btn sm" id="notesBtn">Notes</button>
+</div>
+<div class="notes-panel" id="notes" hidden></div>
+
+<script>
+const $ = (id) => document.getElementById(id)
+const root = document.documentElement
+const state = { view: 'tasks', density: 'comfortable', text: 'auto', sel: 3 }
+const TEXT = { 13: [12, 11, 18], 13.5: [12.5, 11, 19], 14: [13, 11.5, 20], 15: [13.5, 12, 22] }
+
+const PROJECTS = {
+  1: { name: 'Partner portal', color: '#378ADD' },
+  2: { name: 'Pricing refresh', color: '#D85A30' },
+  3: { name: 'Dealer training', color: '#1D9E75' },
+  4: { name: 'Spring launch', color: '#7F77DD' },
+}
+const NO_PROJECT = '#B4B2A9'
+const TASKS = [
+  { id: 1, title: 'Send updated price list to Munich distributor', p: 2, score: 84, why: 'Due tomorrow, requested by Dana Lee', due: 'Tomorrow' },
+  { id: 2, title: 'Confirm tier 2 discount for Northwind AV', p: 2, score: 81, why: 'Overdue by 2 days', due: '2d overdue', over: true },
+  { id: 3, title: 'Approve partner portal wireframes', p: 1, score: 71, why: 'Due in 3 days, 2 follow-ups', due: 'Thu' },
+  { id: 4, title: 'Reply to Dana: Q1 dealer pricing', p: 2, score: 66, why: 'Requested by Dana Lee', due: 'Fri' },
+  { id: 5, title: 'Review training platform quotes', p: 3, score: 47, why: 'Requested by Alex Rivera', due: 'Nov 12' },
+  { id: 6, title: 'Book customer visits for spring launch', p: 4, score: 38, why: 'No activity for 9 days', due: 'Nov 20' },
+  { id: 7, title: 'Draft course outline for dealer training', p: 3, score: 32, why: null, due: '—' },
+  { id: 8, title: 'Update roadmap slides for Q1 planning', p: null, score: 22, why: null, due: '—' },
+  { id: 9, title: 'Collect firmware 3.2 release notes', p: null, score: 18, why: null, due: 'Nov 24' },
+]
+const WAITING = [['Firmware 3.2 build date', 'Kenji Mori', 8], ['Training platform quotes', 'Alex Rivera', 5], ['Margin model for new tiers', 'Priya Shah', 2], ['Portal tile design', 'Marcus Webb', 1]]
+const REVIEW = [
+  { from: 'Teams chat', title: 'Q1 dealer pricing', date: 'Nov 3', items: [
+    ['New task', 'k-task', 'Send Dana the tier 2 discount confirmation', 'Dana asked for it by Wednesday so the dealer letters can go out Friday. Pricing refresh · due Nov 5 · requested by Dana Lee.'],
+    ['Project context', 'k-project-ctx', 'Pricing refresh', 'Four-tier model approved on Oct 28. Northwind AV pilots the new tiers from Dec 1, and the Munich distributor gets the new list first.'],
+    ['Person context', 'k-person-ctx', 'Dana Lee', 'Wants the 2027 view only, not three years. Prefers decks under 10 slides.'],
+  ] },
+  { from: 'meeting transcript', title: 'Partner portal sync', date: 'Nov 2', items: [
+    ['Status update', 'k-task-ctx', 'Approve partner portal wireframes', 'Marcus moved the wireframe review to Thursday; he still needs your sign-off on the dealer tile layout before the design goes to engineering.'],
+    ['New person', 'k-person', 'Priya Shah', 'Finance analyst · Crestron · building the margin model for the new tiers.'],
+  ] },
+]
+const TABS = [['today', 'Today'], ['tasks', 'Tasks'], ['review', 'Review', 5], ['waiting', 'Waiting'], ['projects', 'Projects'], ['people', 'People'], ['import', 'Import']]
+
+const chip = (id) => { const p = PROJECTS[id]; return p ? `<span class="chip proj" style="background:color-mix(in srgb, ${p.color} 16%, transparent);color:color-mix(in srgb, ${p.color} 65%, var(--text))">${p.name}</span>` : '<span class="chip proj"></span>' }
+const sc = (s) => (s >= 80 ? 's-hi' : s >= 60 ? 's-mid' : 's-lo')
+function taskRow(t, showWhy = true) {
+  const p = PROJECTS[t.p]
+  return `<div class="r ${state.view === 'tasks' && state.sel === t.id ? 'sel' : ''}" data-task="${t.id}" title="${t.why ?? ''}">
+    <div class="stripe" style="background:${p ? p.color : NO_PROJECT}"></div>
+    <div class="score ${sc(t.score)}">${t.score}</div>
+    <div class="ttl">${t.title}${showWhy && t.why ? `<span class="why">${t.why}</span>` : ''}</div>
+    ${chip(t.p)}<div class="due ${t.over ? 'over' : ''}">${t.due}</div></div>`
+}
+
+function today() {
+  const metrics = [['Urgent', 2, 'var(--danger)'], ['Overdue', 1, 'var(--warn)'], ['Waiting on', 4, 'var(--text)'], ['Open', 9, 'var(--text)']]
+  return `<div class="page">
+    <div class="head"><h1>Good morning, Frank</h1><span class="muted">Tuesday, November 3</span><div class="spacer"></div><button class="btn primary">New task <span class="kbd">N</span></button></div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:var(--gap)">${metrics.map(([l, n, c]) => `<div class="card"><div class="label">${l}</div><div class="stat" style="color:${c}">${n}</div></div>`).join('')}</div>
+    <div class="grid" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)">
+      <div><h2 style="margin-top:0">Focus · highest priority first</h2><div class="list">${TASKS.slice(0, 7).map((t) => taskRow(t, false)).join('')}</div></div>
+      <div class="grid" style="align-content:start">
+        <div class="ai"><div class="row" style="gap:6px;margin-bottom:4px"><span style="color:var(--accent)">✦</span><b style="font-weight:500">Briefing</b></div>
+          <div class="muted" style="line-height:1.6">5 AI suggestions are waiting for your review.</div>
+          <div class="row" style="margin-top:8px"><button class="btn" data-view="review">Review suggestions <span class="kbd">G R</span></button><button class="btn ghost">Import</button></div></div>
+        <div class="card"><div class="row" style="margin-bottom:6px"><span class="label">Waiting on others</span><div class="spacer"></div><button class="btn ghost sm">All →</button></div>
+          ${WAITING.map(([t, who, d]) => `<div class="row" style="padding:calc(var(--field-py) + 0px) 0"><span class="ttl" style="flex:1">${t}</span><span class="muted ttl" style="max-width:110px">${who}</span><span class="mono ${d > 5 ? 's-mid' : 'muted'}" style="width:30px;text-align:right">${d}d</span></div>`).join('')}</div>
+        <div class="card"><div class="label" style="margin-bottom:4px">Meetings today</div><div class="muted">Your Outlook calendar shows up here in milestone 4.</div></div>
+      </div>
+    </div></div>`
+}
+
+function tasks() {
+  const t = TASKS.find((x) => x.id === state.sel)
+  const p = PROJECTS[t.p]
+  const left = `<div class="head"><h1>Tasks</h1><span class="muted">${TASKS.length} open · by priority</span><div class="spacer"></div><button class="btn primary">New task <span class="kbd">N</span></button></div>
+    <div class="row" style="gap:6px;margin-bottom:calc(var(--gap) - 2px);flex-wrap:wrap"><button class="pill on">All</button>${Object.values(PROJECTS).map((p) => `<button class="pill"><span class="dot" style="background:${p.color}"></span>${p.name}</button>`).join('')}<button class="pill">No project</button></div>
+    <div class="toolbar"><div class="seg"><button class="on">Open</button><button>Done</button></div><label class="search-box"><span class="faint">⌕</span><input placeholder="Search tasks"><span class="kbd">/</span></label></div>
+    <div class="list">${TASKS.map((x) => taskRow(x)).join('')}</div>`
+  const right = `<div class="editor-stripe" style="background:${p ? p.color : NO_PROJECT}"></div><div class="editor">
+    <div class="row" style="gap:10px;margin-bottom:calc(var(--gap))"><span class="score ${sc(t.score)}" style="font-size:calc(var(--fs) + 3px);min-width:26px">${t.score}</span><input class="inp title-inp" value="${t.title}"><button class="iconbtn">✕</button></div>
+    <div class="dgrid"><div>
+      <div class="ai" style="margin-bottom:var(--gap);color:var(--muted)"><div style="font-size:var(--fs-sm);color:var(--accent);margin-bottom:2px">✦ Suggested next action</div>Per-task next-action suggestions arrive in milestone 3. Until then, import notes or summaries and review what the AI proposes.</div>
+      <div class="label" style="margin-bottom:4px">Subtasks</div>
+      <div class="check"><span class="box on">✓</span><input value="Check dealer tile sizes with Marcus"></div>
+      <div class="check"><span class="box"></span><input value="Compare against the October draft"></div>
+      <div class="check"><span class="box"></span><input placeholder="Add subtask…"></div>
+      <div class="label sect">Notes</div><textarea class="inp">Marcus moved the review to Thursday.</textarea>
+      <div class="label sect">Task brief · what the AI should always know</div><textarea class="inp" placeholder="Background, goals, decisions so far"></textarea>
+      <textarea class="inp" style="margin-top:6px;min-height:44px" placeholder="Standing instructions, e.g. keep replies formal"></textarea>
+      <div class="label sect">Activity</div>
+      <div class="muted" style="font-size:var(--fs-sm);line-height:1.8"><div>Nov 2 · ✦ Marcus moved the review to Thursday</div><div>Nov 2 · From meeting transcript: Partner portal sync</div><div>Oct 27, 2026 · Created</div></div>
+    </div>
+    <div class="meta">
+      <label class="field"><span>Project</span><select class="inp"><option>${p ? p.name : 'No project'}</option></select></label>
+      <label class="field"><span>Status</span><select class="inp"><option>Open</option></select></label>
+      <label class="field"><span>Due</span><input class="inp" value="Nov 5, 2026"></label>
+      <label class="field"><span>Asked by</span><select class="inp"><option>Marcus Webb</option></select></label>
+      <div class="card" style="margin-top:10px;padding:calc(var(--card-py) - 4px) calc(var(--card-px) - 4px)"><div class="label">Priority ${t.score}</div><div style="font-size:var(--fs-sm)">${t.why ?? 'No deadline or urgency signals'}</div>
+        <div class="row muted" style="margin-top:6px;font-size:var(--fs-sm)"><input type="checkbox"> Override</div></div>
+      <div class="card" style="margin-top:10px;padding:calc(var(--card-py) - 4px) calc(var(--card-px) - 4px);font-size:var(--fs-sm);line-height:1.8"><div class="label">What the AI knows</div>
+        <div><span style="color:var(--ok)">✓</span> Project brief (${p ? p.name : 'no project'})</div><div><span style="color:var(--faint)">○</span> Task brief</div><div><span style="color:var(--ok)">✓</span> Person brief</div><div><span style="color:var(--ok)">✓</span> Notes and subtasks</div></div>
+    </div></div>
+    <div class="row" style="margin-top:calc(var(--gap) + 6px);padding-top:var(--gap);border-top:1px solid var(--border)"><button class="btn ghost danger">Delete</button><div class="spacer"></div><button class="btn">Mark done <span class="kbd">E</span></button><button class="btn primary">Save <span class="kbd">Ctrl ↵</span></button></div>
+  </div>`
+  return `<div class="split"><div class="pane left">${left}</div><div class="divider"></div><div class="pane right">${right}</div></div>`
+}
+
+function review() {
+  return `<div class="page">
+    <div class="head"><h1>Review queue</h1><span class="muted">5 suggestions · nothing changes until you accept</span><div class="spacer"></div><button class="btn">Import more</button></div>
+    ${REVIEW.map((g, gi) => `<div style="margin-bottom:calc(var(--gap) + 6px)">
+      <div class="row" style="margin-bottom:6px"><span class="label">From ${g.from} · <b style="font-weight:500;color:var(--text)">${g.title}</b> · ${g.date}</span><div class="spacer"></div><button class="btn ghost sm">AI log</button><button class="btn ghost sm">Reject all ${g.items.length}</button></div>
+      <div class="list">${g.items.map(([kind, k, title, details], i) => `<div class="r ${gi === 0 && i === 0 ? 'sel' : ''}" style="grid-template-columns:104px minmax(0,1fr) auto;align-items:start;padding:calc(var(--row-py) + 3px) 12px;cursor:default">
+        <div><span class="chip" style="background:color-mix(in srgb, var(--${k}) 14%, transparent);color:var(--${k})">${kind}</span></div>
+        <div style="min-width:0"><div class="s-title">${title}</div><div class="s-details">${details}</div></div>
+        <div class="row" style="gap:4px"><button class="btn">Accept <span class="kbd">A</span></button><button class="btn ghost">Edit <span class="kbd">↵</span></button><button class="btn ghost">Reject <span class="kbd">R</span></button></div>
+      </div>`).join('')}</div></div>`).join('')}
+  </div>`
+}
+
+const DENSITY = {
+  compact: ['Compact', 'The most on screen. How the app looks today.', 3, 5],
+  comfortable: ['Comfortable', 'More room between rows, slightly larger text. The default.', 5, 6],
+  spacious: ['Spacious', 'The most room. Priority reasons sit under each task title.', 7, 7],
+}
+function settings() {
+  const d = DENSITY[state.density]
+  return `<div class="page"><div class="head"><h1>Settings</h1></div>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="card" style="opacity:.55"><div style="font-weight:500;margin-bottom:8px">AI provider</div><div class="muted">(unchanged)</div></div>
+      <div class="card"><div style="font-weight:500;margin-bottom:8px">Appearance</div>
+        <label class="field"><span>Theme</span><select class="inp"><option>Follow system</option></select></label>
+        <div class="field" style="align-items:start"><span style="padding-top:8px">Density<span class="new-badge">NEW</span></span>
+          <div><div class="density-pick">${Object.entries(DENSITY).map(([k, [name, desc, g, h]]) => `<button class="dopt ${state.density === k ? 'on' : ''}" data-d="${k}">
+            <div class="mini" style="--g:${g}px;--h:${h}px"><i></i><i></i><i></i><i></i></div><b>${name}</b></button>`).join('')}</div>
+            <div class="muted" style="font-size:var(--fs-sm);margin-top:6px">${d[1]}</div></div></div>
+        <div class="field"><span>Split view</span><span class="row"><span class="mono">50%</span><button class="btn ghost">Reset to 50/50</button></span></div>
+      </div>
+      <div class="card" style="opacity:.55"><div style="font-weight:500;margin-bottom:8px">Priority weights</div><div class="muted">(unchanged)</div></div>
+      <div class="card" style="opacity:.55"><div style="font-weight:500;margin-bottom:8px">Backup</div><div class="muted">(unchanged)</div></div>
+    </div></div>`
+}
+
+function placeholder(name) {
+  return `<div class="page"><div class="head"><h1>${name}</h1></div><div class="card muted">Not mocked. Projects, People and Waiting get the same spacing as Tasks; try Today, Tasks, Review or Settings.</div></div>`
+}
+
+function render() {
+  root.dataset.density = state.density
+  const t = TEXT[state.text]
+  for (const [k, i] of [['--fs', -1], ['--fs-sm', 0], ['--fs-xs', 1], ['--h1', 2]]) t ? root.style.setProperty(k, (i < 0 ? Number(state.text) : t[i]) + 'px') : root.style.removeProperty(k)
+  $('tabs').innerHTML = TABS.map(([v, l, n]) => `<button class="tab ${state.view === v ? 'on' : ''}" data-view="${v}">${l}${n ? ` <span class="count">${n}</span>` : ''}</button>`).join('')
+  const m = $('main')
+  m.className = state.view === 'tasks' ? 'fill' : ''
+  m.innerHTML = state.view === 'today' ? today() : state.view === 'tasks' ? tasks() : state.view === 'review' ? review() : state.view === 'settings' ? settings() : placeholder(TABS.find((t) => t[0] === state.view)[1])
+  document.querySelectorAll('#mockSeg button').forEach((b) => b.classList.toggle('on', b.dataset.d === state.density))
+  document.querySelectorAll('#textSeg button').forEach((b) => b.classList.toggle('on', b.dataset.t === state.text))
+}
+
+$('notes').innerHTML = `<h3>Density setting: what changes (round 2)</h3>
+  <div class="muted">Settings → Appearance → Density, also in the Ctrl+K palette. <b>Comfortable is the default.</b></div>
+  <table><tr><th></th><th>Text</th><th>List row</th><th>Rows on screen*</th><th>Page width</th></tr>
+    <tr><td>Compact</td><td class="mono">13px</td><td class="mono">35px</td><td class="mono">23</td><td class="mono">1080px</td></tr>
+    <tr><td>Comfortable</td><td class="mono">13.5px</td><td class="mono">47px</td><td class="mono">17</td><td class="mono">1140px</td></tr>
+    <tr><td>Spacious</td><td class="mono">14px</td><td class="mono">51–59px</td><td class="mono">13</td><td class="mono">1200px</td></tr></table>
+  <div class="faint" style="font-size:11px">*Tasks list, window maximized on a 1080p screen, measured in this mockup.</div>
+  <h4>What changed since round 1</h4>
+  <ul><li><b>Width:</b> Spacious looked narrower because pages have a fixed maximum width and Spacious added wider side margins and bigger buttons inside it. Side margins now stay the same at every level, and the maximum width grows a little with each level, so the text area gets wider, not narrower.</li>
+    <li><b>Spacious rows:</b> the priority reason now sits under the task title, and the project tag stays on the right. Rows without a reason are a bit shorter.</li>
+    <li><b>Text grows less:</b> 13 → 13.5 → 14px (was 13 → 14 → 15).</li>
+    <li><b>Text size</b> in the bar below lets you try any text size with any density, to find what you like.</li></ul>
+  <h4>Question for you</h4>
+  <ul><li>Should the app have a separate Text size setting, or should text just follow the density level?</li></ul>`
+
+document.addEventListener('click', (e) => {
+  const v = e.target.closest('[data-view]'); if (v) { state.view = v.dataset.view; render(); return }
+  const tx = e.target.closest('[data-t]'); if (tx) { state.text = tx.dataset.t; render(); return }
+  const d = e.target.closest('[data-d]'); if (d) { state.density = d.dataset.d; render(); return }
+  const t = e.target.closest('[data-task]'); if (t) { state.sel = Number(t.dataset.task); if (state.view !== 'tasks') state.view = 'tasks'; render() }
+})
+$('notesBtn').onclick = () => { $('notes').hidden = !$('notes').hidden }
+$('theme').onclick = () => { const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; root.dataset.theme = dark ? 'light' : 'dark' }
+window.addEventListener('keydown', (e) => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return
+  const map = { 1: 'compact', 2: 'comfortable', 3: 'spacious' }
+  if (map[e.key]) { state.density = map[e.key]; render() }
+})
+render()
+</script>
+</body>
+</html>

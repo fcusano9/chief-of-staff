@@ -155,17 +155,17 @@ export function ReviewScreen() {
             </span>
             <div className="spacer" />
             {g.source.fromOutlook && (
-              <button className="btn ghost" style={{ fontSize: 12 }} title="Show this conversation's newest message in Outlook" onClick={() => void cos['mail.open'](g.source.id).catch((err) => toast(errorMessage(err), true))}>
+              <button className="btn ghost" style={{ fontSize: 'var(--fs-sm)' }} title="Show this conversation's newest message in Outlook" onClick={() => void cos['mail.open'](g.source.id).catch((err) => toast(errorMessage(err), true))}>
                 Open in Outlook
               </button>
             )}
-            <button className="btn ghost" style={{ fontSize: 12 }} title="See exactly what was sent to the AI and what came back" onClick={() => openAiLog(g.source.id, 'review')}>
+            <button className="btn ghost" style={{ fontSize: 'var(--fs-sm)' }} title="See exactly what was sent to the AI and what came back" onClick={() => openAiLog(g.source.id, 'review')}>
               AI log
             </button>
             {g.items.length > 1 && (
               <button
                 className="btn ghost"
-                style={{ fontSize: 12 }}
+                style={{ fontSize: 'var(--fs-sm)' }}
                 onClick={() =>
                   void (async () => {
                     for (const s of g.items) await cos['suggestions.reject'](s.id)
@@ -186,7 +186,7 @@ export function ReviewScreen() {
                   key={s.id}
                   data-suggestion={s.id}
                   className={`r ${index === cursor ? 'sel' : ''}`}
-                  style={{ gridTemplateColumns: '104px minmax(0, 1fr) auto', alignItems: 'start', padding: '10px 12px', cursor: 'default' }}
+                  style={{ gridTemplateColumns: '104px minmax(0, 1fr) auto', alignItems: 'start', padding: 'calc(var(--row-py) + 3px) 12px', cursor: 'default' }}
                   onClick={() => setCursor(index)}
                 >
                   <div>
@@ -279,7 +279,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
           <span className="s-title">{p.title}</span>
         </div>
         <Details text={p.details} />
-        <div className="faint" style={{ fontSize: 12, marginTop: 3 }}>
+        <div className="faint" style={{ fontSize: 'var(--fs-sm)', marginTop: 3 }}>
           Summary goes into the project's brief{links ? ` · ${links} suggestion${links === 1 ? '' : 's'} below link to it` : ''}
         </div>
       </div>
@@ -295,7 +295,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
           <span className="muted">{[p.role || 'No role', p.company, p.email].filter(Boolean).join(' · ')}</span>
         </div>
         <Details text={p.details} />
-        <div className="faint row" style={{ fontSize: 12, marginTop: 3, gap: 4, flexWrap: 'wrap' }}>
+        <div className="faint row" style={{ fontSize: 'var(--fs-sm)', marginTop: 3, gap: 4, flexWrap: 'wrap' }}>
           Starts at <Stars value={1} /> · context goes into their brief{links ? ` · ${links} suggestion${links === 1 ? '' : 's'} below involve them` : ''}
         </div>
       </div>
@@ -315,7 +315,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
         </div>
         <Details text={p.details} />
         {changes && (
-          <div className="faint" style={{ fontSize: 12, marginTop: 3 }}>
+          <div className="faint" style={{ fontSize: 'var(--fs-sm)', marginTop: 3 }}>
             {changes}
           </div>
         )}
@@ -337,7 +337,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
       </div>
       <Details text={p.details} />
       {meta.length > 0 && (
-        <div className="faint" style={{ fontSize: 12, marginTop: 3 }}>
+        <div className="faint" style={{ fontSize: 'var(--fs-sm)', marginTop: 3 }}>
           {meta.join(' · ')}
         </div>
       )}

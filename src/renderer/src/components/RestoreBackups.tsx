@@ -48,7 +48,7 @@ export function RestoreBackups() {
           {backups ? 'Refresh' : 'Show backups'}
         </button>
       </div>
-      <p className="muted" style={{ fontSize: 12, margin: '0 0 8px', lineHeight: 1.6 }}>
+      <p className="muted" style={{ fontSize: 'var(--fs-sm)', margin: '0 0 8px', lineHeight: 1.6 }}>
         Restoring replaces everything in the app with the backup you pick. Your current data is saved first as a "before a restore" backup, so you can always undo it by restoring that one. The app restarts to finish.
       </p>
       {backups && (
@@ -62,7 +62,7 @@ export function RestoreBackups() {
                   {b.compatible ? ` · ${b.openTasks} open task${b.openTasks === 1 ? '' : 's'}` : ` · ${b.reason}`}
                 </span>
               </div>
-              <span className="faint" style={{ fontSize: 11 }} title={b.path}>
+              <span className="faint" style={{ fontSize: 'var(--fs-xs)' }} title={b.path}>
                 {b.folder.split(/[\\/]/).slice(-1)[0]}
               </span>
               {b.compatible ? (

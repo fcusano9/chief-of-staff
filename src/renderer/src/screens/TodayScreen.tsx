@@ -86,7 +86,7 @@ export function TodayScreen() {
             <div className="row" style={{ marginBottom: 6 }}>
               <span className="label">Waiting on others</span>
               <div className="spacer" />
-              <button className="btn ghost" style={{ padding: '0 6px', fontSize: 12 }} onClick={() => go('waiting')}>
+              <button className="btn ghost" style={{ padding: '0 6px', fontSize: 'var(--fs-sm)' }} onClick={() => go('waiting')}>
                 All →
               </button>
             </div>

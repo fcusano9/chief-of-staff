@@ -136,7 +136,7 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
               </select>
               {since === 'custom' && <input className="inp" style={{ width: 150 }} type="date" value={customDate} max={localDay(new Date())} onChange={(e) => setCustomDate(e.target.value)} />}
               <div className="spacer" />
-              <span className="muted" style={{ fontSize: 12 }}>
+              <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
                 Inbox and its subfolders, plus Sent Items
               </span>
               <button className="btn primary" onClick={() => void runCheck()}>
@@ -144,7 +144,7 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
               </button>
             </div>
             {notice && (
-              <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 6, fontSize: 12, background: 'color-mix(in srgb, var(--warn) 12%, transparent)', color: 'var(--warn)' }}>{notice}</div>
+              <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 6, fontSize: 'var(--fs-sm)', background: 'color-mix(in srgb, var(--warn) 12%, transparent)', color: 'var(--warn)' }}>{notice}</div>
             )}
           </>
         )}
@@ -169,7 +169,7 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
               <Stat n={toRead.length} label="to read" accent />
             </div>
             <div className="row" style={{ flexWrap: 'wrap' }}>
-              <span className="muted" style={{ fontSize: 12 }}>
+              <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
                 {ai.label} · {where}
                 {minutes ? ` · about ${minutes} min` : ''}
               </span>
@@ -231,7 +231,7 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
 
       {stage === 'ready' && skipped.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <button className="btn ghost" style={{ fontSize: 12, color: 'var(--muted)' }} onClick={() => setShowSkipped(!showSkipped)}>
+          <button className="btn ghost" style={{ fontSize: 'var(--fs-sm)', color: 'var(--muted)' }} onClick={() => setShowSkipped(!showSkipped)}>
             {showSkipped ? '▾' : '▸'} Skipped conversations ({skipped.length})
           </button>
           {showSkipped && (
@@ -242,12 +242,12 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
                     {c.subject}
                     <span className="why">{c.people}</span>
                   </div>
-                  <span className="muted" style={{ fontSize: 12 }}>
+                  <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
                     {c.skipReason}
                   </span>
                   <button
                     className="btn ghost"
-                    style={{ fontSize: 12 }}
+                    style={{ fontSize: 'var(--fs-sm)' }}
                     onClick={() => {
                       const next = new Set(readAnyway)
                       if (next.has(c.key)) next.delete(c.key)
@@ -273,7 +273,7 @@ function Stat({ n, label, accent }: { n: number; label: string; accent?: boolean
       <b className="mono" style={{ fontWeight: 500, fontSize: 18, color: accent ? 'var(--accent)' : undefined }}>
         {n}
       </b>
-      <span className="muted" style={{ fontSize: 12 }}>
+      <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
         {label}
       </span>
     </div>

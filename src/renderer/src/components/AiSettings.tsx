@@ -103,7 +103,7 @@ export function AiSettings() {
               </select>
             </label>
           )}
-          <p className="faint" style={{ fontSize: 12, margin: '8px 0 0' }}>
+          <p className="faint" style={{ fontSize: 'var(--fs-sm)', margin: '8px 0 0' }}>
             The AI only proposes. Every suggestion waits in Review until you accept it, and nothing is ever sent on your behalf.
           </p>
         </div>
@@ -115,9 +115,9 @@ export function AiSettings() {
                 <button className="btn" disabled={testing} onClick={() => void test()}>
                   {testing ? 'Testing…' : 'Test connection'}
                 </button>
-                {testResult && <span style={{ fontSize: 12, color: testResult.ok ? 'var(--ok)' : 'var(--danger)' }}>{testResult.text}</span>}
+                {testResult && <span style={{ fontSize: 'var(--fs-sm)', color: testResult.ok ? 'var(--ok)' : 'var(--danger)' }}>{testResult.text}</span>}
               </div>
-              <p className="muted" style={{ fontSize: 12, margin: '10px 0 0', lineHeight: 1.6 }}>
+              <p className="muted" style={{ fontSize: 'var(--fs-sm)', margin: '10px 0 0', lineHeight: 1.6 }}>
                 {ai.sendsDataExternally
                   ? `Imports are sent to the Ollama server at ${settings.localUrl}, which is not this computer.`
                   : 'Imports are read by a model running on this computer. Nothing is sent anywhere.'}{' '}
@@ -155,16 +155,16 @@ export function AiSettings() {
                   </span>
                 )}
               </div>
-              {!ai.encryptionAvailable && <p style={{ fontSize: 12, color: 'var(--danger)' }}>This computer can't encrypt stored secrets, so a key can't be saved.</p>}
+              {!ai.encryptionAvailable && <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--danger)' }}>This computer can't encrypt stored secrets, so a key can't be saved.</p>}
               <div className="row" style={{ marginTop: 6 }}>
                 <button className="btn" disabled={testing || !ai.hasKey} onClick={() => void test()}>
                   {testing ? 'Testing…' : 'Test connection'}
                 </button>
-                {testResult && <span style={{ fontSize: 12, color: testResult.ok ? 'var(--ok)' : 'var(--danger)' }}>{testResult.text}</span>}
+                {testResult && <span style={{ fontSize: 'var(--fs-sm)', color: testResult.ok ? 'var(--ok)' : 'var(--danger)' }}>{testResult.text}</span>}
               </div>
             </>
           ) : (
-            <p className="muted" style={{ fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+            <p className="muted" style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.6, margin: 0 }}>
               The demo AI looks for action items, "waiting on", "done", and dates using simple rules. It's good for trying out the import and review flow; switch to Claude for real
               understanding of your emails, chats, and transcripts.
             </p>

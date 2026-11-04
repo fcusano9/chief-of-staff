@@ -300,6 +300,14 @@ export interface PriorityWeights {
 
 export type ThemeSetting = 'system' | 'light' | 'dark'
 
+/** How much fits on screen: Compact is the original look; Comfortable and Spacious add room and slightly larger text. */
+export type DensitySetting = 'compact' | 'comfortable' | 'spacious'
+export const DENSITIES: { id: DensitySetting; label: string; description: string }[] = [
+  { id: 'compact', label: 'Compact', description: 'The most on screen.' },
+  { id: 'comfortable', label: 'Comfortable', description: 'More room between rows, slightly larger text.' },
+  { id: 'spacious', label: 'Spacious', description: 'The most room. Priority reasons sit under each task title.' },
+]
+
 export interface PeopleFilter {
   /** A company name, NO_COMPANY for people with none, or '' for everyone. */
   company: string
@@ -319,6 +327,7 @@ export interface AppSettings {
   localUrl: string
   priorityWeights: PriorityWeights
   theme: ThemeSetting
+  density: DensitySetting
   /** Left pane width of split views, as a percentage. */
   splitPercent: number
   /** People list filters, remembered between visits. */
@@ -338,6 +347,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   localUrl: 'http://127.0.0.1:11434',
   priorityWeights: { dueDate: 8, requester: 7, staleness: 5 },
   theme: 'system',
+  density: 'comfortable',
   splitPercent: 50,
   peopleFilter: { company: '', openOnly: false },
   dailyBriefingTime: '07:30',

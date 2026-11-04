@@ -101,7 +101,9 @@ try {
   check('dev run keeps backups in its own folder', info.defaultBackupFolder.startsWith(info.dataFolder), info.defaultBackupFolder)
   await app.close()
 } catch (e) {
-  results.push(`ERROR  ${e?.stack ?? e?.message ?? e?.type ?? String(e)}`)
+  // The app allows one copy per data folder, so a running `npm run dev` makes this copy quit at once.
+  const hint = String(e?.message).includes('No page target') ? '\n       Is `npm run dev` (or another dev copy) already running? Close it and run this suite again.' : ''
+  results.push(`ERROR  ${e?.stack ?? e?.message ?? e?.type ?? String(e)}${hint}`)
 }
 
 console.log(results.join('\n'))

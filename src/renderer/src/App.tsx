@@ -76,6 +76,10 @@ export function App() {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
     void cos['app.setTitleBarTheme'](dark)
   }, [dark])
+  const density = settings?.density ?? 'comfortable'
+  useEffect(() => {
+    document.documentElement.dataset.density = density
+  }, [density])
 
   const toast = useCallback((text: string, error = false) => {
     setToastMsg({ text, error })
@@ -223,7 +227,7 @@ export function App() {
           ))}
           <div className="spacer" />
           <span>{settings!.lastBackupAt ? `Backed up ${new Date(settings!.lastBackupAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'Not backed up yet'}</span>
-          <button className="btn ghost" style={{ padding: '0 6px', fontSize: 12, color: 'var(--muted)' }} title="AI settings" onClick={() => setView('settings')}>
+          <button className="btn ghost" style={{ padding: '0 6px', fontSize: 'var(--fs-sm)', color: 'var(--muted)' }} title="AI settings" onClick={() => setView('settings')}>
             AI · {ai?.label ?? '…'}
           </button>
         </footer>

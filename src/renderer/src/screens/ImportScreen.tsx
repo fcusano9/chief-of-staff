@@ -115,7 +115,7 @@ export function ImportScreen() {
         </div>
         <textarea
           className="inp"
-          style={{ minHeight: 220, fontFamily: 'var(--mono)', fontSize: 12, borderStyle: dragging ? 'dashed' : 'solid', borderColor: dragging ? 'var(--accent)' : undefined }}
+          style={{ minHeight: 220, fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', borderStyle: dragging ? 'dashed' : 'solid', borderColor: dragging ? 'var(--accent)' : undefined }}
           placeholder="Paste a Copilot weekly summary, Teams chat, email, meeting transcript, or notes. You can also drop a .txt, .vtt, or .md file here."
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -142,11 +142,11 @@ export function ImportScreen() {
           <button className="btn ghost" onClick={() => fileRef.current?.click()}>
             Choose file…
           </button>
-          <span className="faint" style={{ fontSize: 12 }}>
+          <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>
             {content ? `${content.length.toLocaleString()} characters` : ''}
           </span>
           <div className="spacer" />
-          <span className="muted" style={{ fontSize: 12 }}>
+          <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
             {ai.sendsDataExternally ? `Sent to ${ai.provider === 'claude' ? 'Anthropic' : 'your Ollama server'} (${ai.label}) to find suggestions` : `${ai.label}: nothing leaves this computer`}
           </span>
           <button className="btn primary" disabled={busy} onClick={() => void run()}>
@@ -201,7 +201,7 @@ function MailRunRow({ run, open, onToggle, busy, rerun }: { run: MailImportRun; 
             {run.finishedAt == null ? ' · reading…' : run.complete ? '' : ' · stopped early'}
           </span>
         </div>
-        <span style={{ fontSize: 12 }} className="muted">
+        <span style={{ fontSize: 'var(--fs-sm)' }} className="muted">
           {failed > 0 && <span style={{ color: 'var(--danger)' }}>{failed} failed · </span>}
           {pending > 0 ? (
             <button className="btn ghost" style={{ padding: '0 6px', color: 'var(--accent)' }} onClick={() => go('review')}>
@@ -231,7 +231,7 @@ function SourceRow({ s, busy, rerun, nested }: { s: SourceItem; busy: boolean; r
           {s.fromName ? ` · ${s.fromName}` : ''}
         </span>
       </div>
-      <span style={{ fontSize: 12 }} className={s.extractError ? '' : 'muted'}>
+      <span style={{ fontSize: 'var(--fs-sm)' }} className={s.extractError ? '' : 'muted'}>
         {s.extractError ? (
           <span style={{ color: 'var(--danger)' }} title={s.extractError}>
             Failed
