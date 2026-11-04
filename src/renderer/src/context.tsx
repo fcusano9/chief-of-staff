@@ -4,7 +4,8 @@ import type { AiStatus, AppInfo, AppSettings, PersonSummary, ProjectSummary } fr
 export type View = 'today' | 'tasks' | 'review' | 'waiting' | 'projects' | 'people' | 'prep' | 'weekly' | 'archive' | 'import' | 'settings' | 'ailog'
 
 /** Which task the Tasks screen shows on the right: an id, a new task (with optional defaults), or none. */
-export type TaskSelection = { id: number } | { id: 'new'; projectId?: number | null } | null
+/** `waiting` picks the tab: Waiting for waiting-on items. Left out, Tasks and Waiting keep their own tab. */
+export type TaskSelection = { id: number; waiting?: boolean } | { id: 'new'; projectId?: number | null; waiting?: boolean } | null
 
 export interface AppContextValue {
   view: View

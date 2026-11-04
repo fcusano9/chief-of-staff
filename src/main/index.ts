@@ -162,6 +162,8 @@ function backupIfDue(): void {
 const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<Api[K]> | Promise<Awaited<ReturnType<Api[K]>>> } = {
   'tasks.listActive': (filter) => tasks.listActive(filter),
   'tasks.listWaiting': () => tasks.listWaiting(),
+  'tasks.listDone': (filter) => tasks.listDone(filter),
+  'tasks.reopen': (id) => tasks.reopen(id),
   'tasks.listForPerson': (personId) => tasks.listForPerson(personId),
   'tasks.get': (id) => tasks.get(id),
   'tasks.save': (input) => tasks.save(input),

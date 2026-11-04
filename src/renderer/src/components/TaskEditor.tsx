@@ -12,11 +12,11 @@ interface Form {
   brief: { summary: string; standingInstructions: string }
 }
 
-const emptyInput = (projectId: number | null = null): TaskInput => ({
+const emptyInput = (projectId: number | null = null, waiting = false): TaskInput => ({
   id: 0,
   title: '',
   notes: null,
-  status: 'open',
+  status: waiting ? 'waiting_on' : 'open',
   dueDate: null,
   projectId,
   requesterId: null,
@@ -53,6 +53,8 @@ async function persist(form: Form): Promise<Task> {
 interface Props {
   taskId: number | 'new'
   defaultProjectId?: number | null
+  /** A new item from the Waiting tab starts as Waiting on. */
+  defaultWaiting?: boolean
   onClose: () => void
   /** Called after an explicit save (also when a new task gets its id). */
   onSaved: (task: Task) => void
@@ -64,10 +66,10 @@ interface Props {
  * The right-hand task view. Edits are kept locally until saved. Switching to another task saves
  * pending edits automatically, so moving through the list never loses work.
  */
-export function TaskEditor({ taskId, defaultProjectId = null, onClose, onSaved, onDone, onDeleted }: Props) {
+export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = false, onClose, onSaved, onDone, onDeleted }: Props) {
   const { projects, people, toast, refresh } = useApp()
   const [task, setTask] = useState<Task | null>(null)
-  const [form, setForm] = useState<Form | null>(taskId === 'new' ? { input: emptyInput(defaultProjectId), brief: { summary: '', standingInstructions: '' } } : null)
+  const [form, setForm] = useState<Form | null>(taskId === 'new' ? { input: emptyInput(defaultProjectId, defaultWaiting), brief: { summary: '', standingInstructions: '' } } : null)
   const [snapshot, setSnapshot] = useState(() => (form ? JSON.stringify(form) : ''))
   const [projectBrief, setProjectBrief] = useState<ContextBrief | null>(null)
   const [personBrief, setPersonBrief] = useState<ContextBrief | null>(null)
@@ -365,7 +367,16 @@ export function TaskEditor({ taskId, defaultProjectId = null, onClose, onSaved, 
             </button>
           )}
           {!isNew && form.input.status === 'done' && (
-            <button className="btn" onClick={() => void save({ status: 'open' }).then((t) => t && (toast('Reopened'), onSaved(t)))}>
+            <button
+              className="btn"
+              title={task?.waitedOn ? `Back to Waiting, waiting on ${task.waitedOn}` : 'Back to Tasks'}
+              onClick={() =>
+                void save()
+                  .then((t) => (t ? cos['tasks.reopen'](t.id) : null))
+                  .then((t) => t && (toast(t.status === 'waiting_on' ? 'Reopened on Waiting' : 'Reopened on Tasks'), onSaved(t)))
+                  .catch((err) => toast(errorMessage(err), true))
+              }
+            >
               Reopen
             </button>
           )}

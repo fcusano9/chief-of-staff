@@ -190,6 +190,8 @@ export const MIGRATIONS: Migration[] = [
   ALTER TABLE source_items ADD COLUMN mail_import_id INTEGER REFERENCES mail_imports(id) ON DELETE SET NULL;
   ALTER TABLE source_items ADD COLUMN mail_meta TEXT;
   `,
+  // Waiting items have their own list, including when done: remember who a finished task was waiting on.
+  `ALTER TABLE work_items ADD COLUMN waited_on TEXT;`,
 ]
 
 /** Adds TEXT columns that aren't there yet (SQLite has no ADD COLUMN IF NOT EXISTS). */

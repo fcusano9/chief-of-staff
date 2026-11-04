@@ -155,7 +155,7 @@ describe('AI-proposed people with a company', () => {
       db.prepare(`INSERT INTO suggestions (source_id, kind, payload, evidence, status, created_at) VALUES (1, 'new_person', ?, 'q', 'pending', '2026-11-02')`).run(JSON.stringify(draft!.payload)).lastInsertRowid,
     )
     suggestions.accept(id, { company: 'Northwind AV Inc.' })
-    expect(people.list()[0]).toMatchObject({ name: 'Jordan Kim', company: 'Northwind AV Inc.', priorityWeight: 3 })
+    expect(people.list()[0]).toMatchObject({ name: 'Jordan Kim', company: 'Northwind AV Inc.', priorityWeight: 1 })
   })
 
   it('asks for company only when the source states it', () => {

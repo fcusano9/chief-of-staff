@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { BriefSuggestion, PeopleFilter, PersonSummary, Task } from '@shared/types'
 import { NO_COMPANY } from '@shared/types'
 import { cos, errorMessage } from '../api'
-import { Avatar, ConfirmButton, Stars, TaskRow } from '../components/bits'
+import { Avatar, ConfirmButton, SearchBox, Stars, TaskRow } from '../components/bits'
+import { HistoryWindow } from '../components/HistoryWindow'
 import { SplitView } from '../components/SplitView'
 import { useApp } from '../context'
 
@@ -13,8 +14,6 @@ interface Draft {
   company: string
   email: string
   priorityWeight: number
-  /** The context history (the person's brief summary in the database). */
-  summary: string
   standingInstructions: string
 }
 
@@ -24,7 +23,10 @@ export function PeopleScreen() {
   const { people, openTask, refresh, toast, version, settings, saveSettings } = useApp()
   const [selected, setSelected] = useState<number | 'new' | null>(people[0]?.id ?? null)
   const [draft, setDraft] = useState<Draft | null>(null)
-  const [savedHistory, setSavedHistory] = useState('')
+  // The context history (their brief's summary). It's edited in the History window, not the form.
+  const [history, setHistory] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
+  const [search, setSearch] = useState('')
   const [tasks, setTasks] = useState<Task[]>([])
   // The person the draft was loaded for, so a refresh (e.g. after keeping a brief) keeps unsaved edits.
   const loadedFor = useRef<number | null>(null)
@@ -39,17 +41,18 @@ export function PeopleScreen() {
     if (selected === 'new') {
       loadedFor.current = null
       setTasks([])
-      setSavedHistory('')
-      return setDraft({ id: 0, name: '', role: '', company: '', email: '', priorityWeight: 3, summary: '', standingInstructions: '' })
+      setHistory('')
+      // New people start at 1 star; raise it for people whose requests matter more.
+      return setDraft({ id: 0, name: '', role: '', company: '', email: '', priorityWeight: 1, standingInstructions: '' })
     }
     const p = people.find((x) => x.id === selected)
     if (!p) return setDraft(null) // just created: wait for the refreshed list
     void cos['tasks.listForPerson'](p.id).then(setTasks)
-    if (loadedFor.current === p.id) return
+    const first = loadedFor.current !== p.id
     loadedFor.current = p.id
     void cos['briefs.get']('person', p.id).then((b) => {
-      setSavedHistory(b.summary)
-      setDraft({ id: p.id, name: p.name, role: p.role ?? '', company: p.company ?? '', email: p.email ?? '', priorityWeight: p.priorityWeight, summary: b.summary, standingInstructions: b.standingInstructions })
+      setHistory(b.summary)
+      if (first) setDraft({ id: p.id, name: p.name, role: p.role ?? '', company: p.company ?? '', email: p.email ?? '', priorityWeight: p.priorityWeight, standingInstructions: b.standingInstructions })
     })
   }, [selected, people, version])
 
@@ -57,21 +60,40 @@ export function PeopleScreen() {
     if (!draft) return
     try {
       const saved = await cos['people.save']({ id: draft.id, name: draft.name, role: draft.role, company: draft.company, email: draft.email, priorityWeight: draft.priorityWeight })
-      await cos['briefs.save']({ scope: 'person', ownerId: saved.id, summary: draft.summary, standingInstructions: draft.standingInstructions, updatedAt: null })
+      // Read the history fresh, so notes added from Review or the History window aren't overwritten.
+      const current = await cos['briefs.get']('person', saved.id)
+      await cos['briefs.save']({ ...current, standingInstructions: draft.standingInstructions })
       toast('Saved. Priorities updated.')
-      setSavedHistory(draft.summary)
-      if (draft.id === 0) setSelected(saved.id)
+      if (draft.id === 0) select(saved.id)
       refresh()
     } catch (err) {
       toast(errorMessage(err), true)
     }
   }
 
+  const select = (id: number | 'new' | null) => {
+    setShowHistory(false)
+    setSelected(id)
+  }
+
+  // "/" jumps to the search box, as on Tasks.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || document.querySelector('.scrim') || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return
+      e.preventDefault()
+      document.querySelector<HTMLInputElement>('#list-search')?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const q = search.trim().toLowerCase()
   const companies = [...new Set(people.map((p) => p.company).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b))
   const shown = people.filter(
     (p) =>
       (!filter.company || (filter.company === NO_COMPANY ? !p.company : p.company === filter.company)) &&
-      (!filter.openOnly || p.openCount + p.waitingCount > 0),
+      (!filter.openOnly || p.openCount + p.waitingCount > 0) &&
+      (!q || [p.name, p.role, p.company, p.brief].some((f) => f?.toLowerCase().includes(q))),
   )
   const filtering = !!filter.company || filter.openOnly
   const clearFilters = () => setFilter({ company: '', openOnly: false })
@@ -82,10 +104,15 @@ export function PeopleScreen() {
         <h1>People</h1>
         <span className="muted">most important first</span>
         <div className="spacer" />
-        <button className="btn primary" onClick={() => setSelected('new')}>
+        <button className="btn primary" onClick={() => select('new')}>
           Add person
         </button>
       </div>
+      {people.length > 0 && (
+        <div className="toolbar">
+          <SearchBox value={search} onChange={setSearch} placeholder="Search name, role, company" />
+        </div>
+      )}
       {people.length > 0 && (
         <div className="row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
           <select className="inp" style={{ width: 'auto', padding: '3px 8px' }} aria-label="Company" value={filter.company} onChange={(e) => setFilter({ company: e.target.value })}>
@@ -119,7 +146,7 @@ export function PeopleScreen() {
       )}
       <div className="list">
         {shown.map((p) => (
-          <div key={p.id} className={`r ${selected === p.id ? 'sel' : ''}`} style={{ gridTemplateColumns: '40px minmax(0, 1fr) auto auto', paddingLeft: 10 }} onClick={() => setSelected(p.id)}>
+          <div key={p.id} className={`r ${selected === p.id ? 'sel' : ''}`} style={{ gridTemplateColumns: '40px minmax(0, 1fr) auto auto', paddingLeft: 10 }} onClick={() => select(p.id)}>
             <Avatar person={p} />
             <div className="ttl">
               {p.name}
@@ -134,9 +161,9 @@ export function PeopleScreen() {
         {people.length === 0 && <div className="empty">Add the people who ask you for things. Their weight raises the priority of their requests.</div>}
         {people.length > 0 && shown.length === 0 && (
           <div className="empty">
-            Nobody matches these filters.{' '}
-            <button className="btn ghost" onClick={clearFilters}>
-              Clear filters
+            Nobody matches {q ? `“${search}”` : 'these filters'}.{' '}
+            <button className="btn ghost" onClick={() => (clearFilters(), setSearch(''))}>
+              Clear {q && filtering ? 'search and filters' : q ? 'search' : 'filters'}
             </button>
           </div>
         )}
@@ -151,7 +178,7 @@ export function PeopleScreen() {
         <Avatar person={{ name: draft.name || '?' }} />
         <input className="inp title-inp" value={draft.name} placeholder="Name" autoFocus={draft.id === 0} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
       </div>
-      {person && draft.id !== 0 && <PersonBrief key={person.id} person={person} hasContext={!!savedHistory.trim()} />}
+      {person && draft.id !== 0 && <PersonBrief key={person.id} person={person} hasContext={!!history.trim()} />}
       <label className="field">
         <span>Company</span>
         <input className="inp" list="company-options" value={draft.company} placeholder="e.g. Crestron" onChange={(e) => setDraft({ ...draft, company: e.target.value })} />
@@ -178,14 +205,16 @@ export function PeopleScreen() {
       </div>
       <div className="label" style={{ marginTop: 12 }}>Standing instructions</div>
       <textarea className="inp" style={{ margin: '4px 0 10px', minHeight: 44 }} value={draft.standingInstructions} placeholder="e.g. Lead with the ask; keep it to three bullets" onChange={(e) => setDraft({ ...draft, standingInstructions: e.target.value })} />
-      <div className="label">Context history · everything the AI has learned about them</div>
-      <textarea
-        className="inp"
-        style={{ margin: '4px 0 12px', minHeight: 110, fontSize: 12 }}
-        value={draft.summary}
-        placeholder="Dated notes from imports appear here when you accept them in Review. You can add your own."
-        onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
-      />
+      {draft.id !== 0 && (
+        <div className="row" style={{ marginBottom: 12 }}>
+          <button className="btn sm" onClick={() => setShowHistory(true)}>
+            History <span className="mono muted">{history.split('\n').filter((l) => l.trim()).length}</span>
+          </button>
+          <span className="faint" style={{ fontSize: 12 }}>
+            everything the AI has learned about them, newest first
+          </span>
+        </div>
+      )}
       <div className="row" style={{ marginBottom: 18 }}>
         {draft.id !== 0 && (
           <ConfirmButton
@@ -210,11 +239,24 @@ export function PeopleScreen() {
           <div className="label" style={{ marginBottom: 4 }}>Their open asks</div>
           <div className="list">
             {tasks.map((t) => (
-              <TaskRow key={t.id} task={t} showWhy={false} onClick={() => openTask({ id: t.id })} />
+              <TaskRow key={t.id} task={t} showWhy={false} onClick={() => openTask({ id: t.id, waiting: t.status === 'waiting_on' })} />
             ))}
             {tasks.length === 0 && <div className="empty">Nothing open for them.</div>}
           </div>
         </>
+      )}
+      {person && showHistory && (
+        <HistoryWindow
+          scope="person"
+          ownerId={person.id}
+          title={<b>{person.name}</b>}
+          history={history}
+          newCount={person.brief ? person.newNotes : 0}
+          hint="One note per line. The AI reads this when it writes their brief, and on imports when they have no brief."
+          empty={'No history yet. Accepted "Person context" suggestions from imports land here, newest first.'}
+          placeholder="Add a note, e.g. Prefers Teams over email"
+          onClose={() => setShowHistory(false)}
+        />
       )}
     </div>
   ) : (

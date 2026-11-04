@@ -5,6 +5,9 @@ export const DUE_HORIZON_DAYS = 14
 /** Days without activity at which staleness maxes out. */
 export const STALE_HORIZON_DAYS = 14
 
+/** The rationale when nothing raises a task's priority. Lists don't show it, since it adds nothing. */
+export const NO_SIGNALS = 'No deadline or urgency signals'
+
 /** Business days of waiting after which a waiting-on item is due a follow-up. */
 export const FOLLOW_UP_BUSINESS_DAYS = 3
 
@@ -99,6 +102,6 @@ export function scorePriority(item: PriorityInput, weights: PriorityWeights, now
     .join(', ')
   return {
     score: Math.round(clamp(score, 0, 1) * 100),
-    rationale: text ? text[0]!.toUpperCase() + text.slice(1) : 'No deadline or urgency signals',
+    rationale: text ? text[0]!.toUpperCase() + text.slice(1) : NO_SIGNALS,
   }
 }

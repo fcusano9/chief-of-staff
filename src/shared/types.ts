@@ -102,6 +102,8 @@ export interface Task {
   followUpCount: number
   waitingOn: string | null
   waitingSince: string | null
+  /** For a done task that was waiting on someone: who. Reopening puts it back on Waiting. */
+  waitedOn: string | null
   createdAt: string
   lastActivityAt: string
   completedAt: string | null
@@ -194,7 +196,7 @@ export interface SuggestionPayload {
   briefOwnerId: number | null
   /** new_project: the color the project gets. */
   color?: string | null
-  /** new_person: as written in the source. New people always start at 3 stars. */
+  /** new_person: as written in the source. New people always start at 1 star. */
   role?: string | null
   company?: string | null
   email?: string | null
@@ -286,6 +288,8 @@ export interface TaskFilter {
   projectId?: number
   noProjectOnly?: boolean
   search?: string
+  /** "tasks": open and in progress; "waiting": waiting on someone. Omitted: both. */
+  list?: 'tasks' | 'waiting'
 }
 
 export interface PriorityWeights {

@@ -36,6 +36,10 @@ import type {
 export interface Api {
   'tasks.listActive': (filter?: TaskFilter) => Task[]
   'tasks.listWaiting': () => Task[]
+  /** Finished tasks, newest first; list "waiting" for ones that were waiting on someone. */
+  'tasks.listDone': (filter?: TaskFilter) => Task[]
+  /** Puts a finished task back on Tasks, or on Waiting if it was waiting on someone. */
+  'tasks.reopen': (id: number) => Task
   'tasks.listForPerson': (personId: number) => Task[]
   'tasks.get': (id: number) => Task | null
   'tasks.save': (input: TaskInput) => Task
@@ -100,6 +104,8 @@ export type ApiChannel = keyof Api
 export const API_CHANNELS: ApiChannel[] = [
   'tasks.listActive',
   'tasks.listWaiting',
+  'tasks.listDone',
+  'tasks.reopen',
   'tasks.listForPerson',
   'tasks.get',
   'tasks.save',

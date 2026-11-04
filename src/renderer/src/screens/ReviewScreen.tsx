@@ -293,7 +293,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
         </div>
         <Details text={p.details} />
         <div className="faint row" style={{ fontSize: 12, marginTop: 3, gap: 4, flexWrap: 'wrap' }}>
-          Starts at <Stars value={3} /> · context goes into their brief{links ? ` · ${links} suggestion${links === 1 ? '' : 's'} below involve them` : ''}
+          Starts at <Stars value={1} /> · context goes into their brief{links ? ` · ${links} suggestion${links === 1 ? '' : 's'} below involve them` : ''}
         </div>
       </div>
     )

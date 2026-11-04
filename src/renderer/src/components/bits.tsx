@@ -1,5 +1,5 @@
 import type { Person, Project, Task } from '@shared/types'
-import { daysUntil } from '@shared/priority'
+import { daysUntil, FOLLOW_UP_BUSINESS_DAYS, needsFollowUp, NO_SIGNALS } from '@shared/priority'
 import { effectivePriority, initials, NO_PROJECT_COLOR } from '@shared/types'
 
 export const scoreClass = (s: number) => (s >= 80 ? 's-hi' : s >= 60 ? 's-mid' : 's-lo')
@@ -59,7 +59,10 @@ export const daysSince = (iso: string | null) => (iso ? Math.max(0, Math.floor((
 /** One task line: project stripe, score, title with priority reason, project chip, due date. */
 export function TaskRow({ task, selected, current, onClick, showWhy = true }: { task: Task; selected?: boolean; current?: boolean; onClick: () => void; showWhy?: boolean }) {
   const score = effectivePriority(task)
-  const due = task.status === 'waiting_on' ? { text: `Wait ${daysSince(task.waitingSince)}d`, overdue: false } : dueLabel(task.dueDate)
+  const waiting = task.status === 'waiting_on'
+  const due = waiting ? { text: `Wait ${daysSince(task.waitingSince)}d`, overdue: false } : dueLabel(task.dueDate)
+  // Waiting items say who they wait on; others give the priority reason, unless there's none worth saying.
+  const why = waiting ? (task.waitingOn ? `waiting on ${task.waitingOn}` : null) : task.priorityRationale === NO_SIGNALS ? null : task.priorityRationale
   return (
     <div className={`r ${selected ? 'sel' : ''} ${current ? 'cur' : ''}`} data-id={task.id} onClick={onClick}>
       <div className="stripe" style={{ background: task.project?.color ?? NO_PROJECT_COLOR }} />
@@ -69,11 +72,64 @@ export function TaskRow({ task, selected, current, onClick, showWhy = true }: { 
       </div>
       <div className="ttl">
         {task.title}
-        {showWhy && <span className="why">{task.priorityRationale}</span>}
+        {showWhy && why && <span className="why">{why}</span>}
+        {waiting && needsFollowUp(task, new Date()) && (
+          <span className="chip followup" title={`No reply in ${FOLLOW_UP_BUSINESS_DAYS} or more business days`}>
+            Follow up
+          </span>
+        )}
       </div>
       <ProjectChip project={task.project} />
       <div className={`due ${due.overdue ? 'over' : ''}`}>{due.text}</div>
     </div>
+  )
+}
+
+/** A finished task: a check mark, the title (and who it waited on), project and completion date. */
+export function DoneRow({ task, selected, current, onClick }: { task: Task; selected?: boolean; current?: boolean; onClick: () => void }) {
+  const done = task.completedAt ? new Date(task.completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''
+  return (
+    <div className={`r done ${selected ? 'sel' : ''} ${current ? 'cur' : ''}`} data-id={task.id} onClick={onClick}>
+      <div className="stripe" style={{ background: task.project?.color ?? NO_PROJECT_COLOR }} />
+      <div className="score faint" aria-label="Done">
+        ✓
+      </div>
+      <div className="ttl">
+        {task.title}
+        {task.waitedOn && <span className="why">from {task.waitedOn}</span>}
+      </div>
+      <ProjectChip project={task.project} />
+      <div className="due">{done}</div>
+    </div>
+  )
+}
+
+/** The list search box. "/" jumps to it (the screen handles the key). */
+export function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <label className="search-box">
+      <span className="faint">⌕</span>
+      <input
+        id="list-search"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation()
+            if (value) onChange('')
+            else e.currentTarget.blur()
+          }
+        }}
+      />
+      {value ? (
+        <button type="button" className="clear" aria-label="Clear search" onClick={() => onChange('')}>
+          ×
+        </button>
+      ) : (
+        <span className="kbd">/</span>
+      )}
+    </label>
   )
 }
 

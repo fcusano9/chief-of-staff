@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { BriefSuggestion, ProjectStatus, ProjectSummary, Task } from '@shared/types'
 import { PROJECT_COLORS } from '@shared/types'
 import { cos, errorMessage } from '../api'
-import { ConfirmButton, TaskRow } from '../components/bits'
+import { ConfirmButton, SearchBox, TaskRow } from '../components/bits'
+import { HistoryWindow } from '../components/HistoryWindow'
 import { SplitView } from '../components/SplitView'
 import { useApp } from '../context'
 
@@ -22,8 +23,6 @@ interface Draft {
 }
 
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-/** The date stamp history notes use, matching notes added from Review: "Nov 3, 2026". */
-const noteStamp = () => new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
 export function ProjectsScreen() {
   const { projects, openTask, refresh, toast, version } = useApp()
@@ -32,6 +31,7 @@ export function ProjectsScreen() {
   const [history, setHistory] = useState('')
   const [tasks, setTasks] = useState<Task[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [search, setSearch] = useState('')
   // The project the draft was loaded for, so a refresh (e.g. after keeping a brief) keeps unsaved edits.
   const loadedFor = useRef<number | null>(null)
 
@@ -79,6 +79,19 @@ export function ProjectsScreen() {
   }
 
   const project = draft && draft.id !== 0 ? projects.find((p) => p.id === draft.id) : undefined
+  const q = search.trim().toLowerCase()
+  const shown = q ? projects.filter((p) => [p.name, p.overview].some((f) => f?.toLowerCase().includes(q))) : projects
+
+  // "/" jumps to the search box, as on Tasks.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || document.querySelector('.scrim') || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return
+      e.preventDefault()
+      document.querySelector<HTMLInputElement>('#list-search')?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const noteCount = history.split('\n').filter((l) => l.trim()).length
 
   const left = (
@@ -91,8 +104,13 @@ export function ProjectsScreen() {
           New project
         </button>
       </div>
+      {projects.length > 0 && (
+        <div className="toolbar">
+          <SearchBox value={search} onChange={setSearch} placeholder="Search projects" />
+        </div>
+      )}
       <div className="list">
-        {projects.map((p) => (
+        {shown.map((p) => (
           <div key={p.id} className={`r ${selected === p.id ? 'sel' : ''}`} style={{ gridTemplateColumns: '3px minmax(0, 1fr) auto auto' }} onClick={() => select(p.id)}>
             <div className="stripe" style={{ background: p.color }} />
             <div className="ttl">
@@ -108,6 +126,7 @@ export function ProjectsScreen() {
           </div>
         ))}
         {projects.length === 0 && <div className="empty">No projects yet. Tasks don't need one, but projects keep shared context for the AI.</div>}
+        {projects.length > 0 && shown.length === 0 && <div className="empty">Nothing matches “{search}”.</div>}
       </div>
     </>
   )
@@ -178,14 +197,31 @@ export function ProjectsScreen() {
             <div className="label" style={{ marginBottom: 4 }}>Open tasks</div>
             <div className="list">
               {tasks.map((t) => (
-                <TaskRow key={t.id} task={t} showWhy={false} onClick={() => openTask({ id: t.id })} />
+                <TaskRow key={t.id} task={t} showWhy={false} onClick={() => openTask({ id: t.id, waiting: t.status === 'waiting_on' })} />
               ))}
               {tasks.length === 0 && <div className="empty">No open tasks in this project.</div>}
             </div>
           </>
         )}
       </div>
-      {project && showHistory && <ProjectHistory project={project} history={history} onClose={() => setShowHistory(false)} />}
+      {project && showHistory && (
+        <HistoryWindow
+          scope="project"
+          ownerId={project.id}
+          title={
+            <>
+              <span style={{ width: 3, height: 18, borderRadius: 2, background: project.color }} />
+              <b>{project.name}</b>
+            </>
+          }
+          history={history}
+          newCount={project.brief ? project.newNotes : 0}
+          hint="One note per line. The AI reads this when it writes the brief."
+          empty={'No history yet. Accepted "Project context" suggestions from imports land here, newest first.'}
+          placeholder="Add a note, e.g. Launch moved to April"
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   ) : (
     <div className="empty" style={{ marginTop: 80 }}>Select a project, or create one.</div>
@@ -383,150 +419,6 @@ function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHis
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-interface Note {
-  date: string
-  text: string
-  source: string | null
-}
-
-/** Splits a history line from Review ('Nov 2, 2026: text (from “Title”)'); other lines are kept whole. */
-function parseNote(line: string): Note {
-  const m = line.match(/^([A-Z][a-z]{2,8}\.? \d{1,2}, \d{4}): ([\s\S]*?)(?: \(from “(.*)”\))?$/)
-  return m ? { date: m[1]!, text: m[2]!, source: m[3] ?? null } : { date: '', text: line, source: null }
-}
-
-/**
- * Every dated note about the project, newest first, in a window over the page. Notes added since
- * the brief was written are marked. Add appends a note; Edit changes the whole history as text.
- */
-function ProjectHistory({ project, history, onClose }: { project: ProjectSummary; history: string; onClose: () => void }) {
-  const { refresh, toast } = useApp()
-  const [adding, setAdding] = useState('')
-  const [editing, setEditing] = useState<string | null>(null)
-  const lines = history.split('\n').map((l) => l.trim()).filter(Boolean)
-  // Notes arrive at the end, so the ones since the brief are the last few.
-  const firstNew = project.brief ? lines.length - project.newNotes : lines.length
-  const year = String(new Date().getFullYear())
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && editing === null) onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [editing, onClose])
-
-  const write = async (summary: string, message: string) => {
-    try {
-      const current = await cos['briefs.get']('project', project.id)
-      await cos['briefs.save']({ ...current, summary })
-      toast(message)
-      refresh()
-      return true
-    } catch (err) {
-      toast(errorMessage(err), true)
-      return false
-    }
-  }
-  const add = async () => {
-    const text = adding.replace(/\s+/g, ' ').trim()
-    if (!text) return
-    if (await write([...lines, `${noteStamp()}: ${text}`].join('\n'), 'Note added')) setAdding('')
-  }
-  const saveEdit = async () => {
-    if (editing !== null && (await write(editing.trim(), 'History saved'))) setEditing(null)
-  }
-
-  return (
-    <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="dialog" role="dialog" aria-label="Project history">
-        <div className="dialog-head">
-          <span style={{ width: 3, height: 18, borderRadius: 2, background: project.color }} />
-          <b>{project.name}</b>
-          <span className="muted">
-            history · {lines.length} note{lines.length === 1 ? '' : 's'}
-          </span>
-          <div className="spacer" />
-          {editing === null && (
-            <button className="btn ghost sm" onClick={() => setEditing(lines.join('\n'))}>
-              Edit
-            </button>
-          )}
-          <button className="btn ghost sm" onClick={onClose}>
-            Close <span className="kbd">Esc</span>
-          </button>
-        </div>
-        <div className="dialog-body">
-          {editing !== null ? (
-            <textarea
-              className="inp"
-              aria-label="History"
-              autoFocus
-              style={{ minHeight: 320, marginTop: 10, fontSize: 12 }}
-              value={editing}
-              onChange={(e) => setEditing(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                  e.preventDefault()
-                  void saveEdit()
-                } else if (e.key === 'Escape') {
-                  e.stopPropagation()
-                  setEditing(null)
-                }
-              }}
-            />
-          ) : (
-            <>
-              <div className="row" style={{ margin: '10px 0 6px' }}>
-                <input
-                  className="inp"
-                  aria-label="New note"
-                  autoFocus
-                  value={adding}
-                  placeholder="Add a note, e.g. Launch moved to April"
-                  onChange={(e) => setAdding(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && void add()}
-                />
-                <button className="btn" disabled={!adding.trim()} onClick={() => void add()}>
-                  Add
-                </button>
-              </div>
-              {lines.length === 0 && <div className="empty">No history yet. Accepted "Project context" suggestions from imports land here, newest first.</div>}
-              {lines
-                .map((line, i) => ({ note: parseNote(line), isNew: i >= firstNew, i }))
-                .reverse()
-                .map(({ note, isNew, i }) => (
-                  <div key={i} className="hist" data-note>
-                    <span className="mono muted" style={{ fontSize: 11, paddingTop: 2 }}>
-                      {note.date.endsWith(`, ${year}`) ? note.date.slice(0, -(year.length + 2)) : note.date}
-                      {isNew && <span className="hist-new"> new</span>}
-                    </span>
-                    <div>
-                      {note.text}
-                      {note.source && <div className="faint" style={{ fontSize: 11 }}>from “{note.source}”</div>}
-                    </div>
-                  </div>
-                ))}
-            </>
-          )}
-        </div>
-        {editing !== null && (
-          <div className="dialog-foot">
-            <span className="faint" style={{ fontSize: 12 }}>One note per line. The AI reads this when it writes the brief.</span>
-            <div className="spacer" />
-            <button className="btn ghost" onClick={() => setEditing(null)}>
-              Cancel
-            </button>
-            <button className="btn primary" onClick={() => void saveEdit()}>
-              Save <span className="kbd">Ctrl ↵</span>
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   )
 }

@@ -88,7 +88,7 @@ try {
   )
   const text = (await rows(app)).join('\n')
   check('the user is never suggested as a new person', !text.includes('Frank Cusano'))
-  check('new person starts at 3 stars with role', text.includes('Alex Rivera') && text.includes('Training manager') && text.includes('Starts at'))
+  check('new person starts at 1 star with role', text.includes('Alex Rivera') && text.includes('Training manager') && text.includes('Starts at'))
   check('tasks show the new project as "(new)"', text.includes('Send course outline to Alex') && text.includes('Dealer training program (new)'))
   check('requester linked to the new person', text.includes('Asked by Alex Rivera (new)'))
   check('new project counts its links', text.includes('3 suggestions below link to it'), (text.match(/\d+ suggestions? below link to it/) ?? [''])[0])
@@ -114,7 +114,7 @@ try {
     const t = tasks.find(x => x.title === 'Send course outline to Alex');
     return { p: !!p, alex: alex && { role: alex.role, w: alex.priorityWeight }, linked: t && t.projectId === p?.id && t.requesterId === alex?.id,
              brief: p ? (await window.cos['briefs.get']('project', p.id)).summary : '' }`)
-  check('project and person created with the task', state.p && state.alex?.role === 'Training manager' && state.alex?.w === 3 && state.linked, JSON.stringify(state))
+  check('project and person created with the task', state.p && state.alex?.role === 'Training manager' && state.alex?.w === 1 && state.linked, JSON.stringify(state))
   check('project summary saved to its brief', state.brief.includes('Online certification for dealers'))
   const after = (await rows(app)).join('\n')
   check('created project and person leave the queue', !after.includes('New project') && !after.includes('New person'))

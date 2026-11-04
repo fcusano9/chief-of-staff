@@ -2,6 +2,15 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-03 · Waiting apart from Tasks, Done lists, search, People history (Frank)
+Frank asked for these after using the app day to day. The mockup `design/lists-waiting-done-search.html` was approved.
+- **Waiting is its own list.** Tasks shows open and in-progress items only. Waiting is the same screen showing only waiting-on items, longest waiting first, with the same project filters and editor. "New waiting item" (or N on that tab) starts as Waiting on. Today still shows both, as before.
+- **Done items:** an Open / Done switch on Tasks and Waiting, newest first, up to 200. Frank chose this over a separate tab or the Archive. Reopen puts an item back where it came from. To know which finished items were waiting on someone, `work_items.waited_on` (schema v9) records who, from the moment a waiting item is marked done. Items finished before this change count as tasks.
+- **"No deadline or urgency signals" isn't shown in lists.** The score is unchanged; the text added nothing (`NO_SIGNALS`).
+- **Search** on Tasks, Waiting, Projects and People, in the same toolbar spot, with / to jump to it. Tasks and Waiting search the database (title, notes, who it waits on); Projects (name, overview) and People (name, role, company, brief) filter the loaded list.
+- **People history matches Projects:** the text box became a History button and window (shared `HistoryWindow`). Saving a person no longer writes the history, so notes added in the window or from Review can't be overwritten.
+- **New people start at 1 star**, both added by hand and proposed by the AI (was 3).
+
 ### 2026-11-03 · Quieter Review, and person context updates role and company (Frank)
 After his first large mail import, Frank asked for three changes:
 - **Titles stand apart from details:** titles are 14px semibold, details are smaller and grey and cut to two lines (hover for the rest), and info lines like "Due Fri · Asked by…" are lighter still.
