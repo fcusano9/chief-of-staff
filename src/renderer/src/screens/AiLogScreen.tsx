@@ -39,7 +39,7 @@ function tabsFor(call: AiCall): { label: string; body: string }[] {
   return tabs
 }
 
-function CallCard({ call }: { call: AiCall }) {
+export function CallCard({ call }: { call: AiCall }) {
   const { toast } = useApp()
   const tabs = tabsFor(call)
   const [tab, setTab] = useState(0)

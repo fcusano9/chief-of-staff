@@ -42,8 +42,9 @@ src/main/        Electron main process
   index.ts       Window, IPC handler table, startup, timers (recompute, daily backup)
   db.ts          openDatabase, migrations (PRAGMA user_version), transaction()
   services/      tasks, directory (projects/people/briefs), sources (import), suggestions
-                 (review queue), settings (JSON), backup, secrets (KeyStore)
-  ai/            provider.ts (interface), claude.ts, ollama.ts, demo.ts, context.ts (prompt), schema.ts (Zod + validation)
+                 (review queue), briefings (daily briefing), settings (JSON), backup, secrets (KeyStore)
+  ai/            provider.ts (interface), claude.ts, ollama.ts, demo.ts, context.ts (prompt), schema.ts (Zod + validation),
+                 brief.ts (person and project briefs), briefing.ts (daily briefing prompt and checks)
   mail/          outlook.ps1 (reads classic Outlook over COM), outlook.ts (runs it), plan.ts (skips, conversations, AI text)
 src/preload/     Exposes the API as window.cos (CommonJS, sandboxed)
 src/renderer/    React UI: App.tsx (shell, shortcuts), screens/, components/
@@ -79,7 +80,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   The preload exposes exactly the listed channels.
 - **Schema change:** append a new SQL string to `MIGRATIONS` in `src/main/db.ts`. Never edit a shipped migration. `transaction()` calls nest by joining the outer transaction.
 - **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, the prompt and `ALL_KINDS` in `ai/context.ts`, the split passes in `ai/ollama.ts`, `SuggestionService.accept`, and `ReviewScreen`.
-- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]` from `extract` (validation is shared) and a sentence from `writePersonBrief`. Wrap every request in `logged()` with the `log` that `extract` receives, so the AI log shows it exactly as sent and received. Never put the API key in the logged request.
+- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `currentProvider()` and `AiSettings.tsx`. It must return `RawSuggestion[]` from `extract` (validation is shared), a sentence from `writePersonBrief`, and a `RawBriefing` from `writeBriefing` (`assembleBriefing` checks it). Wrap every request in `logged()` with the `log` that `extract` receives, so the AI log shows it exactly as sent and received. Never put the API key in the logged request.
 - **Claude API changes:** use the official SDK only. Check current model ids and parameters against Anthropic's docs; don't rely on memory, because the API changes often. The default model is `claude-opus-5-5` (Frank can choose Sonnet or Haiku 5.5 in Settings).
 
 ## Product and UI conventions
@@ -98,6 +99,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   - Global shortcuts run in the capture phase and consume their keys.
 - **Project colors:** tasks are themed with their project's color. Tasks with no project get no label and a neutral stripe.
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".
+- **Daily briefing** (Today, `components/Briefing.tsx`, `services/briefings.ts`): written only when Frank clicks Write briefing / Refresh or uses "Write briefing" in Ctrl+K; no keyboard shortcut. Full width under the number cards: a one-line summary, then Top priorities (overdue tasks first with a red tag), Waiting-on nudges, and New since last briefing. Empty sections stay with a short line. It only reads: nothing changes and nothing goes to Review. Items always come from real tasks; the AI only picks ids and writes notes. Every briefing is kept (History); the AI requests behind the newest 5 are kept for History's AI log. `write(trigger)` takes `'manual'` or `'scheduled'`, so a scheduler can be added without changing the card or storage.
 - **Context briefs:** every project, task and person has a summary and standing instructions, so the AI never needs things re-explained. The AI request includes these briefs.
 - **People** also have a one-line brief (`people.brief`), shown under their name. The AI writes it only when Frank clicks Regenerate, as a suggestion he keeps or discards, and he can edit it by hand. Their context summary is labeled "Context history", keeps every dated note, and opens from a History button in the same window as Projects (`HistoryWindow`). New people start at 1 star. Imports send the one-line brief, or the newest notes when there's none.
 - **Projects** have a one-line overview (`projects.overview`) that Frank writes by hand (pencil icon, no AI), and a short status brief (`projects.brief`: status, "Next:", "Open:") that the AI writes from the history only when he clicks Regenerate, kept or discarded like the People brief. The project's context summary is its history of dated notes; it isn't on the page but opens from the History button. Imports send the overview and status brief, or the newest history when there's no brief. Archived projects are left out of `projects.list` (so filters, editors and the AI skip them) and shown only on the Projects tab's Archived list, which has Unarchive.

@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { CLAUDE_MODELS } from '@shared/types'
 import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
+import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
@@ -49,6 +50,20 @@ export function buildProjectBriefRequest(model: string, input: ProjectBriefInput
     max_tokens: 6000,
     // Low effort: condensing notes into a few lines needs little reasoning.
     output_config: { effort: 'low' as const, format: betaZodOutputFormat(ProjectBriefSchema) },
+    system,
+    messages: [{ role: 'user' as const, content: user }],
+    ...fallbackFor(model),
+  }
+}
+
+/** The request for the daily briefing. */
+export function buildBriefingRequest(model: string, input: BriefingInput) {
+  const { system, user } = buildBriefingPrompt(input)
+  return {
+    model,
+    max_tokens: 8000,
+    // Low effort: picking and explaining a handful of tasks needs little reasoning.
+    output_config: { effort: 'low' as const, format: betaZodOutputFormat(BriefingSchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -114,6 +129,28 @@ export class ClaudeProvider implements AiProvider {
       if (response.stop_reason === 'max_tokens') throw new AiError('The brief was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
       return response.parsed_output.brief
+    } catch (err) {
+      throw toAiError(err)
+    }
+  }
+
+  async writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing> {
+    try {
+      const request = buildBriefingRequest(this.model, input)
+      const response = await logged(
+        log,
+        { purpose: 'Write the briefing', endpoint: 'Anthropic Messages API (POST /v1/messages; the beta flag is sent as a header)', request: asSent(request) },
+        () => this.client.beta.messages.parse(request),
+        (r) => {
+          const { parsed_output: _parsed, ...raw } = r
+          return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens }
+        },
+        (err) => (err instanceof Anthropic.APIError ? (err.error ?? null) : null),
+      )
+      if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write the briefing.')
+      if (response.stop_reason === 'max_tokens') throw new AiError('The briefing was cut off. Try again.')
+      if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
+      return response.parsed_output
     } catch (err) {
       throw toAiError(err)
     }

@@ -1,4 +1,5 @@
 import type { PersonBriefInput, ProjectBriefInput } from './brief'
+import { demoBriefing, type BriefingInput, type RawBriefing } from './briefing'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { AiCallLog, AiProvider } from './provider'
 import type { RawSuggestion } from './schema'
@@ -142,6 +143,23 @@ export class DemoProvider implements AiProvider {
     const facts = notes.slice(-2).map((l) => l.replace(/\s*\(from “[^”]*”\)$/, '').replace(/[.!]*$/, '.'))
     const next = input.tasks.slice(0, 2).map((t) => t.replace(/ \([^)]*\)$/, ''))
     return [facts.join(' '), `Next: ${next.length ? next.join('; ') : 'nothing recorded'}.`, 'Open: nothing recorded.'].join('\n')
+  }
+
+  /** Overdue and highest-priority tasks, and waits of 5 days or more, by fixed rules. */
+  async writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing> {
+    const out = demoBriefing(input)
+    log?.record({
+      purpose: 'Write the briefing (demo rules)',
+      endpoint: 'Demo AI on this computer: fixed rules, no prompt',
+      request: { note: 'The demo AI sends no prompt. It picks overdue and highest-priority tasks, and waits of 5 days or more, from this input.', input },
+      response: out,
+      error: null,
+      startedAt: new Date().toISOString(),
+      durationMs: 0,
+      inputTokens: null,
+      outputTokens: null,
+    })
+    return out
   }
 
   async test(): Promise<string> {

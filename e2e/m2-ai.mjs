@@ -200,7 +200,7 @@ try {
 
   await app.key('g'); await app.key('t')
   await app.sleep(300)
-  check('today shows review prompt', (await app.eval(`return document.querySelector('.ai').textContent`)).includes('waiting for your review'))
+  check('today shows review prompt', (await app.eval(`return document.querySelector('[data-briefing]').textContent`)).includes('Review suggestions'))
   await app.screenshot(join(shots, 'm2-04-today.png'))
   check('no renderer errors', app.errors.length === 0, app.errors.join(' | '))
 } catch (e) {
