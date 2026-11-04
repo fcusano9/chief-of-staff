@@ -27,6 +27,7 @@ An AI-assisted work manager for Windows and Mac. It replaces Microsoft To Do: ta
 ```bash
 npm install
 npm run dev           # run with hot reload
+npm run demo:data     # fill the dev copy with made-up test data (your dev data is moved aside, not deleted)
 npm test              # unit and data tests
 npm run bench:ai      # compare AI models on sample imports (bench/README.md)
 npm run typecheck

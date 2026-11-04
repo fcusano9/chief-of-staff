@@ -57,7 +57,8 @@ docs/            ROADMAP.md, DECISIONS.md, COPILOT-PROMPTS.md (Teams chat and me
 
 ```bash
 npm install
-npm run dev          # hot-reload dev app
+npm run dev          # hot-reload dev app (uses its own "Chief of Staff (dev)" data folder)
+npm run demo:data    # fill that dev folder with made-up people, projects, tasks and Review suggestions; existing dev data is moved aside
 npm test             # vitest
 npm run typecheck    # both TS projects
 npm run build        # electron-vite build into out/

@@ -9,6 +9,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "demo:data": "electron-vite build && node scripts/demo-data.mjs",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "e2e": "electron-vite build && node e2e/run.mjs",
