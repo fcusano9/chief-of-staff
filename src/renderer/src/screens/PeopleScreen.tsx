@@ -6,6 +6,7 @@ import { Avatar, ConfirmButton, SearchBox, Stars, TaskRow } from '../components/
 import { HistoryWindow } from '../components/HistoryWindow'
 import { SplitView } from '../components/SplitView'
 import { useAutosave } from '../components/useAutosave'
+import { useListKeys } from '../components/listKeys'
 import { useApp } from '../context'
 
 interface Draft {
@@ -92,16 +93,6 @@ export function PeopleScreen() {
     setSelected(id)
   }
 
-  // "/" jumps to the search box, as on Tasks.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '/' || document.querySelector('.scrim') || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return
-      e.preventDefault()
-      document.querySelector<HTMLInputElement>('#list-search')?.focus()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
 
   const q = search.trim().toLowerCase()
   const companies = [...new Set(people.map((p) => p.company).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b))
@@ -111,6 +102,7 @@ export function PeopleScreen() {
       (!filter.openOnly || p.openCount + p.waitingCount > 0) &&
       (!q || [p.name, p.role, p.company, p.brief].some((f) => f?.toLowerCase().includes(q))),
   )
+  useListKeys(shown.map((p) => p.id), selected, select)
   const filtering = !!filter.company || filter.openOnly
   const clearFilters = () => setFilter({ company: '', openOnly: false })
 

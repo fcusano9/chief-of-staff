@@ -62,10 +62,10 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
       }
       if (isTyping() || e.ctrlKey || e.metaKey || e.altKey) return
       const current = tasks[cursor]
-      if (e.key === 'j' || e.key === 'k' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         if (!tasks.length) return
         e.preventDefault()
-        const down = e.key === 'j' || e.key === 'ArrowDown'
+        const down = e.key === 'ArrowDown'
         const next = Math.max(0, Math.min(tasks.length - 1, cursor + (down ? 1 : -1)))
         setCursor(next)
         openTask({ id: tasks[next]!.id })
@@ -176,7 +176,7 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
         <div style={{ fontSize: 28, color: 'var(--faint)' }}>☰</div>
         <div style={{ color: 'var(--text)', fontWeight: 500, marginTop: 6 }}>Select {waiting ? 'an item' : 'a task'} to see it here</div>
         <div style={{ marginTop: 4 }}>
-          Use <span className="kbd">J</span> <span className="kbd">K</span> to move through the list, or <span className="kbd">N</span> for a new {noun}.
+          Use <span className="kbd">↑</span> <span className="kbd">↓</span> to move through the list, or <span className="kbd">N</span> for a new {noun}.
         </div>
       </div>
     </div>

@@ -5,22 +5,38 @@ import { AiSettings } from '../components/AiSettings'
 import { RestoreBackups } from '../components/RestoreBackups'
 import { useApp } from '../context'
 
-export const SHORTCUTS: [string, string][] = [
-  ['Ctrl K', 'Command palette'],
-  ['N', 'New task'],
-  ['J / K', 'Move down / up (Tasks)'],
-  ['Enter', 'Open task, then edit title'],
-  ['E', 'Mark done (Tasks)'],
-  ['Ctrl Enter', 'Save task'],
-  ['Esc', 'Close task'],
-  ['/', 'Filter tasks'],
-  ['G then T', 'Go to Today'],
-  ['G then K', 'Go to Tasks'],
-  ['G then W', 'Go to Waiting on'],
-  ['G then P', 'Go to Projects'],
-  ['G then E', 'Go to People'],
-  ['Alt 1–9', 'Switch tabs'],
-  ['Shift D', 'Toggle light / dark'],
+/** Shown in Settings, grouped so related keys sit together. */
+export const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
+  {
+    title: 'Anywhere',
+    keys: [
+      ['Ctrl K', 'Command palette'],
+      ['N', 'New task'],
+      ['/', 'Search the list'],
+    ],
+  },
+  {
+    title: 'In lists',
+    keys: [
+      ['↑ / ↓', 'Move up / down'],
+      ['Enter', 'Open item'],
+      ['Ctrl Enter', 'Save'],
+      ['Esc', 'Close or cancel'],
+      ['E', 'Mark done (Tasks)'],
+      ['A / R', 'Accept / reject (Review)'],
+    ],
+  },
+  {
+    title: 'Go to',
+    keys: [
+      ['G then T', 'Today'],
+      ['G then K', 'Tasks'],
+      ['G then R', 'Review'],
+      ['G then W', 'Waiting'],
+      ['G then P', 'Projects'],
+      ['G then E', 'People'],
+    ],
+  },
 ]
 
 export function SettingsScreen() {
@@ -133,13 +149,18 @@ export function SettingsScreen() {
 
         <div className="card" style={{ gridColumn: '1 / -1' }}>
           <div style={{ fontWeight: 500, marginBottom: 8 }}>Keyboard shortcuts</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 22px' }}>
-            {SHORTCUTS.map(([keys, label]) => (
-              <div key={label} className="row" style={{ justifyContent: 'space-between' }}>
-                <span>{label}</span>
-                <span className="row" style={{ gap: 3 }}>
-                  {keys.split(' ').map((k, i) => (k === 'then' || (k === '/' && keys !== '/') ?<span key={i} className="faint">{k}</span> : <span key={i} className="kbd">{k}</span>))}
-                </span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 22px', alignItems: 'start' }}>
+            {SHORTCUTS.map((group) => (
+              <div key={group.title} className="grid" style={{ gap: 6 }}>
+                <div className="label">{group.title}</div>
+                {group.keys.map(([keys, label]) => (
+                  <div key={label} className="row" style={{ justifyContent: 'space-between' }}>
+                    <span>{label}</span>
+                    <span className="row" style={{ gap: 3 }}>
+                      {keys.split(' ').map((k, i) => (k === 'then' || (k === '/' && keys !== '/') ? <span key={i} className="faint">{k}</span> : <span key={i} className="kbd">{k}</span>))}
+                    </span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
