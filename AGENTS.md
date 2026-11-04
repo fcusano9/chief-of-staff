@@ -129,6 +129,6 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 
 - **Node.js:** Node 26 LTS, installed with winget. In shells started before that install, refresh PATH; in Git Bash, add `/c/Program Files/nodejs`.
 - **npm install scripts:** npm holds these back. Electron downloads its binary on first run, or run `node node_modules/electron/install.js`.
-- **OneDrive:** the repo lives inside OneDrive, so `node_modules` syncs there. Moving the repo out of OneDrive is a known nice-to-have.
+- **Repo location:** the working copy is `C:\GitHub\chief-of-staff`, outside OneDrive, so it isn't backed up automatically. GitHub is the backup: push branches regularly. Only the app's daily backups go to OneDrive.
 - **Claude Desktop sandbox:** Claude Desktop is a packaged Windows app, so anything run from a Claude session sees a private, redirected copy of `%APPDATA%` and `%LOCALAPPDATA%`, not the real folders. Reading `%APPDATA%\Chief of Staff` from a session shows that copy, not Frank's data. The installed app refuses to start in the sandbox (see DECISIONS.md, "Real data is never opened from inside Claude Desktop's sandbox"). The OneDrive backup folder is real.
 - **Mac:** Mac packaging (`npm run package:mac`) must run on a Mac and hasn't been tested.

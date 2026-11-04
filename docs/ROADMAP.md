@@ -65,7 +65,6 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 
 - An app icon (it still uses the default Electron icon).
 - `.docx` import.
-- Moving the repo out of OneDrive.
 - A Mac build and test.
 - A signed installer.
 - Manually added status updates on a task.
