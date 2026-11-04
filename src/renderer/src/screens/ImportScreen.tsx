@@ -96,7 +96,6 @@ export function ImportScreen() {
     <div className="page">
       <div className="head">
         <h1>Import</h1>
-        <span className="muted">everything lands in the review queue first</span>
       </div>
 
       <OutlookImport onFinished={refresh} />

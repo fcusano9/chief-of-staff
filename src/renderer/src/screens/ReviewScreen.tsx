@@ -126,7 +126,7 @@ export function ReviewScreen() {
       <div className="head">
         <h1>Review queue</h1>
         <span className="muted">
-          {items.length} suggestion{items.length === 1 ? '' : 's'} · nothing changes until you accept
+          {items.length} suggestion{items.length === 1 ? '' : 's'}
         </span>
         <div className="spacer" />
         <button className="btn" onClick={() => go('import')}>

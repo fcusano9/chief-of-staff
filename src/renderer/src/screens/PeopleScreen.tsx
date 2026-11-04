@@ -220,9 +220,6 @@ export function PeopleScreen() {
           <button className="btn sm" onClick={() => setShowHistory(true)}>
             History <span className="mono muted">{history.split('\n').filter((l) => l.trim()).length}</span>
           </button>
-          <span className="faint" style={{ fontSize: 12 }}>
-            everything the AI has learned about them, newest first
-          </span>
         </div>
       )}
       <div className="row" style={{ marginBottom: 18 }}>
