@@ -79,7 +79,7 @@ export function App() {
         const saved = await cos['settings.save']({ ...settingsRef.current, ...patch })
         setSettings(saved)
         if (patch.priorityWeights) refresh()
-        if (patch.aiProvider || patch.aiModel || patch.localModel || patch.localUrl || patch.localThoroughness) setAi(await cos['ai.status']())
+        if (patch.aiProvider || patch.aiModel || patch.localModel || patch.localUrl) setAi(await cos['ai.status']())
       } catch (err) {
         toast(errorMessage(err), true)
       }

@@ -1,11 +1,11 @@
 # Extraction benchmark
 
-Scores AI providers on nine made-up imports shaped like Frank's real work: a Copilot summary, an email from his manager, a Teams chat, a long meeting transcript, a vendor email with a prompt injection, a newsletter with nothing to do, a recap showing finished work, a kickoff that introduces a new project and person, and a dealer email that names their company. Each case lists the suggestions a careful assistant should make, extras that are fine, and things it must not do.
+Scores AI providers on fifteen made-up imports shaped like Frank's real work: Copilot summaries, emails (from his manager, a vendor with a prompt injection, a dealer, a customer with a question), Teams chats, meeting transcripts (long, a kickoff with a new project and person, a partner call starting an initiative), Outlook conversations, a newsletter with nothing to do, and recaps of finished work and decisions. The last four were added later to check that prompt changes help beyond the original cases. Each case lists the suggestions a careful assistant should make, extras that are fine, and things it must not do.
 
 ```bash
 npm run bench:ai                                          # demo, every installed Ollama model, and Claude if a key is available
 BENCH_MODELS=gpt-oss:20b,claude-sonnet-5-5 npm run bench:ai
-BENCH_MODELS=gpt-oss:20b@medium+split npm run bench:ai    # local model with other options (low|medium|high, split)
+BENCH_MODELS=gpt-oss:20b@medium+single npm run bench:ai   # local model with other options, joined with +: low|medium|high, single (one pass)
 BENCH_RESCORE=bench/results/a.json,bench/results/b.json npm run bench:ai   # re-score saved answers, no model calls
 ```
 
