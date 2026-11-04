@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { CLAUDE_MODELS, DEFAULT_SETTINGS, type AppSettings } from '@shared/types'
+import { CLAUDE_MODELS, DEFAULT_SETTINGS, DENSITIES, type AppSettings } from '@shared/types'
 
 /** JSON settings file next to the database. Unknown or missing fields fall back to defaults. */
 export class SettingsStore {
@@ -33,6 +33,7 @@ export class SettingsStore {
         requester: clampWeight(settings.priorityWeights.requester),
         staleness: clampWeight(settings.priorityWeights.staleness),
       },
+      density: DENSITIES.some((d) => d.id === settings.density) ? settings.density : DEFAULT_SETTINGS.density,
       splitPercent: Math.min(90, Math.max(10, settings.splitPercent)),
       peopleFilter: { company: String(settings.peopleFilter?.company ?? ''), openOnly: !!settings.peopleFilter?.openOnly },
       backupsToKeep: Math.max(1, Math.round(settings.backupsToKeep)),

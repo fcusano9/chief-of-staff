@@ -166,12 +166,12 @@ export function ProjectsScreen() {
             <div className="ttl">
               {p.name}
               {p.overview && (
-                <div className="faint ttl" style={{ fontSize: 11 }}>
+                <div className="faint ttl" style={{ fontSize: 'var(--fs-xs)' }}>
                   {p.overview}
                 </div>
               )}
             </div>
-            <span className="faint" style={{ fontSize: 12 }}>{p.status === 'active' || p.status === 'archived' ? '' : STATUSES.find(([s]) => s === p.status)?.[1]}</span>
+            <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>{p.status === 'active' || p.status === 'archived' ? '' : STATUSES.find(([s]) => s === p.status)?.[1]}</span>
             <span className="mono muted" title="Open tasks">{p.openCount}</span>
           </div>
         ))}
@@ -317,7 +317,7 @@ function ProjectOverview({ project }: { project: ProjectSummary }) {
           aria-label="Overview"
           autoFocus
           rows={2}
-          style={{ fontSize: 14, minHeight: 52 }}
+          style={{ fontSize: 'calc(var(--fs) + 1px)', minHeight: 52 }}
           value={editing}
           placeholder="One sentence on what this project is"
           onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)}
@@ -402,7 +402,7 @@ function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHis
             aria-label="Project brief"
             autoFocus
             rows={6}
-            style={{ fontSize: 13, minHeight: 130 }}
+            style={{ fontSize: 'var(--fs)', minHeight: 130 }}
             value={editing}
             placeholder="Where the project stands, recent decisions, what's next, what's open"
             onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)}
@@ -436,7 +436,7 @@ function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHis
             )}
           </div>
           <div className="row" style={{ marginTop: 4, flexWrap: 'wrap' }}>
-            {byline && <span className="faint" style={{ fontSize: 11 }}>{byline}</span>}
+            {byline && <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{byline}</span>}
             {project.brief && project.newNotes > 0 && (
               <span className="note">
                 {project.newNotes} new note{project.newNotes === 1 ? '' : 's'} since this brief
@@ -465,9 +465,9 @@ function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHis
           <div className="row" style={{ marginBottom: 4 }}>
             <span className="label">Suggested brief</span>
             <div className="spacer" />
-            <span className="faint" style={{ fontSize: 11 }}>{suggestion.writtenBy}</span>
+            <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{suggestion.writtenBy}</span>
           </div>
-          <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{suggestion.text}</div>
+          <div style={{ fontSize: 'var(--fs)', whiteSpace: 'pre-wrap' }}>{suggestion.text}</div>
           <div className="row" style={{ marginTop: 8 }}>
             <button className="btn primary" onClick={() => void keep(suggestion.text, 'ai')}>
               Keep

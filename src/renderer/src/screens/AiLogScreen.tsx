@@ -50,7 +50,7 @@ function CallCard({ call }: { call: AiCall }) {
       <div className="row" style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
         <b style={{ fontWeight: 500 }}>{call.purpose}</b>
         {call.error && <span className="chip" style={{ background: 'color-mix(in srgb, var(--danger) 15%, transparent)', color: 'var(--danger)' }}>Failed</span>}
-        <span className="muted ttl" style={{ fontSize: 12, flex: 1 }} title={call.endpoint}>
+        <span className="muted ttl" style={{ fontSize: 'var(--fs-sm)', flex: 1 }} title={call.endpoint}>
           {call.endpoint} · {seconds(call.durationMs)}
           {tokens}
         </span>
@@ -178,7 +178,7 @@ export function AiLogScreen() {
                         {kindLabel(k.kind)}
                       </span>
                       <span className="ttl" style={{ flex: 1 }}>{k.payload.title}</span>
-                      <span className="muted" style={{ fontSize: 12 }}>Sent to Review</span>
+                      <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>Sent to Review</span>
                     </div>
                   ))}
                   {run.dropped.map((d, i) => (
@@ -189,13 +189,13 @@ export function AiLogScreen() {
                       <span className="ttl" style={{ flex: 1 }}>
                         {kindLabel(d.kind)}: {d.title}
                       </span>
-                      <span className="muted" style={{ fontSize: 12 }}>{d.reason}</span>
+                      <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>{d.reason}</span>
                     </div>
                   ))}
                   {kept.length === 0 && run.dropped.length === 0 && <div className="muted">The AI found nothing to suggest in this import.</div>}
                   {run.rawOutput && (
                     <details style={{ marginTop: 8 }}>
-                      <summary className="muted" style={{ cursor: 'pointer', fontSize: 12 }}>
+                      <summary className="muted" style={{ cursor: 'pointer', fontSize: 'var(--fs-sm)' }}>
                         Everything the AI proposed, before the checks (JSON)
                       </summary>
                       <pre className="code-block">{run.rawOutput}</pre>

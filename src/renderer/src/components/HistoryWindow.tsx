@@ -107,7 +107,7 @@ export function HistoryWindow({
               className="inp"
               aria-label="History"
               autoFocus
-              style={{ minHeight: 320, marginTop: 10, fontSize: 12 }}
+              style={{ minHeight: 320, marginTop: 10, fontSize: 'var(--fs-sm)' }}
               value={editing}
               onChange={(e) => setEditing(e.target.value)}
               onKeyDown={(e) => {
@@ -142,13 +142,13 @@ export function HistoryWindow({
                 .reverse()
                 .map(({ note, isNew, i }) => (
                   <div key={i} className="hist" data-note>
-                    <span className="mono muted" style={{ fontSize: 11, paddingTop: 2 }}>
+                    <span className="mono muted" style={{ fontSize: 'var(--fs-xs)', paddingTop: 2 }}>
                       {note.date.endsWith(`, ${year}`) ? note.date.slice(0, -(year.length + 2)) : note.date}
                       {isNew && <span className="hist-new"> new</span>}
                     </span>
                     <div>
                       {note.text}
-                      {note.source && <div className="faint" style={{ fontSize: 11 }}>from “{note.source}”</div>}
+                      {note.source && <div className="faint" style={{ fontSize: 'var(--fs-xs)' }}>from “{note.source}”</div>}
                     </div>
                   </div>
                 ))}
@@ -157,7 +157,7 @@ export function HistoryWindow({
         </div>
         {editing !== null && (
           <div className="dialog-foot">
-            <span className="faint" style={{ fontSize: 12 }}>{hint}</span>
+            <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>{hint}</span>
             <div className="spacer" />
             <button className="btn ghost" onClick={() => setEditing(null)}>
               Cancel

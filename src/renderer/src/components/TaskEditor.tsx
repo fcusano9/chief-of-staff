@@ -187,7 +187,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
       <div className="editor-stripe" style={{ background: project?.color ?? NO_PROJECT_COLOR }} />
       <div className="editor">
         <div className="row" style={{ gap: 10, marginBottom: 12 }}>
-          <span className={`score ${score == null ? 's-lo' : scoreClass(score)}`} style={{ fontSize: 16, minWidth: 26 }}>
+          <span className={`score ${score == null ? 's-lo' : scoreClass(score)}`} style={{ fontSize: 'calc(var(--fs) + 3px)', minWidth: 26 }}>
             {score ?? '—'}
           </span>
           <input ref={titleRef} className="inp title-inp" value={form.input.title} placeholder="Task title" onChange={(e) => set({ title: e.target.value })} />
@@ -199,7 +199,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
         <div className="dgrid">
           <div>
             <div className="ai" style={{ marginBottom: 12, color: 'var(--muted)' }}>
-              <div style={{ fontSize: 12, color: 'var(--accent)', marginBottom: 2 }}>✦ Suggested next action</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--accent)', marginBottom: 2 }}>✦ Suggested next action</div>
               Per-task next-action suggestions arrive in milestone 3. Until then, import notes or summaries and review what the AI proposes.
             </div>
 
@@ -240,7 +240,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             <textarea className="inp" style={{ marginTop: 6, minHeight: 44 }} value={form.brief.standingInstructions} onChange={(e) => setBrief({ standingInstructions: e.target.value })} placeholder="Standing instructions, e.g. keep replies formal" />
 
             <div className="label" style={{ margin: '14px 0 4px' }}>Activity</div>
-            <div className="muted" style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div className="muted" style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.8 }}>
               {task?.statusUpdates.map((u) => (
                 <div key={u.id}>
                   {new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {u.isAiGenerated ? '✦ ' : ''}
@@ -302,8 +302,8 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
 
             <div className="card" style={{ marginTop: 10, padding: '8px 10px' }}>
               <div className="label">Priority {score ?? ''}</div>
-              <div style={{ fontSize: 12 }}>{task?.priorityRationale ?? 'Calculated when you save'}</div>
-              <div className="row" style={{ marginTop: 6, fontSize: 12 }}>
+              <div style={{ fontSize: 'var(--fs-sm)' }}>{task?.priorityRationale ?? 'Calculated when you save'}</div>
+              <div className="row" style={{ marginTop: 6, fontSize: 'var(--fs-sm)' }}>
                 <label className="row muted" style={{ gap: 6 }}>
                   <input type="checkbox" checked={form.input.priorityOverride != null} onChange={(e) => set({ priorityOverride: e.target.checked ? (task?.priorityScore ?? 50) : null })} />
                   Override
@@ -320,7 +320,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
                   />
                 )}
               </div>
-              <div className="row muted" style={{ marginTop: 6, fontSize: 12 }}>
+              <div className="row muted" style={{ marginTop: 6, fontSize: 'var(--fs-sm)' }}>
                 Follow-ups: <span className="mono" style={{ color: 'var(--text)' }}>{form.input.followUpCount}</span>
                 <button className="btn ghost" style={{ padding: '0 6px' }} title="Someone followed up again" onClick={() => set({ followUpCount: form.input.followUpCount + 1 })}>
                   +1
@@ -333,7 +333,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
               </div>
             </div>
 
-            <div className="card" style={{ marginTop: 10, padding: '8px 10px', fontSize: 12, lineHeight: 1.8 }}>
+            <div className="card" style={{ marginTop: 10, padding: '8px 10px', fontSize: 'var(--fs-sm)', lineHeight: 1.8 }}>
               <div className="label">What the AI knows</div>
               {knows.map(([ok, text]) => (
                 <div key={text}>

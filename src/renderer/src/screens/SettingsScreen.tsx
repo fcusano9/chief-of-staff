@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PriorityWeights, ThemeSetting } from '@shared/types'
+import { DENSITIES, type PriorityWeights, type ThemeSetting } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { AiSettings } from '../components/AiSettings'
 import { RestoreBackups } from '../components/RestoreBackups'
@@ -70,6 +70,22 @@ export function SettingsScreen() {
               <option value="dark">Dark</option>
             </select>
           </label>
+          <div className="field" style={{ alignItems: 'start' }}>
+            <span style={{ paddingTop: 8 }}>Density</span>
+            <div>
+              <div className="density-pick" role="radiogroup" aria-label="Density">
+                {DENSITIES.map((d, i) => (
+                  <button key={d.id} type="button" role="radio" aria-checked={settings.density === d.id} className={`dopt ${settings.density === d.id ? 'on' : ''}`} onClick={() => void saveSettings({ density: d.id })}>
+                    <span className="mini" style={{ gap: 3 + i * 2 }}>
+                      {[0, 1, 2, 3].map((n) => <i key={n} style={{ height: 5 + i }} />)}
+                    </span>
+                    <b>{d.label}</b>
+                  </button>
+                ))}
+              </div>
+              <div className="muted" style={{ fontSize: 'var(--fs-sm)', marginTop: 6 }}>{DENSITIES.find((d) => d.id === settings.density)?.description}</div>
+            </div>
+          </div>
           <div className="field">
             <span>Split view</span>
             <span className="row">
@@ -91,7 +107,7 @@ export function SettingsScreen() {
             </label>
           ))}
           <div className="row" style={{ marginTop: 8 }}>
-            <span className="faint" style={{ fontSize: 12 }}>How much each signal counts toward the 0–100 score.</span>
+            <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>How much each signal counts toward the 0–100 score.</span>
             <div className="spacer" />
             <button
               className="btn"
@@ -119,7 +135,7 @@ export function SettingsScreen() {
               <span className="muted">daily snapshots</span>
             </span>
           </label>
-          <div className="muted" style={{ fontSize: 12, margin: '6px 0 8px' }}>
+          <div className="muted" style={{ fontSize: 'var(--fs-sm)', margin: '6px 0 8px' }}>
             Last backup: {settings.lastBackupAt ? new Date(settings.lastBackupAt).toLocaleString() : 'never'}
           </div>
           <div className="row">
@@ -168,7 +184,7 @@ export function SettingsScreen() {
 
         <div className="card" style={{ gridColumn: '1 / -1' }}>
           <div style={{ fontWeight: 500, marginBottom: 4 }}>About</div>
-          <div className="muted" style={{ fontSize: 12, lineHeight: 1.8 }}>
+          <div className="muted" style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.8 }}>
             Chief of Staff {info.version} · data stored at <span className="mono">{info.databasePath}</span>
             {info.isSeparateData && <div style={{ color: 'var(--warn)' }}>This is a development or test copy of the app. It uses its own data and backups, separate from your real ones.</div>}
           </div>

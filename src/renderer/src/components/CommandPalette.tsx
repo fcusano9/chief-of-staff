@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Task } from '@shared/types'
+import { DENSITIES, type Task } from '@shared/types'
 import { cos } from '../api'
 import { useApp, type View } from '../context'
 
@@ -25,7 +25,7 @@ export const TABS: [View, string][] = [
 
 /** Ctrl+K: jump to any screen, task, project, or person, or run an action. */
 export function CommandPalette({ onClose }: { onClose: () => void }) {
-  const { go, openTask, projects, people, toggleTheme, toast } = useApp()
+  const { go, openTask, projects, people, toggleTheme, toast, saveSettings } = useApp()
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -44,6 +44,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       { group: 'Actions', label: 'New project', run: () => go('projects') },
       { group: 'Actions', label: 'Add person', run: () => go('people') },
       { group: 'Actions', label: 'Toggle light / dark', run: toggleTheme },
+      ...DENSITIES.map((d) => ({ group: 'Actions', label: `Density: ${d.label}`, run: () => void saveSettings({ density: d.id }) })),
       { group: 'Actions', label: 'Back up now', run: () => void cos['backup.now']().then((p) => toast(`Backed up to ${p}`)) },
       ...tasks.map((t) => ({ group: 'Tasks', label: t.title, run: () => openTask({ id: t.id, waiting: t.status === 'waiting_on' }) })),
       ...projects.map((p) => ({ group: 'Projects', label: p.name, run: () => go('projects') })),
@@ -74,6 +75,9 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           placeholder="Type a command, task, project, or person…"
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
+            // Keys the palette handles stop here, so the screen underneath never sees them
+            // (an Enter that runs a command would otherwise also focus the open task's title).
+            if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(e.key)) e.stopPropagation()
             if (e.key === 'ArrowDown') {
               e.preventDefault()
               setCursor((c) => Math.min(c + 1, commands.length - 1))
@@ -85,7 +89,6 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
               run(commands[cursor])
             } else if (e.key === 'Escape') {
               e.preventDefault()
-              e.stopPropagation()
               onClose()
             }
           }}

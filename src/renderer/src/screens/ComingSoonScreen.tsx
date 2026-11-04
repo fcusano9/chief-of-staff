@@ -40,7 +40,7 @@ export function ComingSoonScreen({ view }: { view: View }) {
       </div>
       <p style={{ lineHeight: 1.7, marginTop: 0 }}>{screen.description}</p>
       <div className="ai">
-        <div style={{ fontSize: 12, color: 'var(--accent)', marginBottom: 2 }}>Coming soon</div>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--accent)', marginBottom: 2 }}>Coming soon</div>
         {screen.milestone}
       </div>
     </div>
