@@ -1,4 +1,5 @@
 import type { PersonBriefInput, ProjectBriefInput } from './brief'
+import type { BriefingInput, RawBriefing } from './briefing'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { RawSuggestion } from './schema'
 
@@ -17,6 +18,8 @@ export interface AiProvider {
   writePersonBrief(input: PersonBriefInput): Promise<string>
   /** A short status brief for a project, from its history and open tasks. Proposed only; the caller saves it if kept. */
   writeProjectBrief(input: ProjectBriefInput): Promise<string>
+  /** The daily briefing's summary and picks from the tasks given. The caller checks the ids (assembleBriefing). */
+  writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing>
   /** Cheap check that the provider is reachable and configured. Throws a readable error if not. */
   test(): Promise<string>
 }

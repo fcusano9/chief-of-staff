@@ -192,6 +192,33 @@ export const MIGRATIONS: Migration[] = [
   `,
   // Waiting items have their own list, including when done: remember who a finished task was waiting on.
   `ALTER TABLE work_items ADD COLUMN waited_on TEXT;`,
+  // Milestone 3: daily briefings. Every briefing is kept (content is JSON, a few KB each). The AI
+  // requests behind each one go in briefing_ai_calls, kept only for the newest few briefings.
+  // started_by is 'manual' today; a scheduler would write 'scheduled'.
+  `
+  CREATE TABLE briefings (
+    id INTEGER PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    started_by TEXT NOT NULL,
+    written_by TEXT NOT NULL,
+    since TEXT NOT NULL,
+    content TEXT NOT NULL
+  );
+  CREATE TABLE briefing_ai_calls (
+    id INTEGER PRIMARY KEY,
+    briefing_id INTEGER NOT NULL REFERENCES briefings(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    request TEXT NOT NULL,
+    response TEXT,
+    error TEXT,
+    started_at TEXT NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    input_tokens INTEGER,
+    output_tokens INTEGER
+  );
+  CREATE INDEX ix_briefing_ai_calls_briefing ON briefing_ai_calls(briefing_id);
+  `,
 ]
 
 /** Adds TEXT columns that aren't there yet (SQLite has no ADD COLUMN IF NOT EXISTS). */

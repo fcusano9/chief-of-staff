@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import type { Task, TodaySummary } from '@shared/types'
 import { cos } from '../api'
 import { daysSince, TaskRow } from '../components/bits'
+import { BriefingCard } from '../components/Briefing'
 import { useShortcutHints } from '../components/hints'
 import { useApp } from '../context'
 
 const greeting = (h: number) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
 
 export function TodayScreen() {
-  const { openTask, go, version, settings, reviewCount } = useApp()
+  const { openTask, go, version, settings } = useApp()
   useShortcutHints([['N', 'new task'], ['G R', 'review']])
   const [summary, setSummary] = useState<TodaySummary | null>(null)
   const [focus, setFocus] = useState<Task[]>([])
@@ -50,6 +51,10 @@ export function TodayScreen() {
         ))}
       </div>
 
+      <div style={{ marginBottom: 14 }}>
+        <BriefingCard />
+      </div>
+
       <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)' }}>
         <div>
           <h2 style={{ marginTop: 0 }}>Focus · highest priority first</h2>
@@ -61,27 +66,6 @@ export function TodayScreen() {
           </div>
         </div>
         <div className="grid" style={{ alignContent: 'start' }}>
-          <div className="ai">
-            <div className="row" style={{ gap: 6, marginBottom: 4 }}>
-              <span style={{ color: 'var(--accent)' }}>✦</span>
-              <b style={{ fontWeight: 500 }}>Briefing</b>
-            </div>
-            <div className="muted" style={{ lineHeight: 1.6 }}>
-              {reviewCount > 0
-                ? `${reviewCount} AI suggestion${reviewCount === 1 ? ' is' : 's are'} waiting for your review.`
-                : 'Import a Copilot summary, transcript, or notes and the AI will suggest tasks and updates. A written daily briefing comes in milestone 3.'}
-            </div>
-            <div className="row" style={{ marginTop: 8 }}>
-              {reviewCount > 0 && (
-                <button className="btn" onClick={() => go('review')}>
-                  Review suggestions
-                </button>
-              )}
-              <button className="btn ghost" onClick={() => go('import')}>
-                Import
-              </button>
-            </div>
-          </div>
           <div className="card">
             <div className="row" style={{ marginBottom: 6 }}>
               <span className="label">Waiting on others</span>

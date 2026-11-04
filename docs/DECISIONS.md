@@ -2,6 +2,15 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-04 · Daily briefing: on click only, ready for a schedule later (Frank)
+Frank's choices, asked up front (mockup `design/daily-briefing.html`, approved):
+- **Only when he clicks** (Write briefing, Refresh, or "Write briefing" in Ctrl+K). This settles the roadmap's pending decision for now. He may add a schedule later, so `BriefingService.write(trigger)` takes `'manual'` or `'scheduled'` and each briefing records it (`briefings.started_by`); a scheduler only needs a time setting that calls `write('scheduled')`. No keyboard shortcut (Frank).
+- **Three sections:** Top priorities, Waiting-on nudges, New since last briefing, under a one-line summary. Overdue tasks aren't a section of their own: they lead Top priorities with a red "Overdue N days" tag and edge (Frank). Empty sections stay, with a line saying so, so the layout doesn't jump.
+- **Full width** between the number cards and Focus (Frank chose this over the side column). No Import button and no "sends data to Anthropic" line on the card (Frank).
+- **Text only:** the briefing changes nothing and adds nothing to Review.
+- **Items come from the database, not the AI.** The AI picks task ids from lists the app sends and writes the notes; `assembleBriefing` drops ids it made up or put in the wrong section, always lists every overdue task first (with a factual note if the AI skipped it), and lists everything new whether or not the AI wrote about it. The Review line is the app's own count.
+- **Every briefing is kept**, with the titles as they were, so History reads the same later. Each is a few KB. The AI requests behind them (`briefing_ai_calls`, tens of KB each) are kept for the newest 5 only, like imports' AI log. History has an "AI log" button.
+
 ### 2026-11-03 · Worked examples for the local model: tried and dropped (Frank)
 A made-up item with its correct answer was shown before each of the local model's split passes. On 15 benchmark cases (4 new, written before the examples and unlike them), gpt-oss:20b found 69% with and without examples. Examples helped with updates and context for existing tasks, projects and people (9 of 13 on the new cases, against 7), but dates got much worse (25% right, against 58%), extras rose from 5 to 8, and it missed new projects in two kickoffs. Likely cause: the long example pushes the calendar far from the real item. **Decided:** no examples. Repeating the calendar next to the item is an untested idea if this is revisited. Run-to-run differences of a few points are normal at this benchmark's size.
 

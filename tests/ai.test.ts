@@ -41,6 +41,9 @@ class FakeProvider implements AiProvider {
   async writeProjectBrief() {
     return 'A status.'
   }
+  async writeBriefing() {
+    return { summary: '', priorities: [], nudges: [], new_items: [] }
+  }
   async test() {
     return 'ok'
   }

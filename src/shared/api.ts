@@ -1,6 +1,9 @@
 import type {
   AiRun,
+  AiCall,
   AiStatus,
+  Briefing,
+  BriefingListItem,
   ImportRequest,
   ImportResult,
   MailCheck,
@@ -99,6 +102,17 @@ export interface Api {
   'ai.test': () => string
   /** Models installed in the local Ollama server; empty if it isn't running. */
   'ai.listLocalModels': () => string[]
+  /** The newest saved briefing, or null if none has been written. */
+  'briefing.latest': () => Briefing | null
+  /** Every saved briefing, newest first. */
+  'briefing.list': () => BriefingListItem[]
+  'briefing.get': (id: number) => Briefing | null
+  /** Asks the AI for a new briefing and saves it. Reads only; changes nothing else. */
+  'briefing.write': () => Briefing
+  /** True while a briefing is being written. */
+  'briefing.isWriting': () => boolean
+  /** The requests sent to the AI for a briefing and what came back (kept for the newest few). */
+  'briefing.aiCalls': (id: number) => AiCall[]
 }
 
 export type ApiChannel = keyof Api
@@ -156,6 +170,12 @@ export const API_CHANNELS: ApiChannel[] = [
   'ai.setKey',
   'ai.test',
   'ai.listLocalModels',
+  'briefing.latest',
+  'briefing.list',
+  'briefing.get',
+  'briefing.write',
+  'briefing.isWriting',
+  'briefing.aiCalls',
 ]
 
 /** The renderer sees every call as async. */

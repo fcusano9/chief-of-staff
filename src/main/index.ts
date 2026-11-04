@@ -13,6 +13,7 @@ import { openDatabase, SCHEMA_VERSION } from './db'
 import { chooseDataLocation, findRedirectingPackage } from './paths'
 import { applyPendingRestore, createBackup, listBackups, requestRestore, snapshotNow } from './services/backup'
 import { FixtureOutlook, PowerShellOutlook } from './mail/outlook'
+import { BriefingService } from './services/briefings'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { MailService } from './services/mail'
 import { KeyStore } from './services/secrets'
@@ -117,6 +118,7 @@ function currentProvider(): AiProvider {
   return new DemoProvider()
 }
 const sources = new SourceService(db, currentProvider, () => settings.current.userName)
+const briefings = new BriefingService(db, tasks, currentProvider, () => settings.current.userName)
 // Test data folders can read mail from a fixture file instead of Outlook (see e2e/README.md).
 const outlookFixture = isSeparateData ? process.env.COS_OUTLOOK_FIXTURE : undefined
 const mail = new MailService(
@@ -262,6 +264,12 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   },
   'ai.test': () => currentProvider().test(),
   'ai.listLocalModels': () => new OllamaProvider(settings.current.localUrl, settings.current.localModel).listModels().catch(() => []),
+  'briefing.latest': () => briefings.latest(),
+  'briefing.list': () => briefings.list(),
+  'briefing.get': (id) => briefings.get(id),
+  'briefing.write': () => briefings.write('manual'),
+  'briefing.isWriting': () => briefings.isWriting(),
+  'briefing.aiCalls': (id) => briefings.aiCalls(id),
 }
 
 function registerIpc(): void {

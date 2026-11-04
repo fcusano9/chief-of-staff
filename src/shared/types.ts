@@ -401,6 +401,46 @@ export interface AiRun {
   calls: AiCall[]
 }
 
+/** How a briefing was started. Only 'manual' exists in the UI today; a scheduler would use 'scheduled'. */
+export type BriefingTrigger = 'manual' | 'scheduled'
+
+/** One line in a briefing. Items always come from real tasks; only `note` is written by the AI. */
+export interface BriefingItem {
+  /** The task it's about, or null for the Review line. */
+  taskId: number | null
+  /** The task's title when the briefing was written, so History reads the same later. */
+  title: string
+  /** Who a waiting-on item is waiting on. */
+  who: string | null
+  note: string
+  /** Days past its due date when the briefing was written, or null if not overdue. */
+  overdueDays: number | null
+  /** 'review' opens Review instead of a task. */
+  kind: 'task' | 'waiting' | 'review'
+}
+
+/** A saved daily briefing. Every one is kept. */
+export interface Briefing {
+  id: number
+  createdAt: string
+  trigger: BriefingTrigger
+  /** The AI that wrote it, e.g. "Claude Opus 5.5" or "Demo AI". */
+  writtenBy: string
+  /** Start of the "New since last briefing" window (the previous briefing, or a day back). */
+  since: string
+  summary: string
+  priorities: BriefingItem[]
+  nudges: BriefingItem[]
+  newItems: BriefingItem[]
+}
+
+/** A briefing in the History list. */
+export interface BriefingListItem {
+  id: number
+  createdAt: string
+  trigger: BriefingTrigger
+}
+
 export type BackupKind = 'daily' | 'before-upgrade' | 'before-restore'
 
 export interface BackupInfo {

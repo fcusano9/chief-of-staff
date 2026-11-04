@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Today: daily briefing</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; display: grid; grid-template-rows: 44px auto minmax(0, 1fr); }
+button, input, select, textarea { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; min-height: 28px; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+h2 { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
+.label { font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.pill { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 28px; border-bottom: 1px dashed var(--border-strong); background: var(--bg); }
+.controls .grp { display: flex; gap: 4px; align-items: center; }
+.controls .grp > span { font-size: 11px; color: var(--faint); margin-right: 2px; text-transform: uppercase; letter-spacing: .04em; }
+.page { overflow: auto; padding: 22px 28px 40px; }
+.grid { display: grid; gap: 12px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px 12px; }
+button.card { text-align: left; cursor: pointer; font: inherit; }
+.stat { font: 600 22px var(--mono); letter-spacing: -0.02em; }
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.tr { display: grid; grid-template-columns: 3px 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 12px 7px 0; border-top: 1px solid var(--border); cursor: pointer; }
+.tr:first-child { border-top: 0; }
+.tr:hover { background: var(--hover); }
+.stripe { align-self: stretch; border-radius: 2px; }
+.score { font: 500 12px var(--mono); text-align: right; }
+.s-hi { color: var(--danger); } .s-mid { color: var(--warn); }
+.ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 45%, transparent); border-radius: 8px; padding: 10px 12px; }
+.ai.new { box-shadow: 0 0 0 2px var(--accent); }
+.b-sec { margin-top: 10px; }
+.b-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 22px; }
+.b-cols .b-sec { margin-top: 12px; }
+.b-sec .label { margin-bottom: 2px; display: flex; gap: 6px; align-items: baseline; }
+.b-item { display: grid; grid-template-columns: minmax(0, 1fr); padding: 3px 6px; margin: 0 -6px; border-radius: 5px; cursor: pointer; line-height: 1.45; }
+.b-item:hover { background: color-mix(in srgb, var(--accent-bg) 70%, transparent); }
+.b-item .t { font-weight: 500; }
+.b-item .w { color: var(--muted); }
+.b-item.over { box-shadow: inset 2px 0 0 var(--danger); border-radius: 0 5px 5px 0; }
+.tag-over { display: inline-block; font-size: 11px; font-weight: 500; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 4px; padding: 0 6px; margin-right: 6px; white-space: nowrap; }
+.b-none { color: var(--faint); padding: 3px 0; }
+.summary { font-size: 14px; line-height: 1.55; margin: 2px 0 0; }
+.stale { display: flex; gap: 8px; align-items: center; background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); border-radius: 6px; padding: 4px 8px; font-size: 12px; margin-bottom: 8px; }
+.err { color: var(--danger); font-size: 12px; margin-top: 6px; }
+.spin { width: 12px; height: 12px; border: 2px solid var(--accent-bg); border-top-color: var(--accent); border-radius: 50%; animation: sp .8s linear infinite; display: inline-block; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 30; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .35); display: grid; place-items: center; z-index: 10; }
+.dialog { width: min(860px, calc(100vw - 40px)); height: min(560px, calc(100vh - 80px)); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 12px 40px rgb(0 0 0 / .25); }
+.dialog-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.dialog-body { display: grid; grid-template-columns: 200px minmax(0, 1fr); min-height: 0; flex: 1; }
+.h-list { border-right: 1px solid var(--border); overflow: auto; padding: 6px; }
+.h-row { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.h-row:hover { background: var(--hover); }
+.h-row.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.h-row .d { font-weight: 500; }
+.h-row .s { font-size: 11px; color: var(--faint); }
+.h-view { overflow: auto; padding: 14px 18px; }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.statusbar { position: fixed; bottom: 0; left: 0; right: 0; height: 24px; display: flex; gap: 14px; align-items: center; padding: 0 12px; border-top: 1px solid var(--border); background: var(--surface); font-size: 11px; color: var(--muted); }
+@media (max-width: 900px) { .two { grid-template-columns: minmax(0, 1fr) !important; } .four { grid-template-columns: repeat(2, 1fr) !important; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab on">Today</button><button class="tab">Tasks</button><button class="tab">Review</button>
+  <button class="tab">Waiting</button><button class="tab">Projects</button><button class="tab">People</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="controls">
+  <div class="grp"><span>Mockup</span><button class="pill" data-v="before">Before (today)</button><button class="pill" data-v="after">After</button></div>
+  <div class="grp" id="stateGrp"><span>Briefing</span>
+    <button class="pill" data-s="none">None yet</button>
+    <button class="pill" data-s="fresh">Today's</button>
+    <button class="pill" data-s="empty">Nothing to report</button>
+    <button class="pill" data-s="stale">From yesterday</button>
+    <button class="pill" data-s="error">AI failed</button>
+  </div>
+  <div class="grp" id="layoutGrp"><span>Layout</span>
+    <button class="pill" data-l="full">Full width</button>
+    <button class="pill" data-l="side">Side column</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="head">
+    <h1>Good morning, Frank</h1>
+    <span class="muted">Wednesday, November 4</span>
+    <div class="spacer"></div>
+    <button class="btn primary" onclick="toast('New task works as it does today')">New task</button>
+  </div>
+
+  <div class="grid four" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px">
+    <button class="card"><div class="label">Urgent</div><div class="stat s-hi">2</div></button>
+    <button class="card"><div class="label">Overdue</div><div class="stat s-mid">1</div></button>
+    <button class="card"><div class="label">Waiting on</div><div class="stat">4</div></button>
+    <button class="card"><div class="label">Open</div><div class="stat">17</div></button>
+  </div>
+
+  <div id="briefingFull" style="margin-bottom: 14px"></div>
+
+  <div class="grid two" style="grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr)">
+    <div>
+      <h2>Focus · highest priority first</h2>
+      <div class="list" id="focus"></div>
+    </div>
+    <div class="grid" style="align-content: start">
+      <div id="briefing"></div>
+      <div class="card">
+        <div class="row" style="margin-bottom: 6px"><span class="label">Waiting on others</span><div class="spacer"></div><button class="btn ghost sm">All →</button></div>
+        <div class="row" style="padding: 3px 0"><span class="ttl" style="flex:1">Signed pilot agreement</span><span class="muted">Northwind AV</span><span class="mono s-mid" style="width:30px;text-align:right">8d</span></div>
+        <div class="row" style="padding: 3px 0"><span class="ttl" style="flex:1">Portal wireframe sign-off</span><span class="muted">Marcus Webb</span><span class="mono s-mid" style="width:30px;text-align:right">6d</span></div>
+        <div class="row" style="padding: 3px 0"><span class="ttl" style="flex:1">Training platform quotes</span><span class="muted">Alex Rivera</span><span class="mono muted" style="width:30px;text-align:right">2d</span></div>
+      </div>
+      <div class="card">
+        <div class="label" style="margin-bottom: 4px">Meetings today</div>
+        <div class="muted">Your Outlook calendar shows up here in milestone 4.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes" id="notes">
+    <h3>Mockup notes (not part of the app)</h3>
+    <ul>
+      <li><b>Only when you click.</b> Nothing runs on its own. <b>Write briefing</b> (or <b>Refresh</b> once there is one) asks the selected AI. It's also in the Ctrl+K palette as "Write briefing". There's no keyboard shortcut for it.</li>
+      <li><b>Full width</b> (the default here) puts the briefing between the number cards and the Focus list, with its sections side by side. <b>Side column</b> is the earlier version, for comparison.</li>
+      <li><b>Three short sections:</b> a one-line summary, then Top priorities, Waiting-on nudges, and New since your last briefing. Each item opens its task.</li>
+      <li><b>Overdue tasks</b> are part of Top priorities and listed first, with a red "Overdue" tag and a red edge so they stand out. Tasks due today or soon say so in their reason.</li>
+      <li><b>Empty sections stay on the page</b> with a short line saying there's nothing there, so the layout doesn't jump around. Try "Nothing to report".</li>
+      <li><b>Where items come from:</b> The reasons come from the AI; the items themselves always come from your real task list, so a briefing can't mention a task that doesn't exist.</li>
+      <li><b>Text only.</b> The briefing never changes anything and never sends anything to Review. If it recommends something, that's a sentence in the briefing.</li>
+      <li><b>"New since last briefing"</b> covers tasks, waiting-on items and Review suggestions added since the previous one. Your first briefing looks back one day.</li>
+      <li><b>Every briefing is saved with its date.</b> History opens past ones, newest first. They're kept in the local database and included in the daily backup. Today's briefing stays on the page until you refresh it; an older one gets a "From yesterday" note so it isn't mistaken for today's.</li>
+      <li><b>The AI log</b> records each briefing request and response, like imports.</li>
+      <li><b>Ready for a schedule later.</b> Each saved briefing records how it was started ("You clicked" now). Adding a schedule later means a time setting in Settings that starts the same briefing; the Today card, History and storage don't change. Nothing for a schedule is visible in this version.</li>
+    </ul>
+  </div>
+</div>
+<div class="statusbar"><span id="hints"></span><div class="spacer"></div><span>Comfortable</span></div>
+<div id="modal"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const PROJ = { pricing: '#7F77DD', training: '#1D9E75', portal: '#D85A30', roadmap: '#378ADD' }
+const FOCUS = [
+  [92, 'roadmap', 'Roadmap slides for VP review', 'Due today · requested by Dana Lee'],
+  [81, 'pricing', 'Send pricing deck to EMEA distributors', 'Due Fri · blocked on margin review'],
+  [74, 'pricing', 'Review margin model with Priya', 'Overdue by 1 day'],
+  [63, 'portal', 'Chase Marcus on portal wireframes', 'Waiting 6 days'],
+  [55, 'training', 'Pick a training platform', 'Quotes due Nov 9'],
+  [41, null, 'Expense report for October', 'Due Nov 10'],
+]
+const TODAY = {
+  date: 'Wed, Nov 4', time: '8:12 AM', how: 'You clicked',
+  summary: 'A heavy morning: Dana’s roadmap slides are due today and the margin review slipped a day, which now holds up the EMEA deck.',
+  sections: [
+    ['Top priorities', null, [
+      ['Review margin model with Priya', 'Was due yesterday. Finance needs it before the EMEA deck can go out.', null, 'Overdue 1 day'],
+      ['Roadmap slides for VP review', 'Due today. Timeline is done; pricing assumptions and risks are still open.'],
+      ['Send pricing deck to EMEA distributors', 'Due Friday, once the margin model is reviewed.'],
+    ]],
+    ['Waiting-on nudges', null, [
+      ['Signed pilot agreement · Northwind AV', '8 days with no reply, and the pilot starts Dec 1. A short follow-up today keeps it on track.'],
+      ['Portal wireframe sign-off · Marcus Webb', '6 days. He may have approved it in Teams; worth checking before chasing.'],
+    ]],
+    ['New since last briefing', 'since Tue 4:40 PM', [
+      ['Expense report for October', 'Added from the Copilot summary of the finance sync.'],
+      ['3 suggestions in Review', 'From yesterday’s pricing call transcript.', 'review'],
+    ]],
+  ],
+}
+const YESTERDAY = {
+  date: 'Tue, Nov 3', time: '8:05 AM', how: 'You clicked',
+  summary: 'Pricing is approved; today is about getting the margin model reviewed and pinning down the Northwind pilot.',
+  sections: [
+    ['Top priorities', null, [
+      ['Review margin model with Priya', 'Due today; Finance wants it before anything goes to distributors.'],
+      ['Roadmap slides for VP review', 'Due tomorrow. Start the pricing assumptions slide.'],
+    ]],
+    ['Waiting-on nudges', null, [
+      ['Signed pilot agreement · Northwind AV', '7 days. Still time, but the pilot starts Dec 1.'],
+    ]],
+    ['New since last briefing', 'since Mon 9:20 AM', [
+      ['EMEA will use the four tiers in euros', 'New note on Spring pricing launch.'],
+    ]],
+  ],
+}
+const EMPTY = {
+  date: 'Wed, Nov 4', time: '8:12 AM', how: 'You clicked',
+  summary: 'A quiet day: nothing is due or overdue, no one needs chasing, and nothing new came in.',
+  sections: [
+    ['Top priorities', null, [], 'Nothing is due or overdue. Your Focus list below is still in priority order.'],
+    ['Waiting-on nudges', null, [], 'No one needs a nudge.'],
+    ['New since last briefing', 'since Tue 4:40 PM', [], 'Nothing new since your last briefing.'],
+  ],
+}
+const OLDER = [
+  { date: 'Mon, Nov 2', time: '9:20 AM', how: 'You clicked', summary: 'A light Monday: the pricing approval is the only thing that can’t wait.', sections: [['Top priorities', null, [['Get pricing approval from Dana', 'Her review is today.']]]] },
+  { date: 'Fri, Oct 30', time: '7:58 AM', how: 'You clicked', summary: 'Wrap the week: two follow-ups and the training kickoff prep.', sections: [['Top priorities', null, [['Prep dealer training kickoff', 'Kickoff with Alex is Monday.']]]] },
+]
+
+let view = 'after', state = 'fresh', layout = 'full', busy = false, flash = false, curHist = 0
+const $ = (s) => document.querySelector(s)
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+let tt
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 1800) }
+
+function renderFocus() {
+  $('#focus').innerHTML = FOCUS.map(([s, p, t]) => `<div class="tr" onclick="toast('Opens the task')"><span class="stripe" style="background:${p ? PROJ[p] : 'var(--border-strong)'}"></span><span class="score ${s >= 80 ? 's-hi' : s >= 60 ? 's-mid' : 'muted'}">${s}</span><span class="ttl">${esc(t)}</span><span></span></div>`).join('')
+}
+
+function sectionsHtml(b, full) {
+  const secs = b.sections.map(([name, sub, items, none]) => `<div class="b-sec"><div class="label">${name}${sub ? `<span class="faint" style="font-size:11px">${sub}</span>` : ''}</div>${items.length ? items.map(([t, w, kind, over]) => `<div class="b-item ${over ? 'over' : ''}" onclick="toast('${kind === 'review' ? 'Opens Review' : 'Opens the task'}')"><span>${over ? `<span class="tag-over">${over}</span>` : ''}<span class="t">${esc(t)}</span> <span class="w">— ${esc(w)}</span></span></div>`).join('') : `<div class="b-none">${none}</div>`}</div>`).join('')
+  return full ? `<div class="b-cols">${secs}</div>` : secs
+}
+
+function renderBriefing() {
+  const full = view === 'after' && layout === 'full'
+  const el = full ? $('#briefingFull') : $('#briefing')
+  ;(full ? $('#briefing') : $('#briefingFull')).innerHTML = ''
+  $('#briefingFull').style.display = full ? '' : 'none'
+  if (view === 'before') {
+    el.innerHTML = `<div class="ai"><div class="row" style="gap:6px;margin-bottom:4px"><span style="color:var(--accent)">✦</span><b style="font-weight:500">Briefing</b></div>
+      <div class="muted" style="line-height:1.6">3 AI suggestions are waiting for your review.</div>
+      <div class="row" style="margin-top:8px"><button class="btn">Review suggestions</button><button class="btn ghost">Import</button></div></div>`
+    return
+  }
+  const head = (b, btn) => `<div class="row" style="gap:6px;margin-bottom:2px"><span style="color:var(--accent)">✦</span><b style="font-weight:500">Briefing</b>
+      ${b ? `<span class="faint" style="font-size:11px">· ${b.date === TODAY.date ? 'Today' : b.date}, ${b.time}</span>` : ''}
+      <div class="spacer"></div>${b ? '<button class="btn ghost sm" onclick="openHistory()">History</button>' : ''}${btn}</div>`
+  const writeBtn = (lbl, primary) => busy
+    ? `<button class="btn sm" disabled><span class="spin"></span> Writing…</button>`
+    : `<button class="btn sm ${primary ? 'primary' : ''}" onclick="write()">${lbl}</button>`
+  const review = state === 'empty' ? '' : `<div class="row" style="margin-top:10px"><button class="btn sm" onclick="toast('Opens Review')">Review suggestions <span class="mono muted">3</span></button></div>`
+
+  if (state === 'none') {
+    el.innerHTML = `<div class="ai">${head(null, '')}
+      <div class="muted" style="line-height:1.6;margin:4px 0 8px">Get a short read on today: your top priorities, what's overdue or due soon, who to chase, and what's new.</div>
+      ${writeBtn('Write briefing', true)}${review}</div>`
+    return
+  }
+  if (state === 'error') {
+    el.innerHTML = `<div class="ai">${head(YESTERDAY, writeBtn('Try again'))}
+      <div class="err">Couldn't write the briefing: the AI didn't respond in time. Your last briefing is below.</div>
+      <div class="stale" style="margin-top:6px">From yesterday</div>
+      <div class="summary">${esc(YESTERDAY.summary)}</div>${sectionsHtml(YESTERDAY, full)}${review}</div>`
+    return
+  }
+  const b = state === 'stale' ? YESTERDAY : state === 'empty' ? EMPTY : TODAY
+  el.innerHTML = `<div class="ai ${flash ? 'new' : ''}">${head(b, writeBtn(state === 'stale' ? "Write today's" : 'Refresh', state === 'stale'))}
+    ${state === 'stale' ? `<div class="stale" style="margin-top:6px">From yesterday · things may have changed since</div>` : ''}
+    <div class="summary">${esc(b.summary)}</div>${sectionsHtml(b, full)}${review}</div>`
+}
+
+function write() {
+  busy = true; renderBriefing()
+  setTimeout(() => { busy = false; state = 'fresh'; flash = true; render(); toast('Briefing ready'); setTimeout(() => { flash = false; renderBriefing() }, 1200) }, 1600)
+}
+
+function openHistory() {
+  const all = [state === 'empty' ? EMPTY : TODAY, YESTERDAY, ...OLDER].filter((b) => !(['stale', 'error'].includes(state) && b === TODAY))
+  curHist = Math.min(curHist, all.length - 1)
+  const b = all[curHist]
+  $('#modal').innerHTML = `<div class="scrim" onclick="if(event.target===this)closeHistory()"><div class="dialog">
+    <div class="dialog-head"><b>Briefing history</b><span class="muted">${all.length} briefings</span><div class="spacer"></div><button class="btn ghost" onclick="closeHistory()">Close</button></div>
+    <div class="dialog-body">
+      <div class="h-list">${all.map((x, i) => `<div class="h-row ${i === curHist ? 'on' : ''}" onclick="curHist=${i};openHistory()"><div class="d">${x.date}</div><div class="s">${x.time} · ${x.how}</div></div>`).join('')}</div>
+      <div class="h-view"><div class="label">${b.date}, ${b.time} · ${b.how}</div><div class="summary" style="margin-top:6px">${esc(b.summary)}</div>${sectionsHtml(b)}</div>
+    </div></div></div>`
+}
+function closeHistory() { $('#modal').innerHTML = '' }
+
+function render() {
+  document.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === view))
+  document.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', b.dataset.s === state))
+  document.querySelectorAll('[data-l]').forEach((b) => b.classList.toggle('on', b.dataset.l === layout))
+  $('#stateGrp').style.opacity = $('#layoutGrp').style.opacity = view === 'before' ? .4 : 1
+  $('#notes').style.display = view === 'before' ? 'none' : ''
+  $('#hints').innerHTML = '<span class="kbd">N</span> new task &nbsp; <span class="kbd">G R</span> review'
+  renderBriefing()
+}
+document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { view = b.dataset.v; render() })
+document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { if (view === 'after') { state = b.dataset.s; busy = false; render() } })
+document.querySelectorAll('[data-l]').forEach((b) => b.onclick = () => { if (view === 'after') { layout = b.dataset.l; render() } })
+$('#theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHistory() })
+renderFocus(); render()
+</script>
+</body>

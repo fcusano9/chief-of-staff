@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { DENSITIES, type Task } from '@shared/types'
 import { cos } from '../api'
 import { useApp, type View } from '../context'
+import { startBriefing } from './Briefing'
 
 interface Command {
   group: string
@@ -41,6 +42,14 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       ...TABS.map(([v, l]) => ({ group: 'Go to', label: l === 'Prep' ? 'Meeting prep' : l, run: () => go(v) })),
       { group: 'Go to', label: 'Settings', run: () => go('settings') },
       { group: 'Actions', label: 'New task', keys: 'N', run: () => openTask({ id: 'new' }) },
+      {
+        group: 'Actions',
+        label: 'Write briefing',
+        run: () => {
+          go('today')
+          startBriefing()
+        },
+      },
       { group: 'Actions', label: 'New project', run: () => go('projects') },
       { group: 'Actions', label: 'Add person', run: () => go('people') },
       { group: 'Actions', label: 'Toggle light / dark', run: toggleTheme },

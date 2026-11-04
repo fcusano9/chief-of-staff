@@ -216,3 +216,27 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .dopt .mini i { display: block; border-radius: 2px; background: var(--border-strong); }
 .dopt .mini i:nth-child(odd) { width: 80%; }
 .dopt b { font-weight: 500; }
+
+/* Today: daily briefing */
+.b-summary { font-size: calc(var(--fs) + 1px); line-height: 1.55; margin-top: 2px; }
+.b-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 22px; }
+.b-sec { margin-top: calc(var(--gap) - 4px); min-width: 0; }
+.b-sec > .label { display: flex; gap: 6px; align-items: baseline; margin-bottom: 2px; }
+.b-item { display: block; width: calc(100% + 12px); text-align: left; border: 0; background: none; padding: 3px 6px; margin: 0 -6px; border-radius: 5px; cursor: pointer; line-height: 1.45; }
+.b-item:hover { background: color-mix(in srgb, var(--accent-bg) 70%, transparent); }
+.b-item .t { font-weight: 500; }
+.b-item .w { color: var(--muted); }
+.b-item.over { box-shadow: inset 2px 0 0 var(--danger); border-radius: 0 5px 5px 0; }
+.tag-over { display: inline-block; font-size: var(--fs-xs); font-weight: 500; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 4px; padding: 0 6px; margin-right: 6px; white-space: nowrap; }
+.b-none { color: var(--faint); padding: 3px 0; }
+.b-stale { display: inline-block; background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); border-radius: 6px; padding: 3px 8px; font-size: var(--fs-sm); margin: 6px 0 2px; }
+.b-error { color: var(--danger); font-size: var(--fs-sm); margin-top: 6px; }
+.spin { width: 11px; height: 11px; border: 2px solid var(--accent-bg); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.dialog.wide { width: 880px; height: 70vh; }
+.b-hist { display: grid; grid-template-columns: 190px minmax(0, 1fr); min-height: 0; flex: 1; }
+.b-hist-list { border-right: 1px solid var(--border); overflow: auto; padding: 6px; }
+.b-hist-row { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.b-hist-row:hover { background: var(--hover); }
+.b-hist-row.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.b-hist-view { overflow: auto; padding: 12px 18px 16px; min-width: 0; }
