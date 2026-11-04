@@ -4,6 +4,7 @@ import { SOURCE_KIND_LABELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { ConfirmButton } from '../components/bits'
 import { OutlookImport } from '../components/OutlookImport'
+import { useShortcutHints } from '../components/hints'
 import { useApp } from '../context'
 
 const KINDS: SourceKind[] = ['copilot_summary', 'meeting_transcript', 'teams_chat', 'email', 'note']
@@ -16,6 +17,7 @@ const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, {
 /** Paste or drop text; the AI turns it into suggestions for the review queue. */
 export function ImportScreen() {
   const { ai, go, toast, refresh, version } = useApp()
+  useShortcutHints([['Ctrl ↵', 'extract'], ['N', 'new task']])
   const [kind, setKind] = useState<SourceKind>('copilot_summary')
   const [title, setTitle] = useState('')
   const [fromName, setFromName] = useState('')
@@ -149,7 +151,7 @@ export function ImportScreen() {
             {ai.sendsDataExternally ? `Sent to ${ai.provider === 'claude' ? 'Anthropic' : 'your Ollama server'} (${ai.label}) to find suggestions` : `${ai.label}: nothing leaves this computer`}
           </span>
           <button className="btn primary" disabled={busy} onClick={() => void run()}>
-            {busy ? 'Reading…' : 'Extract suggestions'} <span className="kbd">Ctrl ↵</span>
+            {busy ? 'Reading…' : 'Extract suggestions'}
           </button>
         </div>
         {failure && (

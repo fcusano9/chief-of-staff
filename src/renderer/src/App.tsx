@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AiStatus, AppInfo, AppSettings, PersonSummary, ProjectSummary } from '@shared/types'
 import { cos, errorMessage } from './api'
 import { CommandPalette, TABS } from './components/CommandPalette'
+import { ALWAYS_HINTS, DEFAULT_HINTS, type Hint } from './components/hints'
 import { AppContext, type AppContextValue, type TaskSelection, type View } from './context'
 import { ComingSoonScreen } from './screens/ComingSoonScreen'
 import { AiLogScreen } from './screens/AiLogScreen'
@@ -34,6 +35,16 @@ export function App() {
   const [selection, setSelection] = useState<TaskSelection>(null)
   const [version, setVersion] = useState(0)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [hintSets, setHintSets] = useState<Record<string, { level: number; hints: Hint[] }>>({})
+  const setHints = useCallback((id: string, set: { level: number; hints: Hint[] } | null) => {
+    setHintSets((s) => {
+      const next = { ...s }
+      if (set) next[id] = set
+      else delete next[id]
+      return next
+    })
+  }, [])
+  const pageHints = Object.values(hintSets).sort((a, b) => b.level - a.level)[0]?.hints ?? DEFAULT_HINTS
   const [toastMsg, setToastMsg] = useState<{ text: string; error: boolean } | null>(null)
   const [osDark, setOsDark] = useState(systemDark)
   const toastTimer = useRef<number>(undefined)
@@ -140,9 +151,9 @@ export function App() {
   const ctx = useMemo<AppContextValue | null>(
     () =>
       settings && info
-        ? { view, go, selection, openTask, version, refresh, toast, settings, saveSettings, info, projects, people, dark, toggleTheme, ai: ai ?? FALLBACK_AI, setAi, reviewCount, openAiLog, aiLog }
+        ? { view, go, selection, openTask, version, refresh, toast, settings, saveSettings, info, projects, people, dark, toggleTheme, ai: ai ?? FALLBACK_AI, setAi, reviewCount, openAiLog, aiLog, setHints }
         : null,
-    [view, selection, version, settings, info, projects, people, dark, go, openTask, refresh, toast, saveSettings, toggleTheme, ai, reviewCount, openAiLog, aiLog],
+    [view, selection, version, settings, info, projects, people, dark, go, openTask, refresh, toast, saveSettings, toggleTheme, ai, reviewCount, openAiLog, aiLog, setHints],
   )
   if (!ctx) return null
 
@@ -198,18 +209,18 @@ export function App() {
               Test data
             </span>
           )}
-          <span>
-            <span className="kbd">Ctrl K</span> commands
-          </span>
-          <span>
-            <span className="kbd">↑</span> <span className="kbd">↓</span> move
-          </span>
-          <span>
-            <span className="kbd">N</span> new
-          </span>
-          <span>
-            <span className="kbd">E</span> done
-          </span>
+          {/* The keys for the page you're on, or for the editor that's open. */}
+          {[...ALWAYS_HINTS, ...pageHints].map(([keys, label]) => (
+            <span key={`${keys} ${label}`} data-hint>
+              {keys.split(' ').map((k, i) => (
+                <span key={i}>
+                  {i > 0 && ' '}
+                  <span className="kbd">{k}</span>
+                </span>
+              ))}{' '}
+              {label}
+            </span>
+          ))}
           <div className="spacer" />
           <span>{settings!.lastBackupAt ? `Backed up ${new Date(settings!.lastBackupAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'Not backed up yet'}</span>
           <button className="btn ghost" style={{ padding: '0 6px', fontSize: 12, color: 'var(--muted)' }} title="AI settings" onClick={() => setView('settings')}>

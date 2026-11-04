@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import type { Task, TodaySummary } from '@shared/types'
 import { cos } from '../api'
 import { daysSince, TaskRow } from '../components/bits'
+import { useShortcutHints } from '../components/hints'
 import { useApp } from '../context'
 
 const greeting = (h: number) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
 
 export function TodayScreen() {
   const { openTask, go, version, settings, reviewCount } = useApp()
+  useShortcutHints([['N', 'new task'], ['G R', 'review']])
   const [summary, setSummary] = useState<TodaySummary | null>(null)
   const [focus, setFocus] = useState<Task[]>([])
   const [waiting, setWaiting] = useState<Task[]>([])
@@ -35,7 +37,7 @@ export function TodayScreen() {
         <span className="muted">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
         <div className="spacer" />
         <button className="btn primary" onClick={() => openTask({ id: 'new' })}>
-          New task <span className="kbd">N</span>
+          New task
         </button>
       </div>
 
@@ -72,7 +74,7 @@ export function TodayScreen() {
             <div className="row" style={{ marginTop: 8 }}>
               {reviewCount > 0 && (
                 <button className="btn" onClick={() => go('review')}>
-                  Review suggestions <span className="kbd">G R</span>
+                  Review suggestions
                 </button>
               )}
               <button className="btn ghost" onClick={() => go('import')}>

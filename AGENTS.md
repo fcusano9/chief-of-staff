@@ -93,6 +93,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   - Tasks: E marks done, Esc closes, Ctrl+Enter saves.
   - Review: A, R, Enter to edit. While editing, Ctrl+Enter accepts and Esc cancels.
   - Settings lists every shortcut (`SHORTCUTS` in `SettingsScreen.tsx`); keep it in step.
+  - Buttons don't show keys. The bottom bar shows the keys for the current page: each screen calls `useShortcutHints` (`components/hints.ts`), and an open editor registers its own keys at a higher level, which win while it's open.
   - Global shortcuts run in the capture phase and consume their keys.
 - **Project colors:** tasks are themed with their project's color. Tasks with no project get no label and a neutral stripe.
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".
