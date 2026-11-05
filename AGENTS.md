@@ -22,7 +22,7 @@ It tracks tasks, projects, people and a waiting-on list, ranks tasks by a transp
 - He's a product manager, not a full-time developer. Explain in plain language, lead with the outcome, and say clearly what was and wasn't verified.
 - He likes being asked questions up front for big features, approves designs before the build, and reviews PRs.
 - Things that are his call: company-data policy (sending work content to Anthropic needs Crestron's OK), which AI provider and model to use, and spending money.
-- **Write docs as if the app is for anyone.** Text that describes what the app does says "the user", never Frank's name: "Runs only when the user acts", not "when Frank acts". His name stays only where it's about him, such as who made a decision in DECISIONS.md or how to work with him here.
+- **Write docs as if the app is for anyone.** Text that describes what the app does says "the user", never Frank's name: "Runs only when the user acts", not "when Frank acts". His name stays only where it's about him, such as who made a decision in DECISIONS.md or how to work with him here. `docs/COPILOT-PROMPTS.md` also keeps his name (his choice).
 
 ## Stack
 

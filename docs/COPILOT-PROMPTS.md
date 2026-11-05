@@ -7,7 +7,7 @@ The prompts match what the import looks for:
 - **Full names.** The app matches people by name and suggests new people from them.
 - **Real dates (YYYY-MM-DD).** The app reads relative dates like "Friday" against the import date, not the message date.
 - **Exact quotes.** Every suggestion needs a short quote as evidence.
-- **Whether the user already handled it.** Things already done shouldn't come back as new tasks.
+- **Whether Frank already handled it.** Things already done shouldn't come back as new tasks.
 
 The sections follow the app's suggestion types: asked of me (needs reply), my commitments (new task), waiting on others, done (mark done), decisions and context (brief update), and people (new person).
 
