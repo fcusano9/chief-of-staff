@@ -1,3 +1,4 @@
+import { BASIC_LABEL } from '@shared/types'
 import type { PersonBriefInput, ProjectBriefInput } from './brief'
 import { demoBriefing, type BriefingInput, type RawBriefing } from './briefing'
 import type { ExtractionContext, SourceForExtraction } from './context'
@@ -49,7 +50,7 @@ export function findDueDate(text: string, today: string): string | null {
  * simple: it looks for action-item lines, "waiting on", "done", and dates.
  */
 export class DemoProvider implements AiProvider {
-  readonly label = 'Demo AI'
+  readonly label = BASIC_LABEL
   readonly sendsDataExternally = false
 
   async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawSuggestion[]> {
@@ -57,8 +58,8 @@ export class DemoProvider implements AiProvider {
     const out = this.applyRules(ctx, source)
     log?.record({
       purpose: 'Find suggestions (demo rules)',
-      endpoint: 'Demo AI on this computer: fixed pattern rules, no prompt',
-      request: { note: 'The demo AI sends no prompt. It scans these lines of the imported item for patterns.', importedItem: source.content },
+      endpoint: 'Basic, on this computer: fixed pattern rules, no prompt',
+      request: { note: 'Basic sends no prompt. It scans these lines of the imported item for patterns.', importedItem: source.content },
       response: { suggestions: out },
       error: null,
       startedAt,
@@ -150,8 +151,8 @@ export class DemoProvider implements AiProvider {
     const out = demoBriefing(input)
     log?.record({
       purpose: 'Write the briefing (demo rules)',
-      endpoint: 'Demo AI on this computer: fixed rules, no prompt',
-      request: { note: 'The demo AI sends no prompt. It picks overdue and highest-priority tasks, and waits of 5 days or more, from this input.', input },
+      endpoint: 'Basic, on this computer: fixed rules, no prompt',
+      request: { note: 'Basic sends no prompt. It picks overdue and highest-priority tasks, and waits of 5 days or more, from this input.', input },
       response: out,
       error: null,
       startedAt: new Date().toISOString(),
@@ -163,7 +164,7 @@ export class DemoProvider implements AiProvider {
   }
 
   async test(): Promise<string> {
-    return 'The demo AI runs on this computer. Nothing is sent anywhere.'
+    return 'Basic runs on this computer. Nothing is sent anywhere.'
   }
 
   private matchTask(line: string, ctx: ExtractionContext) {

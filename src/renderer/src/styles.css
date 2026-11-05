@@ -241,6 +241,31 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .b-hist-row.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
 .b-hist-view { overflow: auto; padding: 12px 18px 16px; min-width: 0; }
 
+/* Model picker (Settings and status bar) */
+.scrim.clear { background: none; padding: 0; display: block; }
+.model-menu { position: fixed; background: var(--raised); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: var(--shadow); padding: 4px; max-height: 70vh; overflow: auto; font-size: var(--fs); }
+.mm-group { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--faint); padding: 6px 8px 2px; }
+.mm-item { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 5px; cursor: pointer; }
+.mm-item.cur { background: var(--sel); }
+.mm-item .faint { font-size: var(--fs-xs); }
+.mm-check { color: var(--accent); }
+.mm-sep { border-top: 1px solid var(--border); margin: 4px 0; }
+.model-btn { display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; color: var(--text); }
+.model-btn .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-btn { display: inline-flex; align-items: center; gap: 6px; }
+.provider { border-top: 1px solid var(--border); padding: 14px 0 4px; }
+.provider:first-of-type { border-top: 0; padding-top: 2px; }
+.provider-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.tag { font-size: var(--fs-xs); padding: 1px 8px; border-radius: 999px; background: var(--sel); color: var(--muted); white-space: nowrap; }
+.tag.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.tag.warn { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+.model-list { border: 1px solid var(--border); border-radius: 6px; max-width: 620px; margin-bottom: 10px; }
+.model-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: var(--row-py) 10px; border-top: 1px solid var(--border); }
+.model-row:first-child { border-top: 0; }
+.model-row .state { font-size: var(--fs-xs); color: var(--muted); }
+.progress { height: 5px; border-radius: 3px; background: var(--sel); overflow: hidden; margin-top: 4px; max-width: 320px; }
+.progress > i { display: block; height: 100%; background: var(--accent); transition: width 0.2s; }
+
 /* Updates: the latest one under the Updates button, opening the Updates window. */
 .latest { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: calc(var(--card-py) - 4px) calc(var(--card-px) - 2px); }
 .latest:hover { background: var(--hover); }

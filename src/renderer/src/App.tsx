@@ -3,6 +3,7 @@ import type { AiStatus, AppInfo, AppSettings, PersonSummary, ProjectSummary } fr
 import { cos, errorMessage } from './api'
 import { CommandPalette, TABS } from './components/CommandPalette'
 import { ALWAYS_HINTS, DEFAULT_HINTS, type Hint } from './components/hints'
+import { ModelMenu, ProviderIcon } from './components/ModelMenu'
 import { AppContext, type AppContextValue, type TaskSelection, type View } from './context'
 import { ComingSoonScreen } from './screens/ComingSoonScreen'
 import { AiLogScreen } from './screens/AiLogScreen'
@@ -17,7 +18,7 @@ import { WaitingScreen } from './screens/WaitingScreen'
 
 const G_KEYS: Record<string, View> = { t: 'today', k: 'tasks', r: 'review', w: 'waiting', p: 'projects', e: 'people' }
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
-const FALLBACK_AI: AiStatus = { provider: 'demo', model: '', hasKey: false, encryptionAvailable: false, label: 'Demo AI', sendsDataExternally: false }
+const FALLBACK_AI: AiStatus = { provider: 'demo', model: '', hasKey: false, encryptionAvailable: false, label: 'Basic', sendsDataExternally: false, available: true, problem: null }
 const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches
 
 export function App() {
@@ -35,6 +36,7 @@ export function App() {
   const [selection, setSelection] = useState<TaskSelection>(null)
   const [version, setVersion] = useState(0)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [modelMenuFor, setModelMenuFor] = useState<HTMLElement | null>(null)
   const [hintSets, setHintSets] = useState<Record<string, { level: number; hints: Hint[] }>>({})
   const setHints = useCallback((id: string, set: { level: number; hints: Hint[] } | null) => {
     setHintSets((s) => {
@@ -227,12 +229,31 @@ export function App() {
           ))}
           <div className="spacer" />
           <span>{settings!.lastBackupAt ? `Backed up ${new Date(settings!.lastBackupAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'Not backed up yet'}</span>
-          <button className="btn ghost" style={{ padding: '0 6px', fontSize: 'var(--fs-sm)', color: 'var(--muted)' }} title="AI settings" onClick={() => setView('settings')}>
-            AI · {ai?.label ?? '…'}
+          <button
+            className="btn ghost ai-btn"
+            style={{ padding: '0 6px', fontSize: 'var(--fs-sm)', color: modelMenuFor ? 'var(--text)' : 'var(--muted)' }}
+            title={ai && !ai.available ? (ai.problem ?? '') : 'Change AI model'}
+            data-ai-button
+            onClick={(e) => setModelMenuFor(modelMenuFor ? null : e.currentTarget)}
+          >
+            {ai && <ProviderIcon provider={ai.provider} size={12} />}
+            {ai ? ai.available ? ai.label : <span style={{ color: 'var(--danger)' }}>{ai.label} (unavailable)</span> : '…'} ▴
           </button>
         </footer>
       </div>
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
+      {modelMenuFor && (
+        <ModelMenu
+          anchor={modelMenuFor}
+          placement="above"
+          onClose={() => setModelMenuFor(null)}
+          onManage={() => {
+            setView('settings')
+            // After Settings renders, bring the providers card into view.
+            window.setTimeout(() => document.getElementById('ai-providers')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+          }}
+        />
+      )}
       {toastMsg && <div className={`toast ${toastMsg.error ? 'err' : ''}`}>{toastMsg.text}</div>}
     </AppContext.Provider>
   )

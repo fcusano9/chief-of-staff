@@ -61,7 +61,7 @@ try {
   await app.sleep(300)
   check('clear shows everyone', (await rows(app)).length === 3)
 
-  // Brief: write with the demo AI, keep it
+  // Brief: write with Basic, keep it
   await app.clickText('Dana Lee', '.pane.left .r')
   await app.waitFor('[data-brief]')
   const labels = await app.eval(`return [...document.querySelectorAll('.pane.right .field > span:first-child')].map(s => s.textContent)`)
@@ -72,7 +72,7 @@ try {
   await app.clickText('Write brief', '.pane.right button')
   await app.waitFor('.pane.right .ai')
   const suggested = await app.eval(`return document.querySelector('.pane.right .ai').textContent`)
-  check('suggested brief shown with its writer', suggested.includes('Dana Lee, VP, Product at Crestron. Approved the four-tier pricing model.') && suggested.includes('Demo AI'), suggested)
+  check('suggested brief shown with its writer', suggested.includes('Dana Lee, VP, Product at Crestron. Approved the four-tier pricing model.') && suggested.includes('Basic'), suggested)
   check('nothing saved before Keep', (await app.eval(`return (await window.cos['people.list']()).find(p => p.name === 'Dana Lee').brief`)) === null)
   await app.screenshot(join(shots, 'm2-people-02-suggested.png'))
   await app.clickText('Keep', '.pane.right .ai button')

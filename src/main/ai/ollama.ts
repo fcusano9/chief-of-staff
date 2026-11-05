@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { SuggestionKind } from '@shared/types'
+import { localModelLabel, type SuggestionKind } from '@shared/types'
 import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { ALL_KINDS, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
@@ -189,7 +189,7 @@ export class OllamaProvider implements AiProvider {
     private readonly model: string,
     options: OllamaOptions = {},
   ) {
-    this.label = `${model} (local)`
+    this.label = localModelLabel(model)
     this.sendsDataExternally = !isLoopbackUrl(baseUrl)
     this.options = { ...DEFAULT_OLLAMA_OPTIONS, ...options }
   }
@@ -277,13 +277,9 @@ export class OllamaProvider implements AiProvider {
   async test(): Promise<string> {
     const installed = await this.listModels()
     if (!installed.includes(this.model)) {
-      throw new AiError(
-        installed.length
-          ? `${this.model} isn't installed. Run "ollama pull ${this.model}", or pick one of: ${installed.join(', ')}.`
-          : `No models are installed. Run "ollama pull ${this.model}" in Terminal.`,
-      )
+      throw new AiError(`${this.model} isn't downloaded. Download it in Settings → AI providers, or pick another model.`)
     }
-    return `Connected. ${this.model} is installed and runs on this computer.`
+    return `Connected. ${this.model} is downloaded and ready.`
   }
 
   /** Names of the models pulled into this Ollama server. */
@@ -307,7 +303,7 @@ export class OllamaProvider implements AiProvider {
     }
     const body = (await response.json().catch(() => ({}))) as T & { error?: string }
     if (!response.ok) {
-      if (response.status === 404) throw new AiError(`${this.model} isn't installed. Run "ollama pull ${this.model}" in Terminal.`)
+      if (response.status === 404) throw new AiError(`${this.model} isn't downloaded. Download it in Settings → AI providers, or pick another model.`)
       throw new AiError(`Ollama error ${response.status}: ${body.error ?? response.statusText}`)
     }
     return body

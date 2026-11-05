@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI models and providers</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --raised: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --raised: #1a1a1f; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --raised: #1a1a1f; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); display: grid; grid-template-rows: auto 44px minmax(0, 1fr) 28px; }
+button, select, input { font: inherit; color: inherit; }
+.proto { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 6px 12px; background: var(--accent-bg); font-size: 12px; }
+.proto b { font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 2px 9px; cursor: pointer; }
+.seg button.on { background: var(--text); color: var(--bg); }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+main { overflow: auto; }
+.page { max-width: 1000px; margin: 0 auto; padding: 26px 28px 60px; }
+h1 { font-size: 19px; font-weight: 600; margin: 0 0 14px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .ok { color: var(--ok); } .danger { color: var(--danger); } .warnc { color: var(--warn); }
+.sm { font-size: 12.5px; } .xs { font-size: 11px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 14px 16px; margin-bottom: 14px; }
+.card-h { font-weight: 500; margin-bottom: 10px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.field { display: grid; gap: 4px; margin-bottom: 10px; }
+.field > span { font-size: 12px; color: var(--muted); }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 6px 8px; width: 100%; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.danger { color: var(--danger); }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.prov { border-top: 1px solid var(--border); padding: 14px 0 4px; }
+.prov:first-of-type { border-top: 0; padding-top: 2px; }
+.prov-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.prov-h .name { font-weight: 500; }
+.pill { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--sel); color: var(--muted); }
+.pill.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.pill.warn { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+.mlist { border: 1px solid var(--border); border-radius: 6px; margin: 4px 0 10px; }
+.mrow { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 10px; align-items: center; padding: 7px 10px; border-top: 1px solid var(--border); }
+.mrow:first-child { border-top: 0; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.bar { height: 5px; border-radius: 3px; background: var(--sel); overflow: hidden; margin-top: 4px; }
+.bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+.statusbar { display: flex; align-items: center; gap: 14px; padding: 0 14px; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 12px; white-space: nowrap; position: relative; }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.aibtn { border: 0; background: none; padding: 0 6px; border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 12px; height: 22px; }
+.aibtn:hover, .aibtn.open { background: var(--hover); color: var(--text); }
+.menu { position: fixed; right: 10px; bottom: 32px; width: 300px; background: var(--raised); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: 4px; z-index: 10; font-size: 13px; }
+.menu .grp { font-size: 11px; color: var(--faint); padding: 6px 8px 2px; text-transform: uppercase; letter-spacing: .04em; }
+.menu .it { display: grid; grid-template-columns: 16px 1fr auto; gap: 6px; align-items: center; padding: 5px 8px; border-radius: 5px; cursor: pointer; }
+.menu .it.act { background: var(--sel); }
+.menu .it .chk { color: var(--accent); }
+.ico { width: 16px; height: 16px; flex: none; display: inline-block; vertical-align: -3px; }
+.ico.lg { width: 20px; height: 20px; vertical-align: -5px; }
+.menu .grp { display: flex; align-items: center; gap: 6px; }
+.picker { display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; }
+.picker .lbl { flex: 1; }
+.menu.anchored { position: absolute; right: auto; bottom: auto; }
+.mrow { grid-template-columns: minmax(0,1fr) auto; }
+.state { font-size: 11.5px; color: var(--muted); }
+.menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+.notes { margin-top: 24px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); font-size: 12.5px; }
+.notes h3 { margin: 0 0 6px; font-size: 12.5px; color: var(--text); } .notes li { margin: 3px 0; }
+.hl { animation: hl 1s; } @keyframes hl { from { background: var(--accent-bg); } }
+details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 6px 0; }
+</style>
+</head>
+<body>
+<div class="proto">
+  <b>Prototype</b>
+  <span>View <span class="seg" id="segView"><button data-v="before">Before</button><button data-v="after" class="on">After</button></span></span>
+  <span>Claude <span class="seg" id="segClaude"><button data-v="none">No key</button><button data-v="key" class="on">Key saved</button></span></span>
+  <span>Ollama <span class="seg" id="segOllama"><button data-v="missing">Not installed</button><button data-v="stopped">Installed, not running</button><button data-v="ready" class="on">Running</button></span></span>
+  <span>Name for Demo AI <span class="seg" id="segName"><button data-v="Built-in">Built-in</button><button data-v="Basic" class="on">Basic</button><button data-v="Quick scan">Quick scan</button><button data-v="Rules">Rules</button></span></span>
+  <div class="spacer"></div>
+  <button class="btn sm" id="theme">◐ Theme</button>
+</div>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button><button class="tab">Tasks</button><button class="tab">Waiting</button><button class="tab">Projects</button><button class="tab">People</button><button class="tab">Import</button><button class="tab">Review</button>
+  <div class="spacer"></div>
+  <button class="tab on">⚙</button>
+</div>
+<main><div class="page" id="page"></div></main>
+<footer class="statusbar">
+  <span><span class="kbd">Ctrl</span> <span class="kbd">K</span> commands</span>
+  <span><span class="kbd">G</span> go to</span>
+  <div class="spacer"></div>
+  <span>Backed up Nov 4, 9:00 AM</span>
+  <button class="aibtn" id="aibtn"></button>
+</footer>
+<div class="menu" id="menu" hidden></div>
+
+<script>
+const ICON = {
+  // Placeholders drawn for the mockup. The app will bundle the official Claude and Ollama marks.
+  claude: `<svg class="ico" viewBox="0 0 24 24" aria-label="Claude"><g stroke="#D97757" stroke-width="2.4" stroke-linecap="round">${[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i)=>{const r1=2.2,r2=i%2?8:10.5,c=Math.cos(a*Math.PI/180),d=Math.sin(a*Math.PI/180);return `<line x1="${12+r1*c}" y1="${12+r1*d}" x2="${(12+r2*c).toFixed(2)}" y2="${(12+r2*d).toFixed(2)}"/>`}).join('')}</g></svg>`,
+  ollama: `<svg class="ico" viewBox="0 0 24 24" aria-label="Ollama" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M7.5 9.5V4.2c0-1 1.4-1.3 1.8-.3L10.3 7M16.5 9.5V4.2c0-1-1.4-1.3-1.8-.3L13.7 7"/><path d="M6.5 13c0-3.4 2.5-6 5.5-6s5.5 2.6 5.5 6v6.5a1.5 1.5 0 0 1-1.5 1.5H8a1.5 1.5 0 0 1-1.5-1.5Z"/><ellipse cx="12" cy="15.3" rx="2.4" ry="1.8"/><circle cx="9.6" cy="11.6" r=".6" fill="currentColor"/><circle cx="14.4" cy="11.6" r=".6" fill="currentColor"/></svg>`,
+  builtin: `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 2.5v2.5M15 2.5v2.5M9 19v2.5M15 19v2.5M2.5 9h2.5M2.5 15h2.5M19 9h2.5M19 15h2.5"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>`,
+}
+const S = {
+  builtinName: 'Basic',
+  pickerOpen: false,
+  view: 'after', claude: 'key', ollama: 'ready',
+  model: 'claude:claude-opus-5-5',
+  installed: [{ name: 'gpt-oss:20b', size: '13 GB', tested: true }, { name: 'qwen3:8b', size: '5.2 GB', tested: false }],
+  install: null,         // null | {phase, pct}
+  pulls: {},             // name -> pct
+  confirmDel: null,
+  menuOpen: false, menuIdx: 0,
+  test: {},              // provider -> {ok, text}
+}
+const CLAUDE = [
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', note: 'Most capable' },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', note: 'Balanced' },
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', note: 'Fastest, cheapest' },
+]
+const VETTED = [{ name: 'gpt-oss:20b', size: '13 GB', note: 'Needs about 16 GB of free memory.' }]
+const $ = (s) => document.querySelector(s)
+
+/** Every model you can pick right now, grouped by provider. */
+function options() {
+  const groups = [{ name: 'Built into the app', icon: 'builtin', items: [{ id: 'demo', label: S.builtinName, note: 'Simple rules, no setup' }] }]
+  if (S.claude === 'key') groups.push({ name: 'Claude · sent to Anthropic', icon: 'claude', items: CLAUDE.map((m) => ({ id: 'claude:' + m.id, label: m.label, note: m.note })) })
+  if (S.ollama === 'ready' && S.installed.length)
+    groups.push({ name: 'Ollama · on this computer', icon: 'ollama', items: S.installed.map((m) => ({ id: 'ollama:' + m.name, label: `Ollama ${m.name}`, note: m.tested ? '' : 'Not tested' })) })
+  return groups
+}
+const flat = () => options().flatMap((g) => g.items.map((o) => ({ ...o, icon: g.icon })))
+function current() {
+  const f = flat().find((o) => o.id === S.model)
+  if (f) return f
+  // The chosen model's provider went away: say so rather than silently switching.
+  const label = S.model.startsWith('claude:') ? CLAUDE.find((m) => 'claude:' + m.id === S.model).label : S.model.replace('ollama:', 'Ollama ')
+  return { id: S.model, label, unavailable: true, icon: S.model.startsWith('claude') ? 'claude' : 'ollama' }
+}
+function where(o) {
+  if (o.unavailable) {
+    const fix = S.model.startsWith('claude') ? 'Add a Claude API key' : S.ollama === 'ready' ? 'Download it again' : S.ollama === 'stopped' ? 'Start Ollama' : 'Install Ollama'
+    return `<span class="danger">${o.label} isn't available. ${fix} below, or pick another model.</span>`
+  }
+  if (o.id === 'demo') return 'Basic uses simple rules to spot action items, "waiting on", "done" and dates. It isn\'t actually AI, so it misses a lot. It runs on this computer and sends nothing.'
+  if (o.id.startsWith('claude')) return 'Imports, open-task titles, briefs and names are sent to Anthropic.'
+  return 'Runs on this computer. Nothing is sent anywhere. Each import takes about 40 seconds.'
+}
+
+function render() {
+  $('#page').innerHTML = S.view === 'before' ? before() : after()
+  const c = current()
+  $('#aibtn').innerHTML = S.view === 'before' ? `AI · Claude Opus 5.5` : `${ICON[c.icon]} ${c.unavailable ? '<span class="danger">' + c.label + ' (unavailable)</span>' : c.label} ▴`
+  $('#aibtn').title = S.view === 'before' ? 'AI settings' : 'Change AI model'
+  $('#aibtn').classList.toggle('open', S.menuOpen && !S.pickerOpen)
+  renderMenu()
+  bind()
+}
+
+function before() {
+  return `<h1>Settings</h1>
+  <div class="card"><div class="card-h">AI</div><div class="grid2"><div>
+    <label class="field"><span>Your name</span><input class="inp" value="Frank Cusano"></label>
+    <label class="field"><span>Provider</span><select class="inp"><option>Claude (Anthropic API)</option><option>Demo AI (runs on this PC; nothing is sent)</option><option>Local model (Ollama, runs on this computer)</option></select></label>
+    <label class="field"><span>Model</span><select class="inp">${CLAUDE.map((m) => `<option>${m.label} · ${m.note}</option>`)}</select></label>
+    <p class="faint sm">The AI only proposes. Every suggestion waits in Review until you accept it, and nothing is ever sent on your behalf.</p>
+  </div><div>
+    <div class="field"><span>API key</span><span class="row"><span class="ok">✓</span> Stored, encrypted on this computer <span class="spacer"></span><button class="btn ghost danger">Remove</button></span></div>
+    <button class="btn">Test connection</button>
+    <p class="muted sm">To use a local model, switch Provider, install Ollama from ollama.com, then run "ollama pull gpt-oss:20b" in a terminal.</p>
+  </div></div></div>
+  ${notes()}`
+}
+
+function after() {
+  const c = current()
+  return `<h1>Settings</h1>
+  <div class="card" id="aiCard"><div class="card-h">AI</div><div class="grid2"><div>
+    <label class="field"><span>Your name</span><input class="inp" value="Frank Cusano"></label>
+    <div class="field"><span>Model</span><button class="inp picker" id="modelBtn">${ICON[c.icon]}<span class="lbl ${c.unavailable ? 'danger' : ''}">${c.label}${c.unavailable ? ' (unavailable)' : ''}</span><span class="faint">▾</span></button></div>
+  </div><div>
+    <p class="sm" style="margin:22px 0 6px">${where(c)}</p>
+    <p class="faint sm" style="margin:0">The AI only proposes. Every suggestion waits in Review until you accept it, and nothing is ever sent on your behalf.</p>
+  </div></div></div>
+
+  <div class="card" id="provCard"><div class="card-h">AI providers</div>
+    ${claudeProv()}
+    ${ollamaProv()}
+  </div>
+  ${notes()}`
+}
+
+function testRow(p, enabled) {
+  const t = S.test[p]
+  return `<div class="row"><button class="btn" data-test="${p}" ${enabled ? '' : 'disabled'}>${t && t.busy ? 'Testing…' : 'Test connection'}</button>${t && !t.busy ? `<span class="sm ${t.ok ? 'ok' : 'danger'}">${t.text}</span>` : ''}</div>`
+}
+
+function claudeProv() {
+  const has = S.claude === 'key'
+  return `<div class="prov"><div class="prov-h">${ICON.claude.replace('class="ico"','class="ico lg"')}<span class="name">Claude</span><span class="pill ${has ? 'ok' : ''}">${has ? 'Set up · 3 models' : 'Not set up'}</span><span class="faint sm">Anthropic API. Most accurate. Paid per use.</span></div>
+    <div class="grid2"><div>
+      <div class="field"><span>API key</span>${has
+        ? `<span class="row"><span class="ok">✓</span> Stored, encrypted on this computer <span class="spacer"></span><button class="btn ghost danger" id="rmKey">Remove</button></span>`
+        : `<span class="row"><input class="inp" type="password" placeholder="sk-ant-…" id="keyInp"><button class="btn" id="saveKey">Save</button></span>`}</div>
+    </div><div style="padding-top:20px">${testRow('claude', has)}</div></div>
+  </div>`
+}
+
+function ollamaProv() {
+  const pill = { missing: '<span class="pill">Not installed</span>', stopped: '<span class="pill warn">Installed, not running</span>', ready: `<span class="pill ok">Running · ${S.installed.length} model${S.installed.length === 1 ? '' : 's'}</span>` }[S.ollama]
+  let body = ''
+  if (S.ollama === 'missing') {
+    const i = S.install
+    body = !i
+      ? `<p class="sm" style="margin:0 0 8px">Ollama runs AI models on this computer, so nothing leaves it. The app downloads the official installer from ollama.com and opens it.</p><button class="btn primary" id="install">Install Ollama</button>`
+      : i.phase === 'download'
+      ? `<div class="sm">Downloading the Ollama installer… <span class="mono">${i.pct}%</span></div><div class="bar" style="max-width:320px"><i style="width:${i.pct}%"></i></div><button class="btn ghost sm" id="cancelInstall" style="margin-top:6px">Cancel</button>`
+      : `<div class="sm">Finish installing in Ollama's window. The app will find it when it's done.</div><div class="faint xs" style="margin-top:4px">Checking every few seconds…</div><button class="btn sm" id="fakeDone" style="margin-top:6px">(prototype: installer finished)</button>`
+  } else if (S.ollama === 'stopped') {
+    body = `<p class="sm" style="margin:0 0 8px">Ollama is installed but isn't running, so your local models can't be listed.</p><button class="btn primary" id="startOllama">Start Ollama</button>`
+  } else {
+    // One list: tested models first (downloaded or not), then anything else already installed.
+    const names = [...VETTED.map((v) => v.name), ...S.installed.map((m) => m.name).filter((n) => !VETTED.some((v) => v.name === n))]
+    const rows = names.map((n) => {
+      const v = VETTED.find((x) => x.name === n), m = S.installed.find((x) => x.name === n), p = S.pulls[n]
+      const tag = v ? '<span class="pill ok">Tested</span>' : '<span class="pill">Not tested</span>'
+      let state, action
+      if (m) { state = `Downloaded · ${m.size}`; action = S.confirmDel === n ? `<button class="btn sm danger" data-del="${n}">Delete ${m.size}?</button>` : `<button class="btn ghost sm danger" data-del="${n}">Delete</button>` }
+      else if (p != null) { state = `Downloading · <span class="mono">${(13 * p / 100).toFixed(1)} of 13 GB</span><div class="bar"><i style="width:${p}%"></i></div>`; action = `<button class="btn ghost sm" data-cancelpull="${n}">Cancel</button>` }
+      else { state = `Not downloaded · ${v.size}. ${v.note}`; action = `<button class="btn sm" data-pull="${n}">Download</button>` }
+      return `<div class="mrow"><div><span class="mono">${n}</span> ${tag}<div class="state">${state}</div></div>${action}</div>`
+    }).join('')
+    body = `<div style="max-width:620px"><div class="mlist">${rows}</div></div>
+      ${testRow('ollama', S.installed.length > 0)}
+      <details><summary>Advanced</summary><label class="field" style="max-width:320px"><span>Ollama address</span><input class="inp mono" value="http://localhost:11434"></label><div class="faint xs">Change only if Ollama runs on another machine. Then imports are sent there.</div></details>`
+  }
+  return `<div class="prov"><div class="prov-h">${ICON.ollama.replace('class="ico"','class="ico lg"')}<span class="name">Ollama</span>${pill}<span class="faint sm">Runs models on this computer. Free and private.</span></div>${body}</div>`
+}
+
+function renderMenu() {
+  const m = $('#menu')
+  m.hidden = !S.menuOpen || S.view === 'before'
+  if (m.hidden) return
+  m.classList.toggle('anchored', S.pickerOpen)
+  if (S.pickerOpen) { const r = $('#modelBtn').getBoundingClientRect(); Object.assign(m.style, { left: r.left + 'px', top: r.bottom + 4 + 'px', width: r.width + 'px' }) }
+  else Object.assign(m.style, { left: '', top: '', width: '' })
+  let i = 0
+  m.innerHTML = options().map((g) => `<div class="grp">${ICON[g.icon]}${g.name}</div>` + g.items.map((o) => {
+    const idx = i++
+    return `<div class="it ${idx === S.menuIdx ? 'act' : ''}" data-pick="${o.id}" data-idx="${idx}"><span class="chk">${o.id === S.model ? '✓' : ''}</span><span>${o.label}</span><span class="faint xs">${o.note}</span></div>`
+  }).join('')).join('') +
+  (S.pickerOpen ? '' : `<hr><div class="it" data-manage><span></span><span>Set up providers…</span><span></span></div>`)
+}
+
+function notes() {
+  return `<div class="notes"><h3>What changes</h3><ul>
+    <li><b>One Model picker</b> replaces Provider + Model, with the same menu in Settings and in the status bar. It lists the built-in AI, the three Claude models once a key is saved, and every model installed in Ollama ("Ollama gpt-oss:20b"). The group header says where each one runs, so there's no "(local)".</li>
+    <li><b>Demo AI is now Basic.</b> When it's picked, the note beside the Model picker says it's simple rule-based logic, not actually AI.</li>
+    <li><b>AI providers</b>: Claude needs a key, Save, Test connection. Ollama is found automatically; if it's missing, Install Ollama downloads and opens the official installer; if it's stopped, Start Ollama.</li>
+    <li><b>One Ollama model list.</b> Each tested model (today just gpt-oss:20b) shows Not downloaded with Download, Downloading with progress and Cancel, or Downloaded with a two-click Delete. Models you installed yourself appear below, marked Not tested.</li>
+    <li>If the model you picked becomes unavailable (key removed, Ollama stopped), the app keeps your choice and shows it in red, instead of quietly switching.</li>
+    <li>Icons are placeholders drawn for the mockup; the app will use the official Claude and Ollama marks. The Ollama address moves under Advanced.</li>
+  </ul></div>`
+}
+
+function bind() {
+  const on = (sel, fn) => { const el = $(sel); if (el) el.onclick = fn }
+  document.querySelectorAll('#segView button').forEach((b) => b.onclick = () => { S.view = b.dataset.v; seg('#segView', S.view); render() })
+  document.querySelectorAll('#segClaude button').forEach((b) => b.onclick = () => { S.claude = b.dataset.v; seg('#segClaude', S.claude); S.test = {}; render() })
+  document.querySelectorAll('#segOllama button').forEach((b) => b.onclick = () => { S.ollama = b.dataset.v; S.install = null; seg('#segOllama', S.ollama); render() })
+  on('#modelBtn', (e) => { e.stopPropagation(); S.pickerOpen = !(S.menuOpen && S.pickerOpen); S.menuOpen = S.pickerOpen; S.menuIdx = Math.max(0, flat().findIndex((o) => o.id === S.model)); render() })
+  document.querySelectorAll('#segName button').forEach((b) => b.onclick = () => { S.builtinName = b.dataset.v; seg('#segName', S.builtinName); render() })
+  on('#rmKey', () => { S.claude = 'none'; seg('#segClaude', 'none'); render() })
+  on('#saveKey', () => { if ($('#keyInp').value.trim()) { S.claude = 'key'; seg('#segClaude', 'key'); render() } })
+  on('#install', () => { S.install = { phase: 'download', pct: 0 }; tickInstall() })
+  on('#cancelInstall', () => { S.install = null; render() })
+  on('#fakeDone', () => { S.install = null; S.ollama = 'ready'; S.installed = []; seg('#segOllama', 'ready'); render() })
+  on('#startOllama', () => { S.ollama = 'ready'; seg('#segOllama', 'ready'); render() })
+  document.querySelectorAll('[data-test]').forEach((b) => b.onclick = () => {
+    const p = b.dataset.test; S.test[p] = { busy: true }; render()
+    setTimeout(() => { S.test[p] = { ok: true, text: p === 'claude' ? 'Connected. Claude Opus 5.5 replied.' : 'Connected. gpt-oss:20b replied in 3.1 s.' }; render() }, 900)
+  })
+  document.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => {
+    const n = b.dataset.del
+    if (S.confirmDel === n) { S.installed = S.installed.filter((m) => m.name !== n); S.confirmDel = null } else S.confirmDel = n
+    render()
+  })
+  document.querySelectorAll('[data-pull]').forEach((b) => b.onclick = () => { S.pulls[b.dataset.pull] = 0; tickPull(b.dataset.pull) })
+  document.querySelectorAll('[data-cancelpull]').forEach((b) => b.onclick = () => { delete S.pulls[b.dataset.cancelpull]; render() })
+  document.querySelectorAll('[data-pick]').forEach((el) => el.onclick = () => pick(el.dataset.pick))
+  on('[data-manage]', () => { S.menuOpen = false; render(); const c = $('#provCard'); c.scrollIntoView({ behavior: 'smooth' }); c.classList.add('hl') })
+}
+function seg(sel, v) { document.querySelectorAll(sel + ' button').forEach((b) => b.classList.toggle('on', b.dataset.v === v)) }
+function pick(id) { S.model = id; S.menuOpen = false; S.pickerOpen = false; render() }
+function tickInstall() {
+  if (!S.install) return
+  S.install.pct = Math.min(100, S.install.pct + 9)
+  if (S.install.pct >= 100) S.install.phase = 'installer'
+  render()
+  if (S.install && S.install.phase === 'download') setTimeout(tickInstall, 180)
+}
+function tickPull(n) {
+  if (S.pulls[n] == null) return
+  S.pulls[n] = Math.min(100, S.pulls[n] + 4)
+  if (S.pulls[n] >= 100) { delete S.pulls[n]; S.installed.unshift({ name: n, size: '13 GB', tested: true }) }
+  render()
+  if (S.pulls[n] != null) setTimeout(() => tickPull(n), 150)
+}
+
+$('#aibtn').onclick = (e) => {
+  e.stopPropagation()
+  if (S.view === 'before') return
+  S.menuOpen = !(S.menuOpen && !S.pickerOpen); S.pickerOpen = false
+  S.menuIdx = Math.max(0, flat().findIndex((o) => o.id === S.model))
+  render()
+}
+document.addEventListener('click', (e) => { if (S.menuOpen && !e.target.closest('#menu')) { S.menuOpen = false; S.pickerOpen = false; render() } })
+document.addEventListener('keydown', (e) => {
+  if (!S.menuOpen) return
+  const n = flat().length
+  if (e.key === 'ArrowDown') { S.menuIdx = (S.menuIdx + 1) % n; renderMenu(); bind(); e.preventDefault() }
+  else if (e.key === 'ArrowUp') { S.menuIdx = (S.menuIdx - 1 + n) % n; renderMenu(); bind(); e.preventDefault() }
+  else if (e.key === 'Enter') pick(flat()[S.menuIdx].id)
+  else if (e.key === 'Escape') { S.menuOpen = false; S.pickerOpen = false; render() }
+})
+$('#theme').onclick = () => { const r = document.documentElement; r.dataset.theme = (r.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark' ? 'light' : 'dark' }
+render()
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // Projects: the hand-written overview (pencil, Esc, Ctrl+Enter), the AI status brief (Write brief
-// with the demo AI, Keep, the "new notes" hint, Edit) and the Updates window (newest first, new
+// with Basic, Keep, the "new notes" hint, Edit) and the Updates window (newest first, new
 // notes marked, Add, Edit, Esc).
 import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -64,14 +64,14 @@ try {
   const listSub = await app.eval(`return [...document.querySelectorAll('.pane.left .r')].find(r => r.textContent.startsWith('Spring')).querySelector('.ttl .faint')?.textContent`)
   check('overview shown under the name in the list', listSub === 'Moving dealers to a four-tier pricing model for the spring launch.', listSub)
 
-  // Brief: write with the demo AI, keep it
+  // Brief: write with Basic, keep it
   check('no brief yet', (await text(app, '[data-brief]')).startsWith('No brief yet'))
   check('Updates button shows the count', (await app.eval(`return [...document.querySelectorAll('.pane.right button')].find(b => b.textContent.startsWith('Updates')).textContent.replace(/\\s+/g, ' ')`)) === 'Updates 2')
   check('Latest card shows the newest update', !!(await app.eval(`return document.querySelector('.pane.right [data-latest]')`)))
   await app.clickText('Write brief', '.pane.right button')
   await app.waitFor('.pane.right .ai')
   const suggested = await text(app, '.pane.right .ai')
-  check('suggested brief shown with its writer', suggested.includes('Northwind AV pilots the tiers from Dec 1.') && suggested.includes('Next: Send pricing deck.') && suggested.includes('Demo AI'), suggested)
+  check('suggested brief shown with its writer', suggested.includes('Northwind AV pilots the tiers from Dec 1.') && suggested.includes('Next: Send pricing deck.') && suggested.includes('Basic'), suggested)
   check('nothing saved before Keep', (await project(app)).brief === null)
   await app.screenshot(join(shots, 'm2-project-brief-01-suggested.png'))
   await app.clickText('Keep', '.pane.right .ai button')

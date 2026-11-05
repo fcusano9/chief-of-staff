@@ -169,7 +169,7 @@ describe('briefing: saving and history', () => {
     expect(briefings.latest()).toBeNull()
 
     const first = await briefings.write()
-    expect(first).toMatchObject({ trigger: 'manual', writtenBy: 'Demo AI' })
+    expect(first).toMatchObject({ trigger: 'manual', writtenBy: 'Basic' })
     expect(first.priorities[0]).toMatchObject({ title: 'Margin review', overdueDays: 2 })
     expect(first.newItems.map((n) => n.title).sort()).toEqual(['Margin review', 'Roadmap slides'])
 

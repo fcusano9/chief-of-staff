@@ -10,6 +10,16 @@ Frank found the task editor confusing (Notes, Task brief and Standing instructio
 - **The AI sees task updates.** Each open task sends its latest updates on imports, to match new items to the right task (Frank's choice; more work text goes to Anthropic when Claude is selected). **Whole updates only, up to 300 characters** (Frank chose 300 over a larger limit for now; 600 could be compared with `bench:ai` later). People and projects switched to whole updates too, so nothing is cut mid-sentence. The daily briefing reads Notes and Updates (Frank), and Updates on waiting items.
 - **Migration (schema v11):** status updates become dated lines in each task's Updates, merged in date order with the old task brief; standing instructions become an undated "Standing instructions: …" line; In progress tasks become Open. The usual safety copy is taken first.
 
+### 2026-11-04 · One model picker, AI providers set up in Settings, Basic replaces "Demo AI" (Frank)
+Frank asked for a simpler way to choose the AI (mockup `design/ai-models-providers.html`, approved after two rounds). **Frank's choices:**
+- **One Model picker** replaces Provider + Model. It lists whatever is set up: Basic, Claude Opus / Sonnet / Haiku 5.5 once a key is saved, and every model in Ollama as "Ollama <name>" (no "(local)"; the group header says where it runs). The same menu opens from the AI button at the bottom right, which used to jump to Settings.
+- **AI providers** is where each one is set up. Claude: key, Save, Test connection. Ollama: found automatically; Install Ollama downloads and opens the official installer; Start Ollama starts an installed one; one model list shows each model as Not downloaded, Downloading or Downloaded, with a two-click Delete.
+- **Only tested models are offered for download**, a curated list Frank vets (today just gpt-oss:20b). Models installed outside the app still show, marked Not tested.
+- **"Demo AI" is now Basic** (it's real, not a demo), and Settings says it's simple rules, not actually AI.
+- Icons are the Claude and Ollama marks from Simple Icons (CC0).
+
+**Also decided:** if the chosen model becomes unusable, the app keeps the choice and shows it as unavailable rather than switching AI without asking. The installer only runs if its signature checks out, and nothing installs for a remote Ollama address. Settings fields are unchanged (`aiProvider`, `aiModel`, `localModel`), so nothing migrates. **Not verified:** the install flow end to end on Windows or Mac (Ollama was already installed on the Mac).
+
 ### 2026-11-04 · Daily briefing: on click only, ready for a schedule later (Frank)
 Frank's choices, asked up front (mockup `design/daily-briefing.html`, approved):
 - **Only when he clicks** (Write briefing, Refresh, or "Write briefing" in Ctrl+K). This settles the roadmap's pending decision for now. He may add a schedule later, so `BriefingService.write(trigger)` takes `'manual'` or `'scheduled'` and each briefing records it (`briefings.started_by`); a scheduler only needs a time setting that calls `write('scheduled')`. No keyboard shortcut (Frank).
