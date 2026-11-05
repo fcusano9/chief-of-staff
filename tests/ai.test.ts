@@ -44,6 +44,9 @@ class FakeProvider implements AiProvider {
   async writeBriefing() {
     return { summary: '', priorities: [], nudges: [], new_items: [] }
   }
+  async writeWeeklyReflection() {
+    return { summary: '', went_well: [], slipped: [], focus_next: [] }
+  }
   async test() {
     return 'ok'
   }

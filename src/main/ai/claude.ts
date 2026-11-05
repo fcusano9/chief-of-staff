@@ -3,6 +3,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { CLAUDE_MODELS } from '@shared/types'
 import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
+import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
 import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
@@ -66,6 +67,20 @@ export function buildBriefingRequest(model: string, input: BriefingInput) {
     max_tokens: 8000,
     // Low effort: picking and explaining a handful of tasks needs little reasoning.
     output_config: { effort: 'low' as const, format: betaZodOutputFormat(BriefingSchema) },
+    system,
+    messages: [{ role: 'user' as const, content: user }],
+    ...fallbackFor(model),
+  }
+}
+
+/** The request for the weekly reflection. */
+export function buildWeeklyRequest(model: string, input: WeeklyInput) {
+  const { system, user } = buildWeeklyPrompt(input)
+  return {
+    model,
+    max_tokens: 8000,
+    // Low effort: a short look back at lists that are already worked out.
+    output_config: { effort: 'low' as const, format: betaZodOutputFormat(WeeklySchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -151,6 +166,18 @@ export class ClaudeProvider implements AiProvider {
       )
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write the briefing.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The briefing was cut off. Try again.')
+      if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
+      return response.parsed_output
+    } catch (err) {
+      throw toAiError(err)
+    }
+  }
+
+  async writeWeeklyReflection(input: WeeklyInput, log?: AiCallLog): Promise<RawReflection> {
+    try {
+      const response = await this.send(log, 'Write the weekly reflection', buildWeeklyRequest(this.model, input))
+      if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write the reflection.')
+      if (response.stop_reason === 'max_tokens') throw new AiError('The reflection was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
       return response.parsed_output
     } catch (err) {

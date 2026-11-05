@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Weekly review</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; display: grid; grid-template-rows: 44px auto minmax(0, 1fr); }
+button, input, select, textarea { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; min-height: 28px; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+h2 { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
+.label { font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.pill { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 28px; border-bottom: 1px dashed var(--border-strong); background: var(--bg); }
+.controls .grp { display: flex; gap: 4px; align-items: center; }
+.controls .grp > span { font-size: 11px; color: var(--faint); margin-right: 2px; text-transform: uppercase; letter-spacing: .04em; }
+.page { overflow: auto; padding: 22px 28px 40px; }
+.grid { display: grid; gap: 12px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px 12px; }
+button.card { text-align: left; cursor: pointer; font: inherit; }
+.stat { font: 600 22px var(--mono); letter-spacing: -0.02em; }
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.tr { display: grid; grid-template-columns: 3px 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 12px 7px 0; border-top: 1px solid var(--border); cursor: pointer; }
+.tr:first-child { border-top: 0; }
+.tr:hover { background: var(--hover); }
+.stripe { align-self: stretch; border-radius: 2px; }
+.score { font: 500 12px var(--mono); text-align: right; }
+.s-hi { color: var(--danger); } .s-mid { color: var(--warn); }
+.ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 45%, transparent); border-radius: 8px; padding: 10px 12px; }
+.ai.new { box-shadow: 0 0 0 2px var(--accent); }
+.b-sec { margin-top: 10px; }
+.b-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 22px; }
+.b-cols .b-sec { margin-top: 12px; }
+.b-sec .label { margin-bottom: 2px; display: flex; gap: 6px; align-items: baseline; }
+.b-item { display: grid; grid-template-columns: minmax(0, 1fr); padding: 3px 6px; margin: 0 -6px; border-radius: 5px; cursor: pointer; line-height: 1.45; }
+.b-item:hover { background: color-mix(in srgb, var(--accent-bg) 70%, transparent); }
+.b-item .t { font-weight: 500; }
+.b-item .w { color: var(--muted); }
+.b-item.over { box-shadow: inset 2px 0 0 var(--danger); border-radius: 0 5px 5px 0; }
+.tag-over { display: inline-block; font-size: 11px; font-weight: 500; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 4px; padding: 0 6px; margin-right: 6px; white-space: nowrap; }
+.b-none { color: var(--faint); padding: 3px 0; }
+.summary { font-size: 14px; line-height: 1.55; margin: 2px 0 0; }
+.stale { display: flex; gap: 8px; align-items: center; background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); border-radius: 6px; padding: 4px 8px; font-size: 12px; margin-bottom: 8px; }
+.err { color: var(--danger); font-size: 12px; margin-top: 6px; }
+.spin { width: 12px; height: 12px; border: 2px solid var(--accent-bg); border-top-color: var(--accent); border-radius: 50%; animation: sp .8s linear infinite; display: inline-block; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 30; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .35); display: grid; place-items: center; z-index: 10; }
+.dialog { width: min(860px, calc(100vw - 40px)); height: min(560px, calc(100vh - 80px)); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 12px 40px rgb(0 0 0 / .25); }
+.dialog-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.dialog-body { display: grid; grid-template-columns: 200px minmax(0, 1fr); min-height: 0; flex: 1; }
+.h-list { border-right: 1px solid var(--border); overflow: auto; padding: 6px; }
+.h-row { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.h-row:hover { background: var(--hover); }
+.h-row.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.h-row .d { font-weight: 500; }
+.h-row .s { font-size: 11px; color: var(--faint); }
+.h-view { overflow: auto; padding: 14px 18px; }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.statusbar { position: fixed; bottom: 0; left: 0; right: 0; height: 24px; display: flex; gap: 14px; align-items: center; padding: 0 12px; border-top: 1px solid var(--border); background: var(--surface); font-size: 11px; color: var(--muted); }
+@media (max-width: 900px) { .two { grid-template-columns: minmax(0, 1fr) !important; } .four { grid-template-columns: repeat(2, 1fr) !important; } }
+/* Weekly review */
+.wk { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 0; }
+.wk-list { border-right: 1px solid var(--border); background: var(--surface); overflow: auto; padding: 8px 6px; }
+.wk-list .label { padding: 4px 8px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); }
+.wk-row { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.wk-row:hover { background: var(--hover); }
+.wk-row.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.wk-row .d { font-weight: 500; }
+.wk-row .s { font-size: 11px; color: var(--faint); display: flex; gap: 8px; }
+.wk-main { overflow: auto; padding: 22px 28px 60px; }
+.badge { font-size: 11px; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.badge.live { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.badge.saved { color: var(--muted); background: var(--sel); }
+.badge.part { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.secs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sec { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.sec-h { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.sec-h b { font-weight: 600; }
+.it { display: grid; grid-template-columns: 3px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 12px 6px 0; border-top: 1px solid var(--border); cursor: pointer; }
+.it:first-of-type { border-top: 0; }
+.it:hover { background: var(--hover); }
+.it .sub { font-size: 12px; color: var(--muted); }
+.it .r { font-size: 12px; color: var(--muted); white-space: nowrap; text-align: right; }
+.none { padding: 10px 12px; color: var(--faint); }
+.notrec { padding: 10px 12px; color: var(--warn); font-size: 12px; }
+.refl h4 { font-size: 12px; font-weight: 500; color: var(--muted); margin: 10px 0 2px; }
+.refl ul { margin: 0; padding-left: 18px; }
+.refl li { margin: 2px 0; }
+.done-t { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button><button class="tab on">Weekly</button><button class="tab">Tasks</button><button class="tab">Review</button>
+  <button class="tab">Waiting</button><button class="tab">Projects</button><button class="tab">People</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="controls">
+  <div class="grp"><span>Week</span>
+    <button class="pill" data-w="0">This week</button>
+    <button class="pill" data-w="1">Last week (saved)</button>
+    <button class="pill" data-w="3">Before weekly reviews</button>
+  </div>
+  <div class="grp"><span>Reflection</span>
+    <button class="pill" data-r="written">Written</button>
+    <button class="pill" data-r="outdated">Out of date</button>
+    <button class="pill" data-r="none">Not written yet</button>
+    <button class="pill" data-r="error">AI failed</button>
+  </div>
+  <div class="grp"><span>Data</span>
+    <button class="pill" data-q="busy">Busy week</button>
+    <button class="pill" data-q="quiet">Quiet week</button>
+  </div>
+</div>
+
+<div class="wk">
+  <div class="wk-list" id="weeks"></div>
+  <div class="wk-main" id="main"></div>
+</div>
+<div class="statusbar"><span id="hints"></span><div class="spacer"></div><span>Comfortable</span></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const PROJ = { pricing: '#7F77DD', training: '#1D9E75', portal: '#D85A30', roadmap: '#378ADD' }
+const WEEKS = [
+  { range: 'Nov 1 – 7', label: 'This week', kind: 'live', sub: 'Sunday to today · updates as you go', counts: [5, 4, 2, 3] },
+  { range: 'Oct 25 – 31', label: 'Last week', kind: 'saved', sub: 'Saved Sun, Nov 1, 8:02 AM · as it stood Saturday night', counts: [8, 6, 1, 2] },
+  { range: 'Oct 18 – 24', label: '', kind: 'saved', sub: 'Saved Sun, Oct 25, 9:15 AM', counts: [6, 3, 2, 2] },
+  { range: 'Oct 11 – 17', label: '', kind: 'part', sub: 'Before weekly reviews: only Completed and New are known', counts: [7, 5, null, null] },
+  { range: 'Oct 4 – 10', label: '', kind: 'part', sub: 'Before weekly reviews: only Completed and New are known', counts: [4, 2, null, null] },
+]
+const DATA = {
+  completed: [
+    ['pricing', 'Get pricing approval from Dana', 'Spring pricing launch', 'Mon'],
+    ['training', 'Shortlist training platforms', 'Dealer training', 'Mon'],
+    ['roadmap', 'Draft roadmap timeline slide', 'Roadmap', 'Tue'],
+    [null, 'Book flights for ISE', null, 'Tue'],
+    ['portal', 'Send portal feedback to Marcus', 'Partner portal', 'Wed'],
+  ],
+  added: [
+    ['pricing', 'Send pricing deck to EMEA distributors', 'From import: Pricing call', 'Mon'],
+    ['roadmap', 'Roadmap slides for VP review', 'Added by you', 'Mon'],
+    [null, 'Expense report for October', 'From import: Finance sync summary', 'Tue'],
+    ['training', 'Pick a training platform', 'From import: Alex Rivera email', 'Wed'],
+  ],
+  slipping: [
+    ['pricing', 'Review margin model with Priya', 'Due Tue, Nov 3', 'Overdue 1 day'],
+    ['portal', 'Update partner portal FAQ', 'Due Fri, Oct 30', 'Overdue 5 days'],
+  ],
+  waiting: [
+    ['training', 'Signed pilot agreement', 'Northwind AV', '9 days'],
+    ['portal', 'Portal wireframe sign-off', 'Marcus Webb', '6 days'],
+    ['training', 'Training platform quotes', 'Alex Rivera', '2 days'],
+  ],
+}
+const REFLECTION = {
+  at: 'Wed, 2:40 PM',
+  summary: 'A solid start: pricing is approved and the training shortlist is done, but the margin review slipped and is now holding up the EMEA deck.',
+  well: ['Pricing approval from Dana closed a two-week loop.', 'Training platforms are down to two options.'],
+  slipped: ['Margin model review is a day late, and the EMEA deck depends on it.', 'The portal FAQ has been overdue since last Friday.'],
+  next: ['Finish the margin review first; it unblocks the EMEA deck.', 'Nudge Northwind AV on the pilot agreement before it passes two weeks.'],
+}
+const LAST_REFLECTION = {
+  at: 'Fri, Oct 30, 4:55 PM',
+  summary: 'A productive week: eight tasks closed, mostly pricing prep, with the portal FAQ the one thing left hanging.',
+  well: ['Pricing proposal went to Dana on time.', 'Cleared the backlog of dealer follow-ups.'],
+  slipped: ['Portal FAQ update missed its Friday date.'],
+  next: ['Get pricing approved early in the week.', 'Start the roadmap slides for the VP review.'],
+}
+
+let wk = 0, refl = 'written', quiet = false, busy = false
+const $ = (s) => document.querySelector(s)
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+let tt
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 1800) }
+const stripe = (p) => `<span class="stripe" style="background:${p ? PROJ[p] : 'var(--border-strong)'}"></span>`
+
+function renderWeeks() {
+  $('#weeks').innerHTML = `<div class="label">Weeks</div>` + WEEKS.map((w, i) => `<div class="wk-row ${i === wk ? 'on' : ''}" onclick="wk=${i};render()">
+    <div class="d">${w.range}${w.label ? ` <span class="faint" style="font-weight:400">· ${w.label}</span>` : ''}</div>
+    <div class="s"><span>${w.counts[0]} done</span><span>${w.counts[1]} new</span>${w.kind === 'part' ? '<span>partly recorded</span>' : ''}</div></div>`).join('')
+}
+
+function section(name, rows, empty, render, extra = '') {
+  return `<div class="sec"><div class="sec-h"><b>${name}</b><span class="mono muted">${rows ? rows.length : '–'}</span><div class="spacer"></div>${extra}</div>
+    ${rows === null ? `<div class="notrec">Not recorded. Weekly reviews started after this week, so the app doesn't know what was overdue or waiting then.</div>`
+      : rows.length ? rows.map(render).join('') : `<div class="none">${empty}</div>`}</div>`
+}
+
+function reflectionHtml(w) {
+  const isLive = w.kind === 'live'
+  const r = isLive ? REFLECTION : LAST_REFLECTION
+  const btn = busy ? `<button class="btn sm" disabled><span class="spin"></span> Writing…</button>`
+    : isLive ? `<button class="btn sm ${refl === 'none' ? 'primary' : ''}" onclick="writeRefl()">${refl === 'none' ? 'Write reflection' : refl === 'error' ? 'Try again' : 'Refresh'}</button>` : ''
+  const head = (meta) => `<div class="row" style="gap:6px;margin-bottom:2px"><span style="color:var(--accent)">✦</span><b style="font-weight:500">Your week</b>${meta ? `<span class="faint" style="font-size:11px">· ${meta}</span>` : ''}<div class="spacer"></div>
+    ${refl !== 'none' || !isLive ? `<button class="btn ghost sm" onclick="toast('Copied as plain text')">Copy</button>` : ''}${btn}</div>`
+  if (w.kind === 'part' || (!isLive && wk !== 1)) {
+    return `<div class="ai">${head('')}<div class="muted">No reflection was written for this week.</div></div>`
+  }
+  if (isLive && refl === 'none') {
+    return `<div class="ai">${head('')}<div class="muted" style="line-height:1.6;margin:4px 0 8px">A short look back for you: what went well, what slipped, and what to focus on next. The lists below already update on their own; this is written only when you click.</div>${btn.replace('btn sm', 'btn sm primary')}</div>`
+  }
+  const quietR = { summary: 'A quiet week so far: nothing finished, nothing new, and nothing overdue or waiting.', well: [], slipped: [], next: ['Use the space to get ahead on the roadmap slides.'] }
+  const rr = quiet && isLive ? quietR : r
+  const list = (t, items, none) => `<div><h4>${t}</h4>${items.length ? `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : `<div class="b-none">${none}</div>`}</div>`
+  return `<div class="ai">${head(`Written ${rr === r ? r.at : 'Wed, 2:40 PM'}`)}
+    ${isLive && refl === 'outdated' ? `<div class="stale" style="margin-top:6px">2 tasks completed and 1 added since this was written</div>` : ''}
+    ${isLive && refl === 'error' ? `<div class="err">Couldn't write the reflection: the AI didn't respond in time. Your last one is below.</div>` : ''}
+    <div class="summary refl" style="margin-top:4px">${esc(rr.summary)}</div>
+    <div class="refl" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 22px">
+      ${list('Went well', rr.well, 'Nothing to note.')}${list('Slipped', rr.slipped, 'Nothing slipped.')}${list('Focus next', rr.next, 'Nothing to suggest.')}
+    </div></div>`
+}
+
+function render() {
+  document.querySelectorAll('[data-w]').forEach((b) => b.classList.toggle('on', +b.dataset.w === wk))
+  document.querySelectorAll('[data-r]').forEach((b) => b.classList.toggle('on', b.dataset.r === refl))
+  document.querySelectorAll('[data-q]').forEach((b) => b.classList.toggle('on', (b.dataset.q === 'quiet') === quiet))
+  renderWeeks()
+  const w = WEEKS[wk], live = w.kind === 'live', part = w.kind === 'part'
+  const q = quiet && live
+  const d = q ? { completed: [], added: [], slipping: [], waiting: [] } : DATA
+  const counts = q ? [0, 0, 0, 0] : w.counts
+  const badge = live ? '<span class="badge live">Live</span>' : part ? '<span class="badge part">Partly recorded</span>' : '<span class="badge saved">Saved</span>'
+  $('#main').innerHTML = `
+    <div class="head">
+      <button class="btn ghost sm" onclick="wk=Math.min(${WEEKS.length - 1},wk+1);render()" title="Earlier week">‹</button>
+      <h1>Week of ${w.range}</h1>
+      <button class="btn ghost sm" ${wk === 0 ? 'disabled' : ''} onclick="wk=Math.max(0,wk-1);render()" title="Later week">›</button>
+      ${badge}<span class="muted">${w.sub}</span>
+      <div class="spacer"></div>
+      ${wk ? '<button class="btn sm" onclick="wk=0;render()">This week</button>' : ''}
+    </div>
+    <div class="grid four" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px">
+      <div class="card"><div class="label">Completed</div><div class="stat" style="color:var(--ok)">${counts[0]}</div></div>
+      <div class="card"><div class="label">New</div><div class="stat">${counts[1]}</div></div>
+      <div class="card"><div class="label">Slipping</div><div class="stat ${counts[2] ? 's-hi' : ''}">${counts[2] ?? '–'}</div></div>
+      <div class="card"><div class="label">Waiting on</div><div class="stat">${counts[3] ?? '–'}</div></div>
+    </div>
+    <div style="margin-bottom:14px">${reflectionHtml(w)}</div>
+    <div class="secs two">
+      ${section('Completed', d.completed, 'Nothing completed yet this week.', ([p, t, proj, day]) => `<div class="it" onclick="toast('Opens the task (in Done)')">${stripe(p)}<span><span class="done-t">✓</span> ${esc(t)}${proj ? `<div class="sub">${proj}</div>` : ''}</span><span class="r">${day}</span></div>`)}
+      ${section('New', d.added, 'Nothing new this week.', ([p, t, src, day]) => `<div class="it" onclick="toast('Opens the task')">${stripe(p)}<span>${esc(t)}<div class="sub">${src}</div></span><span class="r">${day}</span></div>`)}
+      ${section('Slipping', part ? null : d.slipping, 'Nothing is overdue.', ([p, t, due, tag]) => `<div class="it" onclick="toast('Opens the task')" style="box-shadow: inset 2px 0 0 var(--danger)">${stripe(p)}<span>${esc(t)}<div class="sub">${due}</div></span><span class="r"><span class="tag-over" style="margin:0">${tag}</span></span></div>`, live ? '<span class="faint" style="font-size:11px">overdue now</span>' : '<span class="faint" style="font-size:11px">overdue at week’s end</span>')}
+      ${section('Waiting on', part ? null : d.waiting, 'Not waiting on anyone.', ([p, t, who, days]) => `<div class="it" onclick="toast('Opens the item in Waiting')">${stripe(p)}<span>${esc(t)}<div class="sub">${who}</div></span><span class="r mono">${days}</span></div>`, '<span class="faint" style="font-size:11px">longest first</span>')}
+    </div>
+    <div class="notes">
+      <h3>Mockup notes (not part of the app)</h3>
+      <ul>
+        <li><b>A new Weekly tab</b> next to Today. Weeks run Sunday to Saturday. The list on the left has every week, newest first; ‹ › step between weeks. <b>G then V</b> would open the tab (W is taken by Waiting); tell me if you'd prefer another key.</li>
+        <li><b>This week is live.</b> Completed, New, Slipping and Waiting on update by themselves as you work. Nothing is sent to the AI for them.</li>
+        <li><b>"Your week" is the AI part,</b> written only when you click Write reflection or Refresh: one summary line, then Went well, Slipped, and Focus next. It's for you, not a report to send. Copy puts it on the clipboard as plain text. If tasks change after it's written, it says so (try "Out of date").</li>
+        <li><b>Weeks are saved automatically.</b> The first time the app opens after Saturday, it saves the week that ended with its four lists as they stood and its last reflection, and that saved week never changes. If the app wasn't opened at all for a week, that week is saved partly, like the weeks below.</li>
+        <li><b>Weeks before this feature</b> show Completed and New (the app knows when each task was created and finished) and mark Slipping and Waiting on as not recorded. A past week with no reflection says so. In the real app, every week before this one starts out like this; "Last week (saved)" shows how weeks will look from now on.</li>
+        <li><b>Slipping</b> is tasks that are overdue (for a saved week, overdue on Saturday night). Due dates that move aren't tracked, as you chose.</li>
+        <li><b>New</b> shows where each task came from: added by you, or the import it was accepted from.</li>
+        <li><b>Only reads.</b> Like the briefing, the weekly review never changes tasks or adds anything to Review. Clicking an item opens it.</li>
+        <li><b>The AI log</b> keeps the request and response for each reflection, the same way as the briefing.</li>
+      </ul>
+    </div>`
+  $('#hints').innerHTML = '<span class="kbd">↑↓</span> week &nbsp; <span class="kbd">N</span> new task'
+}
+
+function writeRefl() {
+  if (WEEKS[wk].kind !== 'live') return
+  busy = true; render()
+  setTimeout(() => { busy = false; refl = 'written'; render(); toast('Reflection ready') }, 1400)
+}
+document.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { wk = +b.dataset.w; render() })
+document.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { refl = b.dataset.r; wk = 0; busy = false; render() })
+document.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => { quiet = b.dataset.q === 'quiet'; wk = 0; render() })
+$('#theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown') { wk = Math.min(WEEKS.length - 1, wk + 1); render() }
+  if (e.key === 'ArrowUp') { wk = Math.max(0, wk - 1); render() }
+})
+render()
+</script>
+</body>
+</html>

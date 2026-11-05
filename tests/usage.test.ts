@@ -37,6 +37,9 @@ class Fake implements AiProvider {
   writeBriefing(_i: unknown, log?: AiCallLog) {
     return this.one(log, { summary: 'A quiet day.', priorities: [], nudges: [], new_items: [] })
   }
+  writeWeeklyReflection(_i: unknown, log?: AiCallLog) {
+    return this.one(log, { summary: 'A quiet week.', went_well: [], slipped: [], focus_next: [] })
+  }
   async test() {
     return 'ok'
   }
@@ -162,7 +165,7 @@ describe('upgrading to the AI spending version', () => {
     const folder = mkdtempSync(join(tmpdir(), 'cos-usage-up-'))
     const path = join(folder, 'test.db')
     try {
-      const old = openDatabase(path, { migrations: MIGRATIONS.slice(0, -1) })
+      const old = openDatabase(path, { migrations: MIGRATIONS.slice(0, MIGRATIONS.findIndex((m) => typeof m === 'string' && m.includes('CREATE TABLE ai_usage'))) })
       old.exec(`
         INSERT INTO source_items (id, kind, title, occurred_at, content, content_hash, imported_at) VALUES (1, 'note', 'A', '2026-11-01', 'x', 'h1', '2026-11-01');
         INSERT INTO extraction_runs (id, source_id, provider, started_at) VALUES (1, 1, 'Claude Opus 5.5', '2026-11-01T10:00:00Z');

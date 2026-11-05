@@ -125,6 +125,14 @@ export class TaskService {
     return this.save(task.waitedOn ? { ...task, status: 'waiting_on', waitingOn: task.waitedOn } : { ...task, status: 'open' })
   }
 
+  /**
+   * Everything a week's review can mention: tasks created before the week ended that were still
+   * active at its start or finished during or after it. Proposed and dismissed tasks are left out.
+   */
+  listForWeek(from: string, to: string): Task[] {
+    return this.load(`${SELECT} WHERE w.status IN ('open', 'waiting_on', 'done') AND w.created_at < $to AND (w.status != 'done' OR w.completed_at >= $from)`, { from, to })
+  }
+
   /** Waiting-on tasks, longest waiting first. */
   listWaiting(): Task[] {
     return this.load(`${SELECT} WHERE w.status = 'waiting_on'`).sort(longestWaiting)

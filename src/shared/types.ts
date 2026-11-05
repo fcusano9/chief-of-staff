@@ -494,12 +494,76 @@ export interface BriefingListItem {
   estimatedCost: number | null
 }
 
+/**
+ * How much of a week is known. 'live' is the current week, rebuilt each time it's shown. 'saved'
+ * weeks were saved after they ended and never change. 'partial' weeks only know what was completed
+ * and added: weeks before the weekly review started, and weeks the app wasn't opened after.
+ */
+export type WeekRecord = 'live' | 'saved' | 'partial'
+
+/** One line in a weekly review. Titles and details are kept as they were, so saved weeks read the same later. */
+export interface WeeklyItem {
+  taskId: number
+  title: string
+  project: string | null
+  projectColor: string | null
+  /** The line under the title: the project, where a new task came from, its due date, or who it's waiting on. */
+  detail: string
+  /** When it was completed or added (ISO), for the day shown on the right. */
+  at: string | null
+  /** Slipping: days past due (at the end of a saved week). */
+  overdueDays: number | null
+  /** Waiting on: days waited so far, when known. */
+  days: number | null
+}
+
+/** The four lists. Slipping and waiting are null when not recorded (partial weeks). */
+export interface WeeklyLists {
+  completed: WeeklyItem[]
+  added: WeeklyItem[]
+  slipping: WeeklyItem[] | null
+  waiting: WeeklyItem[] | null
+}
+
+/** The AI's short look back at a week, for Frank only. Written only when he clicks. */
+export interface WeeklyReflection {
+  summary: string
+  wentWell: string[]
+  slipped: string[]
+  focusNext: string[]
+  writtenAt: string
+  /** The AI that wrote it, e.g. "Claude Opus 5.5" or "Basic". */
+  writtenBy: string
+}
+
+export interface WeeklyReview {
+  /** The week's Sunday, 'YYYY-MM-DD'. */
+  weekStart: string
+  record: WeekRecord
+  /** When an ended week was saved. Null for the live week and for weeks before the weekly review started. */
+  savedAt: string | null
+  lists: WeeklyLists
+  reflection: WeeklyReflection | null
+  /** Live week only: tasks completed and added since the reflection was written. */
+  changedSince: { completed: number; added: number } | null
+}
+
+/** A week in the list on the left of the Weekly tab. */
+export interface WeekListItem {
+  weekStart: string
+  record: WeekRecord
+  completed: number
+  added: number
+  hasReflection: boolean
+}
+
 /** What a paid AI request was for. */
-export type UsagePurpose = 'import' | 'briefing' | 'person_brief' | 'project_brief'
+export type UsagePurpose = 'import' | 'briefing' | 'weekly' | 'person_brief' | 'project_brief'
 
 export const USAGE_PURPOSE_LABELS: Record<UsagePurpose, string> = {
   import: 'Imports',
   briefing: 'Daily briefings',
+  weekly: 'Weekly reflections',
   person_brief: 'Person briefs',
   project_brief: 'Project briefs',
 }

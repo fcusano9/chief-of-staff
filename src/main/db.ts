@@ -253,6 +253,41 @@ export const MIGRATIONS: Migration[] = [
       AND (response IS NULL OR json_valid(response)) AND json_extract(request, '$.model') IS NOT NULL
     ORDER BY started_at;
   `,
+  // Weekly review (Sunday to Saturday). weekly_meta holds the week the weekly review started, set
+  // the first time it runs; weeks before it are rebuilt from task dates and only partly known.
+  // Ended weeks are saved once in weekly_reviews (lists as JSON) and never change. The AI
+  // reflection for a week is in weekly_reflections (basis: the completed and added task ids it was
+  // written from, to tell when it's out of date); its requests are kept for the newest few.
+  `
+  CREATE TABLE weekly_meta (started_week TEXT NOT NULL);
+  CREATE TABLE weekly_reviews (
+    week_start TEXT PRIMARY KEY,
+    record TEXT NOT NULL,
+    saved_at TEXT NOT NULL,
+    lists TEXT NOT NULL
+  );
+  CREATE TABLE weekly_reflections (
+    week_start TEXT PRIMARY KEY,
+    written_at TEXT NOT NULL,
+    written_by TEXT NOT NULL,
+    content TEXT NOT NULL,
+    basis TEXT NOT NULL
+  );
+  CREATE TABLE weekly_ai_calls (
+    id INTEGER PRIMARY KEY,
+    week_start TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    request TEXT NOT NULL,
+    response TEXT,
+    error TEXT,
+    started_at TEXT NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    input_tokens INTEGER,
+    output_tokens INTEGER
+  );
+  CREATE INDEX ix_weekly_ai_calls_week ON weekly_ai_calls(week_start);
+  `,
 ]
 
 /** Moves status updates and task standing instructions into each task's Updates (see the migration above). */
