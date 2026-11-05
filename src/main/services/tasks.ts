@@ -4,6 +4,7 @@ import {
   ACTIVE_STATUSES,
   effectivePriority,
   type Person,
+  type PriorityAdjustment,
   type PriorityWeights,
   type Project,
   type SourceKind,
@@ -25,10 +26,12 @@ const SELECT = `
          p.id AS p_id, p.name AS p_name, p.color AS p_color, p.status AS p_status, p.created_at AS p_created_at,
          p.overview AS p_overview, p.brief AS p_brief, p.brief_by AS p_brief_by, p.brief_at AS p_brief_at,
          r.id AS r_id, r.name AS r_name, r.role AS r_role, r.company AS r_company, r.email AS r_email, r.priority_weight AS r_weight,
-         r.brief AS r_brief, r.brief_by AS r_brief_by, r.brief_at AS r_brief_at
+         r.brief AS r_brief, r.brief_by AS r_brief_by, r.brief_at AS r_brief_at,
+         a.delta AS a_delta, a.reason AS a_reason, a.written_at AS a_written_at, a.written_by AS a_written_by, a.origin AS a_origin, a.origin_label AS a_origin_label
   FROM work_items w
   LEFT JOIN projects p ON p.id = w.project_id
-  LEFT JOIN people r ON r.id = w.requester_id`
+  LEFT JOIN people r ON r.id = w.requester_id
+  LEFT JOIN priority_adjustments a ON a.work_item_id = w.id`
 
 function toTask(row: Row): Task {
   const project: Project | null =
@@ -61,6 +64,17 @@ function toTask(row: Row): Task {
     priorityScore: Number(row.priority_score),
     priorityRationale: (row.priority_rationale as string) ?? null,
     priorityOverride: row.priority_override == null ? null : Number(row.priority_override),
+    aiAdjustment:
+      row.a_delta == null
+        ? null
+        : {
+            delta: Number(row.a_delta),
+            reason: String(row.a_reason),
+            writtenAt: String(row.a_written_at),
+            writtenBy: String(row.a_written_by),
+            origin: row.a_origin as PriorityAdjustment['origin'],
+            originLabel: (row.a_origin_label as string) ?? null,
+          },
     followUpCount: Number(row.follow_up_count),
     waitingOn: (row.waiting_on as string) ?? null,
     waitingSince: (row.waiting_since as string) ?? null,

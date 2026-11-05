@@ -61,15 +61,15 @@ export class DemoProvider implements AiProvider {
       purpose: 'Find suggestions (demo rules)',
       endpoint: 'Basic, on this computer: fixed pattern rules, no prompt',
       request: { note: 'Basic sends no prompt. It scans these lines of the imported item for patterns.', importedItem: source.content },
-      response: { suggestions: out, next_actions: [] },
+      response: { suggestions: out, next_actions: [], priority_changes: [] },
       error: null,
       startedAt,
       durationMs: 0,
       inputTokens: null,
       outputTokens: null,
     })
-    // Basic follows simple rules and can't judge a next step, so it suggests none.
-    return { suggestions: out, next_actions: [] }
+    // Basic follows simple rules and can't judge a next step or a priority, so it suggests neither.
+    return { suggestions: out, next_actions: [], priority_changes: [] }
   }
 
   private applyRules(ctx: ExtractionContext, source: SourceForExtraction): RawSuggestion[] {

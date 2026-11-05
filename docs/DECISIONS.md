@@ -2,10 +2,19 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-05 · AI priority adjustment: ±15, applied at once, undoable; an AI rules page (Frank)
+Frank's choices, asked up front (mockup `design/priority-adjustment.html`, approved):
+- **Written as part of a daily briefing or an import**, like next actions. Never on its own; Basic makes none.
+- **Applied right away**, shown on the priority card with its reason and a Remove link, rather than going to Review or only being shown. A score set by hand still wins.
+- **At most ±15:** enough to reorder close tasks, not enough to bury an overdue one.
+- **Proposed in the mockup, approved:** the card shows the sum ("54 + 10"); a ✦ marks adjusted scores in lists; with a score set by hand the change stays visible, greyed, as "Not used"; a removed change can come back with a later briefing or import.
+- **Decided while building:** the AI gets the computed score and its current change separately, so it revises its change instead of stacking a new one. A later change replaces the old one and 0 clears it; a briefing or import that skips a task keeps its change (simpler and safer than clearing everything it was sent but didn't mention). Imports now send each open task's score, so every import prompt is slightly longer.
+- **`docs/AI-RULES.md`** (Frank asked): every AI rule and limit on one scannable page, kept current in the same PR as any rule change. DECISIONS.md keeps the reasons.
+
 ### 2026-11-05 · Suggested next action: part of briefings and imports, card only (Frank)
 Frank's choices, asked up front (mockup `design/next-action.html`, approved):
 - **Written as part of a daily briefing or an import**, not on its own and with no Suggest button: the briefing writes one for each top priority, an import for each open task the item is about. Basic writes none (rules can't judge a next step).
-- **Shown on the card only**, never in Review. It's advice that changes nothing, like the briefing itself, so it doesn't need accepting. An import writes them when it runs, even if Frank later rejects that import's suggestions; tasks the import proposes to mark done get none.
+- **Shown on the card only**, never in Review. It's advice that changes nothing, like the briefing itself, so it doesn't need accepting. An import writes them when it runs, even if the user later rejects that import's suggestions; tasks the import proposes to mark done get none.
 - **One sentence plus why.** One per task; the newest replaces it.
 - **Dismiss collapses it** to "Suggestion dismissed · Show" (Frank chose this over hiding it for good). A new suggestion shows again.
 - **Out of date** (proposed in the mockup, approved): when the task has an update dated a later day than the suggestion, the card says so in amber instead of hiding it. Updates are dated by day, so a same-day update doesn't count.
@@ -15,7 +24,7 @@ Frank's choices, asked up front (mockup `design/next-action.html`, approved):
 Frank's choices, asked up front (mockup `design/weekly-review.html`, approved):
 - **Weeks run Sunday to Saturday.** The current week shows Sunday to today and updates as he works; every week is kept so he can go back to any of them. Its own **Weekly tab** next to Today (G then V; W was taken by Waiting).
 - **Four lists:** Completed, New, Slipping, Waiting on. **Slipping is overdue tasks only**; due dates that move aren't tracked (Frank chose not to start recording them).
-- **The reflection is for Frank alone**, not a report for others: a summary, Went well, Slipped, Focus next. The lists update on their own with no AI; the reflection is written only when he clicks, and says when tasks changed since. Text only; nothing goes to Review.
+- **The reflection is for the user alone**, not a report for others: a summary, Went well, Slipped, Focus next. The lists update on their own with no AI; the reflection is written only when the user clicks, and says when tasks changed since. Text only; nothing goes to Review.
 - **Ended weeks are saved automatically** the first time the app runs after Saturday midnight, and never change after. The lists are rebuilt as they stood at Saturday midnight from task dates (a task finished on Sunday still counts as overdue that week), so opening the app a few days late doesn't change them much.
 - **Weeks before this feature** show Completed and New (from task dates) and mark Slipping and Waiting on as not recorded (Frank: "Yes, partly"). A week the app wasn't opened at all the week after is saved the same way; this was in the mockup notes and Frank approved it.
 
@@ -61,7 +70,7 @@ Frank asked for a simpler way to choose the AI (mockup `design/ai-models-provide
 
 ### 2026-11-04 · Daily briefing: on click only, ready for a schedule later (Frank)
 Frank's choices, asked up front (mockup `design/daily-briefing.html`, approved):
-- **Only when he clicks** (Write briefing, Refresh, or "Write briefing" in Ctrl+K). This settles the roadmap's pending decision for now. He may add a schedule later, so `BriefingService.write(trigger)` takes `'manual'` or `'scheduled'` and each briefing records it (`briefings.started_by`); a scheduler only needs a time setting that calls `write('scheduled')`. No keyboard shortcut (Frank).
+- **Only when the user clicks** (Write briefing, Refresh, or "Write briefing" in Ctrl+K). This settles the roadmap's pending decision for now. A schedule may be added later, so `BriefingService.write(trigger)` takes `'manual'` or `'scheduled'` and each briefing records it (`briefings.started_by`); a scheduler only needs a time setting that calls `write('scheduled')`. No keyboard shortcut (Frank).
 - **Three sections:** Top priorities, Waiting-on nudges, New since last briefing, under a one-line summary. Overdue tasks aren't a section of their own: they lead Top priorities with a red "Overdue N days" tag and edge (Frank). Empty sections stay, with a line saying so, so the layout doesn't jump.
 - **Full width** between the number cards and Focus (Frank chose this over the side column). No Import button and no "sends data to Anthropic" line on the card (Frank).
 - **Text only:** the briefing changes nothing and adds nothing to Review.
@@ -114,10 +123,10 @@ Frank wants the app to read his mail since the last import, find action items an
 - **Two steps:** "Check Outlook" sends nothing to the AI. "Read" sends one conversation at a time in the background while the screen polls for progress. Stop finishes the current conversation, and the rest is offered next time. A stopped run doesn't move the start date.
 - **One import per conversation:** received and sent messages are read together, oldest first, with quoted history removed (kept only under the first message, for context). On a week of Frank's real mail that cut the text sent from about 1.6 million to 390,000 characters. Each conversation is a normal import with its own AI log and Run again; Recent imports shows one row per mail import.
 - **Never read twice:** every message read is recorded by its Internet message id (`mail_messages`), so going back further only adds older mail.
-- **App rules over AI guesses:** if Frank wrote the newest message, any "needs reply" is dropped (shown in the AI log), and a waiting-on starts at the time he sent the ask.
+- **App rules over AI guesses:** if the user wrote the newest message, any "needs reply" is dropped (shown in the AI log), and a waiting-on starts at the time the user sent the ask.
 - **A new suggestion kind**, `needs_reply`. "Reply arrived" is a "Looks done" on a waiting-on task from an email, relabeled in Review.
 
-**A change from the mockup:** the mockup also skipped conversations where Frank replied last. Those are now read, because they're exactly where his sent asks are, and only "needs reply" is suppressed.
+**A change from the mockup:** the mockup also skipped conversations where the user replied last. Those are now read, because they're exactly where the user's sent asks are, and only "needs reply" is suppressed.
 
 **Not done yet:** draft replies, calendar, and a benchmark of real models on the new email cases (no Ollama or Claude key on the Windows PC).
 
@@ -173,7 +182,7 @@ A third provider runs a model on the computer through Ollama's HTTP API, so noth
 On Opus 5.5 and Sonnet 5.5, extraction requests send `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`). If Claude's safety classifier declines, the API reruns the request on a fallback model instead of failing. This follows Anthropic's guidance. Frank was told; it's easy to remove.
 
 ### 2026-11-02 · Demo AI is the default provider
-A local, rule-based provider ships so the import and review flow works and can be tested without an API key or any data leaving the PC. Claude is used only when Frank selects it and stores a key. **Why:** the key and Crestron's data policy were still pending.
+A local, rule-based provider ships so the import and review flow works and can be tested without an API key or any data leaving the PC. Claude is used only when the user selects it and stores a key. **Why:** the key and Crestron's data policy were still pending.
 
 ### 2026-11-02 · Claude model default: Opus 5.5
 `claude-opus-5-5` is the default, at medium effort, with Zod structured outputs through `client.beta.messages.parse`. Sonnet 5.5 and Haiku 5.5 can be chosen in Settings. Cost tradeoffs are Frank's decision.

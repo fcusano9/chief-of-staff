@@ -9,12 +9,12 @@ export const CONTEXT: ExtractionContext = {
   today: '2026-11-02',
   userName: 'Frank Cusano',
   tasks: [
-    { id: 1, title: 'Roadmap slides for Q1 planning', status: 'open', dueDate: null, project: 'Roadmap 2027', requester: 'Dana Lee', waitingOn: null, updates: [] },
-    { id: 2, title: 'Approve partner portal wireframes', status: 'open', dueDate: '2026-11-05', project: 'Partner portal', requester: 'Marcus Webb', waitingOn: null, updates: [] },
-    { id: 3, title: 'Margin model for new tiers', status: 'open', dueDate: null, project: 'Pricing refresh', requester: null, waitingOn: null, updates: [] },
-    { id: 4, title: 'Dealer FAQ for DM-NVX 3.2 firmware', status: 'open', dueDate: null, project: null, requester: 'Kenji Mori', waitingOn: null, updates: ['Oct 30, 2026: Kenji sent the 3.2 release notes; the FAQ goes to dealers before the webinar.'] },
-    { id: 5, title: 'Review SOW from Northside AV', status: 'open', dueDate: null, project: null, requester: null, waitingOn: null, updates: [] },
-    { id: 6, title: 'Customer advisory board agenda', status: 'open', dueDate: null, project: 'Roadmap 2027', requester: 'Dana Lee', waitingOn: null, updates: [] },
+    { id: 1, title: 'Roadmap slides for Q1 planning', status: 'open', dueDate: null, project: 'Roadmap 2027', requester: 'Dana Lee', waitingOn: null, updates: [], priority: 40, aiChange: null },
+    { id: 2, title: 'Approve partner portal wireframes', status: 'open', dueDate: '2026-11-05', project: 'Partner portal', requester: 'Marcus Webb', waitingOn: null, updates: [], priority: 40, aiChange: null },
+    { id: 3, title: 'Margin model for new tiers', status: 'open', dueDate: null, project: 'Pricing refresh', requester: null, waitingOn: null, updates: [], priority: 40, aiChange: null },
+    { id: 4, title: 'Dealer FAQ for DM-NVX 3.2 firmware', status: 'open', dueDate: null, project: null, requester: 'Kenji Mori', waitingOn: null, updates: ['Oct 30, 2026: Kenji sent the 3.2 release notes; the FAQ goes to dealers before the webinar.'], priority: 40, aiChange: null },
+    { id: 5, title: 'Review SOW from Northside AV', status: 'open', dueDate: null, project: null, requester: null, waitingOn: null, updates: [], priority: 40, aiChange: null },
+    { id: 6, title: 'Customer advisory board agenda', status: 'open', dueDate: null, project: 'Roadmap 2027', requester: 'Dana Lee', waitingOn: null, updates: [], priority: 40, aiChange: null },
   ],
   projects: [
     { id: 1, name: 'Roadmap 2027', overview: 'Three-year product roadmap for the exec team. Dana Lee owns the review.', brief: '', instructions: 'Keep decks short.' },

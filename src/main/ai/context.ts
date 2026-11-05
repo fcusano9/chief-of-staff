@@ -7,7 +7,20 @@ export const ALL_KINDS: SuggestionKind[] = ['new_task', 'needs_reply', 'status_u
 export interface ExtractionContext {
   today: string
   userName: string
-  tasks: { id: number; title: string; status: string; dueDate: string | null; project: string | null; requester: string | null; waitingOn: string | null; updates: string[] }[]
+  tasks: {
+    id: number
+    title: string
+    status: string
+    dueDate: string | null
+    project: string | null
+    requester: string | null
+    waitingOn: string | null
+    updates: string[]
+    /** The app's computed score, before any AI change. */
+    priority: number
+    /** The AI's current change to it, if any. */
+    aiChange: { delta: number; reason: string } | null
+  }[]
   projects: { id: number; name: string; overview: string; brief: string; instructions: string }[]
   people: { id: number; name: string; role: string | null; company: string | null; brief: string }[]
 }
@@ -27,9 +40,11 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
   const active = ACTIVE_STATUSES.map((s) => `'${s}'`).join(', ')
   const tasks = db
     .prepare(
-      `SELECT w.id, w.title, w.status, w.due_date, w.waiting_on, p.name AS project, r.name AS requester, IFNULL(b.summary, '') AS updates
+      `SELECT w.id, w.title, w.status, w.due_date, w.waiting_on, w.priority_score, p.name AS project, r.name AS requester, IFNULL(b.summary, '') AS updates,
+              a.delta AS ai_delta, a.reason AS ai_reason
        FROM work_items w LEFT JOIN projects p ON p.id = w.project_id LEFT JOIN people r ON r.id = w.requester_id
        LEFT JOIN context_briefs b ON b.scope = 'task' AND b.owner_id = w.id
+       LEFT JOIN priority_adjustments a ON a.work_item_id = w.id
        WHERE w.status IN (${active}) ORDER BY w.id`,
     )
     .all() as Record<string, unknown>[]
@@ -60,6 +75,8 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
       waitingOn: (t.waiting_on as string) ?? null,
       // The task's latest updates, whole ones only, so the AI can match new items to it.
       updates: recentNotes(String(t.updates), UPDATES_FOR_AI),
+      priority: Number(t.priority_score),
+      aiChange: t.ai_delta == null ? null : { delta: Number(t.ai_delta), reason: String(t.ai_reason) },
     })),
     // A project's overview and status brief; without a brief, its latest updates (whole ones only).
     projects: projects.map((p) => ({
@@ -118,8 +135,17 @@ ${calendar(ctx.today)}`
 /** True when a request with these kinds also asks for next actions (the task kinds; see OllamaProvider's split passes). */
 export const asksForNextActions = (kinds: SuggestionKind[]) => kinds.includes('status_update')
 
+/** How a task's current AI priority change reads in a prompt, e.g. ", AI change +10: Dana's launch depends on it". */
+export const aiChangeText = (c: { delta: number; reason: string } | null) => (c ? `, AI change ${c.delta > 0 ? '+' : ''}${c.delta}: ${c.reason}` : '')
+
+/** The priority-change rule, shared by imports and the daily briefing. */
+export const priorityChangeRule = (field: string, scope: string) =>
+  `Also fill ${field}: each task's priority (0 to 100) comes from its due date, who asked and how long it's been idle. For ${scope} whose priority clearly misses something stated in the item, notes or updates (for example a stakeholder's deadline, a blocker for other work, or a request that's no longer wanted), give change: points to add, from -15 to 15, and reason: one short sentence on what the score misses. Skip tasks whose priority is about right. A task marked "AI change" already has one: give a new change to replace it, 0 to remove it, or skip it to keep it.`
+
 const nextActionRule = (name: string) => `
 Also fill next_actions: for each existing open task this item is about (one you propose a status_update, waiting_on or brief_update for, or that the item clearly moves forward), the single concrete step ${name} should take next. action is one sentence starting with a verb (for example "Send Dana the two budget options"); why is one short sentence on why, from the item and the task's updates. Use only task_id values from the open-task list, at most one per task. Skip tasks you propose to mark done, and leave next_actions empty if the item moves no existing task forward.
+
+${priorityChangeRule('priority_changes', 'open tasks this item is about')} Use only task_id values from the open-task list, and skip tasks you propose to mark done.
 `
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -142,7 +168,7 @@ export function calendar(today: string): string {
 export function buildUserPrompt(ctx: ExtractionContext, source: SourceForExtraction): string {
   const tasks = ctx.tasks.length
     ? ctx.tasks
-        .map((t) => `- [${t.id}] ${t.title} (${t.status.replace('_', ' ')}${t.dueDate ? `, due ${t.dueDate}` : ''}${t.project ? `, project: ${t.project}` : ''}${t.requester ? `, asked by ${t.requester}` : ''}${t.waitingOn ? `, waiting on ${t.waitingOn}` : ''})${t.updates.length ? ` Updates: ${t.updates.join(' | ')}` : ''}`)
+        .map((t) => `- [${t.id}] ${t.title} (${t.status.replace('_', ' ')}${t.dueDate ? `, due ${t.dueDate}` : ''}${t.project ? `, project: ${t.project}` : ''}${t.requester ? `, asked by ${t.requester}` : ''}${t.waitingOn ? `, waiting on ${t.waitingOn}` : ''}, priority ${t.priority}${aiChangeText(t.aiChange)})${t.updates.length ? ` Updates: ${t.updates.join(' | ')}` : ''}`)
         .join('\n')
     : '(none)'
   const projects = ctx.projects.length

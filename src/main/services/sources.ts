@@ -7,6 +7,7 @@ import { validateSuggestions, type DroppedSuggestion, type SuggestionDraft } fro
 import { nowIso, transaction } from '../db'
 import { AiLogService } from './ai-log'
 import { cleanNextActions, NextActionService } from './next-actions'
+import { cleanAdjustments, PriorityAdjustmentService } from './priority-adjustments'
 
 /** Removes WEBVTT/SRT timing lines and cue numbers so transcripts read as plain text. */
 export function cleanTranscript(text: string): string {
@@ -72,10 +73,12 @@ export class SourceService {
   ) {
     this.aiLog = new AiLogService(db)
     this.nextActions = new NextActionService(db)
+    this.adjustments = new PriorityAdjustmentService(db)
   }
 
   private readonly aiLog: AiLogService
   private readonly nextActions: NextActionService
+  private readonly adjustments: PriorityAdjustmentService
 
   /** What was sent to the AI and what came back, for each time this import was read. */
   aiRuns(sourceId: number): AiRun[] {
@@ -144,12 +147,16 @@ export class SourceService {
       const drafts = applyMailRules(validateSuggestions(raw.suggestions, ctx, dropped), this.mailMeta(sourceId), dropped)
       // Next actions only for open tasks that were sent, and not for ones this import says are done.
       const finishing = new Set(drafts.filter((d) => d.kind === 'mark_done').map((d) => d.payload.taskId))
-      const nextActions = cleanNextActions(raw.next_actions, new Set(ctx.tasks.map((t) => t.id).filter((id) => !finishing.has(id))))
+      const covered = new Set(ctx.tasks.map((t) => t.id).filter((id) => !finishing.has(id)))
+      const nextActions = cleanNextActions(raw.next_actions, covered)
+      const changes = cleanAdjustments(raw.priority_changes, covered)
       this.aiLog.finishRun(runId, { raw, kept: drafts, dropped })
       const now = nowIso()
       transaction(this.db, () => {
         // Shown on each task's card only; they change nothing and don't go to Review.
         this.nextActions.save(nextActions, { writtenBy: provider.label, origin: 'import', originLabel: String(row.title) })
+        // Applied at once and shown on the priority card, with Remove; a score set by hand still wins.
+        this.adjustments.save(changes, { writtenBy: provider.label, origin: 'import', originLabel: String(row.title) })
         this.db.prepare(`DELETE FROM suggestions WHERE source_id = ? AND status = 'pending'`).run(sourceId)
         const insert = this.db.prepare('INSERT INTO suggestions (source_id, kind, payload, evidence, created_at) VALUES (?, ?, ?, ?, ?)')
         // New projects and people come first in drafts, so tasks can link to their suggestion ids.

@@ -60,6 +60,8 @@ export interface Api {
   'tasks.nextAction': (taskId: number) => NextAction | null
   /** Hides (true) or shows again (false) a task's suggested next action. */
   'tasks.dismissNextAction': (taskId: number, dismissed: boolean) => NextAction | null
+  /** Takes the AI's priority adjustment off a task. Returns the task with its score as it now is. */
+  'tasks.removeAiAdjustment': (taskId: number) => Task
   'projects.list': () => ProjectSummary[]
   /** Archived projects, which projects.list leaves out. */
   'projects.listArchived': () => ProjectSummary[]
@@ -167,6 +169,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'tasks.summary',
   'tasks.nextAction',
   'tasks.dismissNextAction',
+  'tasks.removeAiAdjustment',
   'projects.list',
   'projects.listArchived',
   'projects.save',

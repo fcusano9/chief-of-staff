@@ -26,7 +26,7 @@ class Fake implements AiProvider {
     return logged(log, { purpose: 'x', endpoint: 'fake', request: {} }, async () => out, () => ({ response: {}, inputTokens: 10_000, outputTokens: 1_000, paidModel: this.paidModel }))
   }
   extract(_c: unknown, _s: unknown, log?: AiCallLog) {
-    return this.one(log, { suggestions: [], next_actions: [] })
+    return this.one(log, { suggestions: [], next_actions: [], priority_changes: [] })
   }
   writePersonBrief(_i: unknown, log?: AiCallLog) {
     return this.one(log, 'brief')
@@ -35,7 +35,7 @@ class Fake implements AiProvider {
     return this.one(log, 'brief')
   }
   writeBriefing(_i: unknown, log?: AiCallLog) {
-    return this.one(log, { summary: 'A quiet day.', priorities: [], nudges: [], new_items: [] })
+    return this.one(log, { summary: 'A quiet day.', priorities: [], nudges: [], new_items: [], priority_changes: [] })
   }
   writeWeeklyReflection(_i: unknown, log?: AiCallLog) {
     return this.one(log, { summary: 'A quiet week.', went_well: [], slipped: [], focus_next: [] })

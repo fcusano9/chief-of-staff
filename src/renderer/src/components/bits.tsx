@@ -66,9 +66,18 @@ export function TaskRow({ task, selected, current, onClick, showWhy = true }: { 
   return (
     <div className={`r ${selected ? 'sel' : ''} ${current ? 'cur' : ''}`} data-id={task.id} onClick={onClick}>
       <div className="stripe" style={{ background: task.project?.color ?? NO_PROJECT_COLOR }} />
-      <div className={`score ${scoreClass(score)}`} title={task.priorityOverride != null ? 'Manual priority' : undefined}>
+      <div
+        className={`score ${scoreClass(score)}`}
+        title={
+          task.priorityOverride != null
+            ? 'Manual priority'
+            : task.aiAdjustment
+              ? `Includes an AI adjustment of ${task.aiAdjustment.delta > 0 ? '+' : '−'}${Math.abs(task.aiAdjustment.delta)}`
+              : undefined
+        }
+      >
         {score}
-        {task.priorityOverride != null ? '*' : ''}
+        {task.priorityOverride != null ? '*' : task.aiAdjustment ? <span className="ai-mark">✦</span> : ''}
       </div>
       <div className="ttl">
         {task.title}
