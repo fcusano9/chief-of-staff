@@ -2,6 +2,15 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-05 · Suggested next action: part of briefings and imports, card only (Frank)
+Frank's choices, asked up front (mockup `design/next-action.html`, approved):
+- **Written as part of a daily briefing or an import**, not on its own and with no Suggest button: the briefing writes one for each top priority, an import for each open task the item is about. Basic writes none (rules can't judge a next step).
+- **Shown on the card only**, never in Review. It's advice that changes nothing, like the briefing itself, so it doesn't need accepting. An import writes them when it runs, even if Frank later rejects that import's suggestions; tasks the import proposes to mark done get none.
+- **One sentence plus why.** One per task; the newest replaces it.
+- **Dismiss collapses it** to "Suggestion dismissed · Show" (Frank chose this over hiding it for good). A new suggestion shows again.
+- **Out of date** (proposed in the mockup, approved): when the task has an update dated a later day than the suggestion, the card says so in amber instead of hiding it. Updates are dated by day, so a same-day update doesn't count.
+- **Notes made taller** in the same change: about 6 lines. The earlier attempt (`.notes-inp`, Nov 4) never applied because `textarea.inp` is more specific.
+
 ### 2026-11-05 · Weekly review: live lists, saved weeks, a reflection on click (Frank)
 Frank's choices, asked up front (mockup `design/weekly-review.html`, approved):
 - **Weeks run Sunday to Saturday.** The current week shows Sunday to today and updates as he works; every week is kept so he can go back to any of them. Its own **Weekly tab** next to Today (G then V; W was taken by Waiting).

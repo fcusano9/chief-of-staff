@@ -4,7 +4,7 @@ import { demoBriefing, type BriefingInput, type RawBriefing } from './briefing'
 import { demoReflection, type RawReflection, type WeeklyInput } from './weekly'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { AiCallLog, AiProvider } from './provider'
-import type { RawSuggestion } from './schema'
+import type { RawExtraction, RawSuggestion } from './schema'
 
 const STOP = new Set(['the', 'and', 'for', 'with', 'from', 'into', 'that', 'this', 'about', 'review', 'send', 'draft', 'update', 'new'])
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
@@ -54,21 +54,22 @@ export class DemoProvider implements AiProvider {
   readonly label = BASIC_LABEL
   readonly sendsDataExternally = false
 
-  async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawSuggestion[]> {
+  async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawExtraction> {
     const startedAt = new Date().toISOString()
     const out = this.applyRules(ctx, source)
     log?.record({
       purpose: 'Find suggestions (demo rules)',
       endpoint: 'Basic, on this computer: fixed pattern rules, no prompt',
       request: { note: 'Basic sends no prompt. It scans these lines of the imported item for patterns.', importedItem: source.content },
-      response: { suggestions: out },
+      response: { suggestions: out, next_actions: [] },
       error: null,
       startedAt,
       durationMs: 0,
       inputTokens: null,
       outputTokens: null,
     })
-    return out
+    // Basic follows simple rules and can't judge a next step, so it suggests none.
+    return { suggestions: out, next_actions: [] }
   }
 
   private applyRules(ctx: ExtractionContext, source: SourceForExtraction): RawSuggestion[] {

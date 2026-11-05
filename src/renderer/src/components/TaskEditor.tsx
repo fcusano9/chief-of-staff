@@ -4,6 +4,7 @@ import { effectivePriority, NO_PROJECT_COLOR, SOURCE_KIND_LABELS, STATUS_LABELS 
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
 import { ConfirmButton, scoreClass } from './bits'
+import { NextActionCard } from './NextActionCard'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from './UpdatesWindow'
 
 const EDITABLE_STATUSES: TaskStatus[] = ['open', 'waiting_on', 'done']
@@ -178,10 +179,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
 
         <div className="dgrid">
           <div>
-            <div className="ai" style={{ marginBottom: 12, color: 'var(--muted)' }}>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--accent)', marginBottom: 2 }}>✦ Suggested next action</div>
-              Per-task next-action suggestions arrive in milestone 3. Until then, import notes or summaries and review what the AI proposes.
-            </div>
+            <NextActionCard taskId={isNew ? null : form.input.id} />
 
             <div className="label" style={{ marginBottom: 4 }}>Subtasks</div>
             {form.input.subtasks.map((s, i) => (

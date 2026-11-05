@@ -21,11 +21,21 @@ export const RawSuggestionSchema = z.object({
   evidence: z.string().describe('A short verbatim quote from the source that supports this suggestion'),
 })
 
+export const NextActionSchema = z.object({
+  task_id: z.number().int().describe('ID of the existing open task, from the open-task list'),
+  action: z.string().describe('The one concrete next step, one sentence starting with a verb'),
+  why: z.string().describe('Why that step, in one short sentence, from the item and the task'),
+})
+
 export const ExtractionSchema = z.object({
   suggestions: z.array(RawSuggestionSchema),
+  next_actions: z.array(NextActionSchema).describe('A next step for each existing open task this item is about; empty if none'),
 })
 
 export type RawSuggestion = z.infer<typeof RawSuggestionSchema>
+export type RawNextAction = z.infer<typeof NextActionSchema>
+/** Everything an extraction returns: suggestions for Review, and next actions for task cards. */
+export type RawExtraction = z.infer<typeof ExtractionSchema>
 
 export interface SuggestionDraft {
   kind: SuggestionKind

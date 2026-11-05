@@ -468,6 +468,30 @@ export interface BriefingItem {
   overdueDays: number | null
   /** 'review' opens Review instead of a task. */
   kind: 'task' | 'waiting' | 'review'
+  /** Top priorities only: the next action the AI suggested for the task (also saved on its card). */
+  nextAction?: string | null
+}
+
+/** Where a suggested next action came from. */
+export type NextActionOrigin = 'briefing' | 'import'
+
+/**
+ * A task's suggested next action: one sentence plus why. Written by the AI as part of a daily
+ * briefing or an import, shown on the task's card only. It changes nothing.
+ */
+export interface NextAction {
+  taskId: number
+  action: string
+  why: string
+  writtenAt: string
+  /** The AI that wrote it, e.g. "Claude Opus 5.5". */
+  writtenBy: string
+  origin: NextActionOrigin
+  /** For imports: the import's title. */
+  originLabel: string | null
+  dismissed: boolean
+  /** Set when the task got an update dated after this was written, e.g. "Nov 15, 2026". */
+  staleSince: string | null
 }
 
 /** A saved daily briefing. Every one is kept. */

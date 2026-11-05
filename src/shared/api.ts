@@ -8,6 +8,7 @@ import type {
   OllamaSetupStatus,
   Briefing,
   BriefingListItem,
+  NextAction,
   WeekListItem,
   WeeklyReview,
   ImportRequest,
@@ -55,6 +56,10 @@ export interface Api {
   'tasks.setStatus': (id: number, status: TaskStatus) => Task
   'tasks.delete': (id: number) => void
   'tasks.summary': () => TodaySummary
+  /** The task's suggested next action, or null if none has been written. */
+  'tasks.nextAction': (taskId: number) => NextAction | null
+  /** Hides (true) or shows again (false) a task's suggested next action. */
+  'tasks.dismissNextAction': (taskId: number, dismissed: boolean) => NextAction | null
   'projects.list': () => ProjectSummary[]
   /** Archived projects, which projects.list leaves out. */
   'projects.listArchived': () => ProjectSummary[]
@@ -160,6 +165,8 @@ export const API_CHANNELS: ApiChannel[] = [
   'tasks.setStatus',
   'tasks.delete',
   'tasks.summary',
+  'tasks.nextAction',
+  'tasks.dismissNextAction',
   'projects.list',
   'projects.listArchived',
   'projects.save',

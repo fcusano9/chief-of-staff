@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Suggested next action</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 0 16px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex: none; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); padding: 0 6px; }
+.btn.ghost:hover { color: var(--text); background: var(--hover); }
+.link { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; }
+.danger { color: var(--danger); border: 0; background: none; cursor: pointer; padding: 5px 0; }
+.page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+.editor { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.stripe { height: 3px; background: #378ADD; }
+.inner { padding: 18px 22px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.score { font: 600 16px var(--mono); color: var(--warn); min-width: 26px; }
+.title-inp { flex: 1; font-size: 17px; font-weight: 600; border: 0; background: none; outline: 0; min-width: 0; }
+.iconbtn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; margin-top: 14px; }
+.label { color: var(--muted); font-size: 12.5px; margin: 16px 0 5px; }
+.label:first-child { margin-top: 0; }
+.label .faint { font-size: 11.5px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 7px 9px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { min-height: 64px; resize: vertical; display: block; }
+.ai-box { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 55%, transparent); border-radius: 8px; padding: 10px 12px; color: var(--muted); }
+.ai-box b { color: var(--accent); font-weight: 500; display: block; font-size: 12.5px; }
+.check { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.box { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--bg); display: grid; place-items: center; font-size: 11px; cursor: pointer; padding: 0; flex: none; }
+.box.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.check input[type=text] { flex: 1; border: 0; background: none; outline: 0; padding: 2px 0; min-width: 0; }
+.check .done-ttl { color: var(--faint); text-decoration: line-through; }
+.check .x { border: 0; background: none; color: var(--faint); cursor: pointer; visibility: hidden; }
+.check:hover .x { visibility: visible; }
+.hist { font-size: 12.5px; color: var(--muted); line-height: 1.9; }
+.hist .d { font-family: var(--mono); color: var(--faint); font-size: 11.5px; display: inline-block; min-width: 48px; }
+.field { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; padding: 4px 0; }
+.field > span { color: var(--muted); }
+.field .inp { padding: 5px 8px; }
+.card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 12.5px; }
+.card .label { margin: 0 0 2px; }
+.foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.new { outline: 2px dashed var(--ok); outline-offset: 4px; border-radius: 6px; }
+.gone { position: relative; opacity: .55; }
+.gone::after { content: attr(data-why); position: absolute; right: 6px; top: 6px; font-size: 11px; background: var(--danger); color: #fff; padding: 1px 7px; border-radius: 4px; opacity: 1; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 18px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; padding: 16px; z-index: 5; }
+.win { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; width: min(560px, 100%); max-height: 85vh; overflow: auto; padding: 16px 18px; box-shadow: 0 16px 48px rgba(0,0,0,.25); }
+.upd { padding: 8px 0; border-top: 1px solid var(--border); }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+@media (max-width: 760px) { .dgrid { grid-template-columns: minmax(0, 1fr); } .top .logo span { display: none; } }
+
+.nx { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 55%, transparent); border-radius: 8px; padding: 10px 12px; }
+.nx .h { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--accent); }
+.nx .act { margin: 4px 0 2px; font-size: 14px; }
+.nx .why { color: var(--muted); font-size: 12.5px; }
+.nx .meta { color: var(--faint); font-size: 11.5px; margin-top: 6px; }
+.stale { color: var(--warn); }
+.brief { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 14px 18px; }
+.brief .item { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
+.brief .item:first-of-type { border-top: 0; }
+.tag { font-size: 11px; background: var(--danger); color: #fff; border-radius: 4px; padding: 0 6px; margin-left: 6px; }
+.nextline { color: var(--accent); font-size: 12.5px; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Next action mockup</span></div>
+  <div class="seg"><button data-v="task" class="on">Task with suggestion</button><button data-v="stale">Out of date</button><button data-v="none">No suggestion yet</button><button data-v="brief">Where it's written: briefing</button></div>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+<div class="page">
+  <div id="stage"></div>
+  <div class="notes" id="notes"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id)
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1700) }
+let view = 'task', dismissed = false
+const editor = (box) => `
+<div class="editor"><div class="stripe"></div><div class="inner">
+  <div class="row"><span class="score">72</span><input class="title-inp" value="Dealer FAQ for DM-NVX 3.2 firmware"><button class="iconbtn">✕</button></div>
+  <div class="dgrid"><div>
+    ${box}
+    <div class="label">Subtasks</div>
+    <div class="check"><button class="box on">✓</button><input type="text" class="done-ttl" value="Draft rollback section"></div>
+    <div class="check"><button class="box"></button><input type="text" value="Send to Kenji for review"></div>
+    <div class="label">Notes</div><div class="new"><textarea class="inp" style="min-height:calc(13.5px * 1.5 * 6 + 16px)">Fix the rollback section (still says 3.1).
+Ask Priya about the PDF template.</textarea></div>
+    <div class="label">Updates <span class="faint">· 5</span></div>
+    <div class="card" style="margin-top:0"><div class="faint mono" style="font-size:11.5px">Nov 14, 2026</div>Kenji approved the final draft; marketing will post it to the dealer portal.</div>
+  </div><div>
+    <label class="field"><span>Status</span><select class="inp"><option>Open</option></select></label>
+    <label class="field"><span>Due</span><input class="inp" type="date" value="2026-11-14"></label>
+    <div class="card"><div class="label">Priority 72</div>Due in 2 days, 2 follow-ups</div>
+  </div></div>
+</div></div>`
+const card = (stale) => dismissed ? `<div class="row" style="margin-bottom:12px;font-size:12.5px;color:var(--faint)"><span>✦ Suggestion dismissed</span><button class="link" id="show">Show</button></div>` : `<div class="nx" style="margin-bottom:12px">
+  <div class="h"><span>✦ Suggested next action</span><span style="flex:1"></span><button class="btn ghost" id="copy">Copy</button><button class="btn ghost" id="dismiss">Dismiss</button></div>
+  <div class="act">Send the approved FAQ to marketing for the dealer portal.</div>
+  <div class="why">Kenji approved the final draft on Nov 14, and the Nov 15 webinar is the next day.</div>
+  <div class="meta">From the daily briefing · Nov 14, 2026 ${stale ? '<span class="stale">· Written before the latest update (Nov 15). Refreshes with the next briefing or import.</span>' : ''}</div>
+</div>`
+const empty = `<div class="nx" style="margin-bottom:12px;background:none;border-color:var(--border)">
+  <div class="h" style="color:var(--muted)"><span>✦ Suggested next action</span></div>
+  <div class="why" style="margin-top:4px">None yet. One is written when a daily briefing or an import includes this task. It is never written on its own.</div></div>`
+const brief = `<div class="brief">
+  <div class="row" style="margin-bottom:6px"><b>Daily briefing</b><span class="muted">· Nov 14, 2026</span></div>
+  <div class="muted" style="margin-bottom:10px">Three things need you today; one is overdue.</div>
+  <div class="label">Top priorities</div>
+  <div class="item"><span class="score">91</span><div>Reply to Dana about the Q4 budget <span class="tag">Overdue</span><div class="muted">Waiting since Monday; it blocks the launch.</div><div class="nextline new">✦ Next: Send Dana the two budget options with a recommendation.</div></div></div>
+  <div class="item"><span class="score">72</span><div>Dealer FAQ for DM-NVX 3.2 firmware<div class="muted">Due in 2 days.</div><div class="nextline new">✦ Next: Send the approved FAQ to marketing for the dealer portal.</div></div></div>
+  <div class="item"><span class="score">64</span><div>Review Priya's PDF template<div class="muted">Needed for the FAQ.</div><div class="nextline new">✦ Next: Open the template and check the rollback section.</div></div></div>
+</div>`
+const NOTES = {
+  task: ['How it works', ['<b>No button.</b> A suggestion is written as part of a daily briefing (for the tasks it lists) or an import (for the tasks it updates). Nothing runs on its own.','<b>Shown on the card only.</b> It never goes to Review, changes nothing, and is replaced by the next one. Copy puts it on your clipboard. Dismiss collapses it to one line with a Show link to bring it back; a new suggestion replaces it.','<b>Notes are taller</b> (green outline): about 6 lines instead of 3, at every density, and still drag taller.','<b>One sentence plus why</b>, taken from the task’s updates, notes and due date. The AI picks real tasks only (same checks as the briefing).','<b>Briefing tasks also show it</b> as a “Next:” line (last tab).']],
+  stale: ['Out of date', ['If the task got a newer update after the suggestion was written, the card says so in amber instead of hiding it. You decide whether it still applies.']],
+  none: ['No suggestion yet', ['Most tasks start here. There is no Suggest button, since you chose briefings and imports as the only triggers.']],
+  brief: ['In the daily briefing', ['Each Top priorities item gets one “Next:” line. The same text is saved on the task, so it shows on its card.','For imports, the AI log for the run lists the suggestions it wrote, like everything else it sent and received.']],
+}
+function render() {
+  document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.v === view))
+  $('stage').innerHTML = view === 'brief' ? brief : editor(view === 'none' ? empty : card(view === 'stale'))
+  const [h, l] = NOTES[view]
+  $('notes').innerHTML = `<h3>${h}</h3><ul>${l.map((x) => `<li>${x}</li>`).join('')}</ul>`
+  const c = $('copy'); if (c) c.onclick = () => toast('Copied')
+  const d = $('dismiss'); if (d) d.onclick = () => { dismissed = true; render() }
+  const s = $('show'); if (s) s.onclick = () => { dismissed = false; render() }
+}
+document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { view = b.dataset.v; dismissed = false; render() }))
+$('theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+render()
+</script>
+</body>
+</html>

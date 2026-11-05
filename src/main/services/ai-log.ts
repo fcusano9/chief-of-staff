@@ -13,7 +13,9 @@ const count = (json: string | null) => {
   if (!json) return null
   try {
     const v = JSON.parse(json) as unknown
-    return Array.isArray(v) ? v.length : null
+    // Older runs saved the suggestions alone; newer ones save { suggestions, next_actions }.
+    const list = Array.isArray(v) ? v : (v as { suggestions?: unknown } | null)?.suggestions
+    return Array.isArray(list) ? list.length : null
   } catch {
     return null
   }

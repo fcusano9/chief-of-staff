@@ -26,7 +26,7 @@ class Fake implements AiProvider {
     return logged(log, { purpose: 'x', endpoint: 'fake', request: {} }, async () => out, () => ({ response: {}, inputTokens: 10_000, outputTokens: 1_000, paidModel: this.paidModel }))
   }
   extract(_c: unknown, _s: unknown, log?: AiCallLog) {
-    return this.one(log, [])
+    return this.one(log, { suggestions: [], next_actions: [] })
   }
   writePersonBrief(_i: unknown, log?: AiCallLog) {
     return this.one(log, 'brief')

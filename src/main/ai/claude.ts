@@ -6,7 +6,7 @@ import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefi
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
 import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
-import { ExtractionSchema, type RawSuggestion } from './schema'
+import { ExtractionSchema, type RawExtraction } from './schema'
 
 const ENDPOINT = 'Anthropic Messages API (POST /v1/messages; the beta flag is sent as a header)'
 
@@ -100,7 +100,7 @@ export class ClaudeProvider implements AiProvider {
     this.label = CLAUDE_MODELS.find((m) => m.id === model)?.label ?? model
   }
 
-  async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawSuggestion[]> {
+  async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawExtraction> {
     try {
       const request = buildExtractionRequest(this.model, ctx, source)
       const response = await logged(
@@ -121,7 +121,7 @@ export class ClaudeProvider implements AiProvider {
         throw new AiError('The response was cut off because the item produced too many suggestions. Try importing a shorter section.')
       }
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
-      return response.parsed_output.suggestions
+      return response.parsed_output
     } catch (err) {
       throw toAiError(err)
     }

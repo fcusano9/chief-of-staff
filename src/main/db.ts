@@ -288,6 +288,22 @@ export const MIGRATIONS: Migration[] = [
   );
   CREATE INDEX ix_weekly_ai_calls_week ON weekly_ai_calls(week_start);
   `,
+  // Milestone 3: a suggested next action per task, written by the AI as part of a daily briefing
+  // or an import (never on its own) and shown on the task's card only. One per task: a newer one
+  // replaces it. origin is 'briefing' or 'import'; origin_label names the import. dismissed hides
+  // it behind a Show link until a new one arrives.
+  `
+  CREATE TABLE next_actions (
+    work_item_id INTEGER PRIMARY KEY REFERENCES work_items(id) ON DELETE CASCADE,
+    action TEXT NOT NULL,
+    why TEXT NOT NULL,
+    written_at TEXT NOT NULL,
+    written_by TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    origin_label TEXT,
+    dismissed INTEGER NOT NULL DEFAULT 0
+  );
+  `,
 ]
 
 /** Moves status updates and task standing instructions into each task's Updates (see the migration above). */
