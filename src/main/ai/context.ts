@@ -111,9 +111,16 @@ Rules:
 - Every suggestion needs a short verbatim quote from the source as evidence.
 - Titles are short and start with a verb, except new_project and new_person titles, which are names. Write details in plain, factual language.
 - If the item contains nothing actionable, return an empty suggestions list.
-
+${asksForNextActions(kinds) ? nextActionRule(name) : ''}
 ${calendar(ctx.today)}`
 }
+
+/** True when a request with these kinds also asks for next actions (the task kinds; see OllamaProvider's split passes). */
+export const asksForNextActions = (kinds: SuggestionKind[]) => kinds.includes('status_update')
+
+const nextActionRule = (name: string) => `
+Also fill next_actions: for each existing open task this item is about (one you propose a status_update, waiting_on or brief_update for, or that the item clearly moves forward), the single concrete step ${name} should take next. action is one sentence starting with a verb (for example "Send Dana the two budget options"); why is one short sentence on why, from the item and the task's updates. Use only task_id values from the open-task list, at most one per task. Skip tasks you propose to mark done, and leave next_actions empty if the item moves no existing task forward.
+`
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 

@@ -7,7 +7,7 @@ import { buildExtractionRequest } from '../src/main/ai/claude'
 import { buildExtractionContext, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from '../src/main/ai/context'
 import { DemoProvider, findDueDate } from '../src/main/ai/demo'
 import type { AiProvider } from '../src/main/ai/provider'
-import { validateSuggestions, type RawSuggestion } from '../src/main/ai/schema'
+import { validateSuggestions, type RawNextAction, type RawSuggestion } from '../src/main/ai/schema'
 import { openDatabase } from '../src/main/db'
 import { BriefService, PersonService, ProjectService } from '../src/main/services/directory'
 import { cleanTranscript, SourceService } from '../src/main/services/sources'
@@ -29,11 +29,14 @@ class FakeProvider implements AiProvider {
   readonly label = 'Fake AI'
   readonly sendsDataExternally = false
   calls = 0
-  constructor(private readonly output: RawSuggestion[] | Error) {}
+  constructor(
+    private readonly output: RawSuggestion[] | Error,
+    private readonly nextActions: RawNextAction[] = [],
+  ) {}
   async extract() {
     this.calls++
     if (this.output instanceof Error) throw this.output
-    return this.output
+    return { suggestions: this.output, next_actions: this.nextActions }
   }
   async writePersonBrief() {
     return 'A brief.'
@@ -211,7 +214,7 @@ describe('AI import and review queue', () => {
         'The team discussed the spring launch timeline.',
       ].join('\n'),
     }
-    const out = validateSuggestions(await new DemoProvider().extract(ctx, source), ctx)
+    const out = validateSuggestions((await new DemoProvider().extract(ctx, source)).suggestions, ctx)
     expect(out.map((s) => s.kind)).toEqual(['new_task', 'mark_done', 'waiting_on'])
     expect(out[0]!.payload.title).toBe('Send the updated pricing deck to EMEA distributors')
     expect(out[0]!.payload.dueDate).toBe('2026-11-06')

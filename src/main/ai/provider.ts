@@ -2,7 +2,7 @@ import type { PersonBriefInput, ProjectBriefInput } from './brief'
 import type { BriefingInput, RawBriefing } from './briefing'
 import type { RawReflection, WeeklyInput } from './weekly'
 import type { ExtractionContext, SourceForExtraction } from './context'
-import type { RawSuggestion } from './schema'
+import type { RawExtraction } from './schema'
 
 /**
  * Anything that can read an imported item and propose suggestions. Claude is the first real
@@ -13,8 +13,11 @@ export interface AiProvider {
   readonly label: string
   /** True when calling extract() sends content off this computer. */
   readonly sendsDataExternally: boolean
-  /** `log` receives every request sent to the AI and its raw response, for the import's AI log. */
-  extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawSuggestion[]>
+  /**
+   * Suggestions for Review, plus next actions for open tasks the item is about (shown on their
+   * cards). `log` receives every request sent to the AI and its raw response, for the import's AI log.
+   */
+  extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawExtraction>
   /** One or two sentences on who a person is and what they do. Proposed only; the caller saves it if kept. */
   writePersonBrief(input: PersonBriefInput, log?: AiCallLog): Promise<string>
   /** A short status brief for a project, from its history and open tasks. Proposed only; the caller saves it if kept. */

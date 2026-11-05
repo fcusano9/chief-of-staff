@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { BriefingItem } from '@shared/types'
 import { AiError } from './provider'
+import { cleanNextActions, type NextActionDraft } from '../services/next-actions'
 
 /** An open task the briefing may pick as a top priority. */
 export interface BriefingTask {
@@ -65,9 +66,14 @@ const Pick = z.object({
   note: z.string().describe('One short sentence'),
 })
 
+const PriorityPick = Pick.extend({
+  next_action: z.string().describe('The one concrete next step, one sentence starting with a verb'),
+  next_why: z.string().describe('Why that step, in one short sentence, from the facts given'),
+})
+
 export const BriefingSchema = z.object({
   summary: z.string().describe('One sentence on what matters most today'),
-  priorities: z.array(Pick).describe('3 to 5 open tasks, most important first, every overdue task included'),
+  priorities: z.array(PriorityPick).describe('3 to 5 open tasks, most important first, every overdue task included'),
   nudges: z.array(Pick).describe('Up to 3 waiting-on items worth a follow-up today; empty if none'),
   new_items: z.array(Pick).describe('A note for each item new since the last briefing'),
 })
@@ -85,7 +91,7 @@ export function buildBriefingPrompt(input: BriefingInput): { system: string; use
 
 Fill in:
 - summary: one sentence, under 35 words, on what matters most today.
-- priorities: the 3 to 5 tasks from <open_tasks> that most deserve attention today, most important first. Always include every task marked OVERDUE. Each note is one short sentence on why it matters today and what's left.
+- priorities: the 3 to 5 tasks from <open_tasks> that most deserve attention today, most important first. Always include every task marked OVERDUE. Each note is one short sentence on why it matters today and what's left. Also give each one next_action: the single concrete step ${first} should take next, one sentence starting with a verb (for example "Send Dana the two budget options"), and next_why: one short sentence on why that step, from the task's notes, updates and dates. Don't repeat the note.
 - nudges: up to 3 items from <waiting_on> where a follow-up today is worth it, for example a long wait, a close deadline, or several follow-ups already. Each note says why, in one short sentence. Leave it empty if nothing needs a nudge.
 - new_items: one short sentence for each item in <new_since_last_briefing>, on what it is or why it matters.
 
@@ -155,14 +161,18 @@ export const dueLabel = (ymd: string) => {
  * were sent: an id the AI made up, or put in the wrong section, is dropped. Every overdue task
  * is listed first in Top priorities, even if the AI left it out.
  */
-export function assembleBriefing(input: BriefingInput, raw: RawBriefing): { summary: string; priorities: BriefingItem[]; nudges: BriefingItem[]; newItems: BriefingItem[] } {
+export function assembleBriefing(
+  input: BriefingInput,
+  raw: RawBriefing,
+): { summary: string; priorities: BriefingItem[]; nudges: BriefingItem[]; newItems: BriefingItem[]; nextActions: NextActionDraft[] } {
   const summary = tidy(raw.summary, 400)
   if (!summary) throw new AiError("The AI didn't write a briefing. Try again.")
 
   const tasks = new Map(input.tasks.map((t) => [t.id, t]))
   const picked = new Map<number, string>()
   for (const p of raw.priorities) if (tasks.has(p.task_id) && !picked.has(p.task_id)) picked.set(p.task_id, tidy(p.note))
-  const item = (t: BriefingTask, note: string): BriefingItem => ({ taskId: t.id, title: t.title, who: null, note, overdueDays: t.overdueDays, kind: 'task' })
+  const next = new Map(cleanNextActions(raw.priorities.map((p) => ({ task_id: p.task_id, action: p.next_action, why: p.next_why })), new Set(tasks.keys())).map((n) => [n.taskId, n]))
+  const item = (t: BriefingTask, note: string): BriefingItem => ({ taskId: t.id, title: t.title, who: null, note, overdueDays: t.overdueDays, kind: 'task', nextAction: next.get(t.id)?.action ?? null })
   const overdue = input.tasks
     .filter((t) => t.overdueDays)
     .sort((a, b) => b.overdueDays! - a.overdueDays! || b.priority - a.priority)
@@ -195,7 +205,10 @@ export function assembleBriefing(input: BriefingInput, raw: RawBriefing): { summ
     const n = input.newReviewCount
     newItems.push({ taskId: null, title: `${n} suggestion${n === 1 ? '' : 's'} in Review`, who: null, note: 'Waiting for you to accept or reject.', overdueDays: null, kind: 'review' })
   }
-  return { summary, priorities: [...overdue, ...others], nudges, newItems }
+  const priorities = [...overdue, ...others]
+  // Next actions are kept only for the tasks the briefing lists.
+  const nextActions = priorities.flatMap((p) => (p.taskId != null && next.has(p.taskId) ? [next.get(p.taskId)!] : []))
+  return { summary, priorities, nudges, newItems, nextActions }
 }
 
 /** A rule-based briefing for Basic (the demo provider): overdue and highest-priority tasks, and long waits. */
@@ -217,7 +230,8 @@ export function demoBriefing(input: BriefingInput): RawBriefing {
       : 'Nothing is due or overdue today; new items are below.'
   return {
     summary,
-    priorities: top.map((t) => ({ task_id: t.id, note: t.overdueDays ? `Was due ${dueLabel(t.due!)}.` : (t.reason ?? '') })),
+    // Basic follows simple rules and can't judge a next step, so it suggests none.
+    priorities: top.map((t) => ({ task_id: t.id, note: t.overdueDays ? `Was due ${dueLabel(t.due!)}.` : (t.reason ?? ''), next_action: '', next_why: '' })),
     nudges: longWaits.map((w) => ({ task_id: w.id, note: `Waiting ${w.days} days${w.followUps ? `, followed up ${w.followUps} time${w.followUps === 1 ? '' : 's'}` : ''}.` })),
     new_items: [],
   }

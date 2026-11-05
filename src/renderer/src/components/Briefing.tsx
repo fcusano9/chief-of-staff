@@ -54,6 +54,7 @@ function Sections({ briefing, columns, onOpen }: { briefing: Briefing; columns: 
                 {item.who ? ` · ${item.who}` : ''}
               </span>
               {item.note && <span className="w"> — {item.note}</span>}
+              {item.nextAction && <span className="b-next">✦ Next: {item.nextAction}</span>}
             </button>
           ))}
           {items.length === 0 && <div className="b-none">{none}</div>}

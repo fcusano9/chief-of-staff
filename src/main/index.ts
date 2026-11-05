@@ -17,6 +17,7 @@ import { BriefingService } from './services/briefings'
 import { WeeklyService } from './services/weekly'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { MailService } from './services/mail'
+import { NextActionService } from './services/next-actions'
 import { nodeHost, OllamaManager } from './services/ollama-setup'
 import { KeyStore } from './services/secrets'
 import { SettingsStore } from './services/settings'
@@ -107,6 +108,7 @@ const tasks = new TaskService(db, () => settings.current.priorityWeights)
 const projects = new ProjectService(db)
 const people = new PersonService(db)
 const briefs = new BriefService(db)
+const nextActions = new NextActionService(db)
 const suggestions = new SuggestionService(db, tasks, briefs, projects, people)
 
 /** The AI that reads imports. Claude only when chosen in Settings and a key is stored. */
@@ -216,6 +218,8 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'tasks.setStatus': (id, status) => tasks.setStatus(id, status),
   'tasks.delete': (id) => tasks.delete(id),
   'tasks.summary': () => tasks.summary(),
+  'tasks.nextAction': (taskId) => nextActions.get(taskId),
+  'tasks.dismissNextAction': (taskId, dismissed) => nextActions.setDismissed(taskId, dismissed),
   'projects.list': () => projects.list(),
   'projects.listArchived': () => projects.listArchived(),
   'projects.save': (project) => projects.save(project),

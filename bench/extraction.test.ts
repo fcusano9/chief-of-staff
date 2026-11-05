@@ -108,10 +108,10 @@ async function benchModel(spec: string): Promise<{ runs: Run[]; info: ModelInfo;
     try {
       let raw: RawSuggestion[]
       let stats: Partial<Run> = {}
-      if (isDemo) raw = await new DemoProvider().extract(CONTEXT, c.source)
-      else if (claude) raw = await claude.extract(CONTEXT, c.source)
+      if (isDemo) raw = (await new DemoProvider().extract(CONTEXT, c.source)).suggestions
+      else if (claude) raw = (await claude.extract(CONTEXT, c.source)).suggestions
       else {
-        raw = await local!.extract(CONTEXT, c.source)
+        raw = (await local!.extract(CONTEXT, c.source)).suggestions
         const s = local!.lastStats!
         stats = { promptTokens: s.promptTokens, outputTokens: s.outputTokens, promptPerSecond: s.promptTokens / s.promptSeconds, outputPerSecond: s.outputTokens / s.outputSeconds }
       }

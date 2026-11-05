@@ -27,9 +27,9 @@ class LoggingFake implements AiProvider {
     return logged(log, { purpose: 'Find suggestions', endpoint: 'fake', request: { system: 'rules', user: source.content } },
       async () => {
         if (this.out instanceof Error) throw this.out
-        return this.out
+        return { suggestions: this.out, next_actions: [] }
       },
-      (r) => ({ response: { suggestions: r }, inputTokens: 120, outputTokens: 30 }),
+      (r) => ({ response: r, inputTokens: 120, outputTokens: 30 }),
     )
   }
   async writePersonBrief() {
@@ -145,7 +145,7 @@ describe('AI log for each import', () => {
     const s = sources(() => new OllamaProvider('http://127.0.0.1:11434', 'gpt-oss:20b'))
     const { source } = await s.importAndExtract({ kind: 'note', title: 'n', content: 'Frank to send the deck' })
     const calls = s.aiRuns(source.id)[0]!.calls
-    expect(calls.map((c) => c.purpose)).toEqual(['Pass 1 of 3: tasks, updates, done, waiting on', 'Pass 2 of 3: projects, people, context'])
+    expect(calls.map((c) => c.purpose)).toEqual(['Pass 1 of 3: tasks, updates, done, waiting on, next actions', 'Pass 2 of 3: projects, people, context'])
     const sent = JSON.parse(calls[0]!.request)
     expect(sent.model).toBe('gpt-oss:20b')
     expect(sent.messages.map((m: { role: string }) => m.role)).toEqual(['system', 'user'])

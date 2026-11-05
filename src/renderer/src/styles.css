@@ -226,6 +226,7 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .b-item:hover { background: color-mix(in srgb, var(--accent-bg) 70%, transparent); }
 .b-item .t { font-weight: 500; }
 .b-item .w { color: var(--muted); }
+.b-item .b-next { display: block; color: var(--accent); font-size: var(--fs-sm); margin-top: 1px; }
 .b-item.over { box-shadow: inset 2px 0 0 var(--danger); border-radius: 0 5px 5px 0; }
 .tag-over { display: inline-block; font-size: var(--fs-xs); font-weight: 500; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 4px; padding: 0 6px; margin-right: 6px; white-space: nowrap; }
 .b-none { color: var(--faint); padding: 3px 0; }
@@ -269,7 +270,18 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 /* Updates: the latest one under the Updates button, opening the Updates window. */
 .latest { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: calc(var(--card-py) - 4px) calc(var(--card-px) - 2px); }
 .latest:hover { background: var(--hover); }
-.notes-inp { min-height: calc(var(--fs) * 9); }
+/* About 6 lines at every density. textarea.inp sets a smaller min-height, so this needs the same weight. */
+textarea.notes-inp { min-height: calc(var(--fs) * 1.5 * 6 + var(--inp-py) * 2 + 2px); }
+/* The task's suggested next action (NextActionCard). */
+.next-action { margin-bottom: 12px; }
+.next-action.empty-next { border: 1px solid var(--border); border-radius: 8px; padding: calc(var(--card-py) - 2px) calc(var(--card-px) - 2px); }
+.next-head { font-size: var(--fs-sm); color: var(--accent); gap: 6px; }
+.next-head .btn.sm { padding: 0 6px; color: var(--muted); }
+.next-text { margin: 2px 0; }
+.next-why { color: var(--muted); font-size: var(--fs-sm); }
+.next-meta { color: var(--faint); font-size: var(--fs-xs); margin-top: 4px; }
+.next-meta .stale { color: var(--warn); }
+.next-dismissed { margin-bottom: 12px; font-size: var(--fs-sm); color: var(--faint); gap: 8px; }
 .link-btn { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; font-size: var(--fs-sm); }
 .link-btn:hover { text-decoration: underline; }
 
