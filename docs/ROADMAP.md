@@ -62,6 +62,20 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 - M365 Copilot Chat API and Meeting Insights as AI providers or sources.
 - **What it needs:** an Entra app registration, a Copilot license, and IT approval.
 
+## Later: in-app updates (not scheduled)
+
+Frank wants the app to keep itself up to date (requested 2026-11-05; not to be built yet):
+
+- **Detect new versions** published on GitHub.
+- **Prompt** when one is available, with **one-click update**.
+- **Release notes:** a place in the app to read what changed in each version.
+
+**To decide before building:**
+- **Releases:** the repo has no GitHub Releases yet; today the app is built on each computer from source. Updates need versioned, built installers published as releases.
+- **Private repo:** the repo is private, so the app can't read its releases without a GitHub token. Options include a read-only token stored with `KeyStore`, or publishing releases somewhere public.
+- **Signing:** unsigned updates may trigger Windows SmartScreen. On Mac, automatic updates generally require a signed, notarized app. Signing certificates cost money, which is Frank's call.
+- **Data safety:** an update that changes the database already gets the automatic safety copy before upgrading.
+
 ## Smaller backlog
 
 - An app icon (it still uses the default Electron icon).
