@@ -2,6 +2,7 @@ import type { DatabaseSync, SQLInputValue } from 'node:sqlite'
 import { scorePriority } from '@shared/priority'
 import {
   ACTIVE_STATUSES,
+  type ChangeBy,
   effectivePriority,
   type Person,
   type PriorityAdjustment,
@@ -10,12 +11,16 @@ import {
   type SourceKind,
   type Subtask,
   type Task,
+  type TaskActivity,
   type TaskFilter,
   type TaskInput,
   type TaskStatus,
   type TodaySummary,
 } from '@shared/types'
 import { nowIso, transaction } from '../db'
+import { taskChanges, TaskEventService } from './task-events'
+
+const BY_USER: ChangeBy = { by: 'user' }
 
 type Row = Record<string, SQLInputValue>
 
@@ -98,7 +103,16 @@ export class TaskService {
     private readonly db: DatabaseSync,
     private readonly weights: () => PriorityWeights,
     private readonly now: () => Date = () => new Date(),
-  ) {}
+  ) {
+    this.events = new TaskEventService(db, now)
+  }
+
+  private readonly events: TaskEventService
+
+  /** The task's recorded changes for its Activity log, newest first. */
+  activity(id: number): TaskActivity {
+    return this.events.activity(id)
+  }
 
   /**
    * Active tasks sorted by effective priority, highest first. With list "waiting", only waiting-on
@@ -133,10 +147,10 @@ export class TaskService {
   }
 
   /** Reopens a finished task: back to Waiting if it was waiting on someone, else to Tasks. */
-  reopen(id: number): Task {
+  reopen(id: number, by: ChangeBy = BY_USER): Task {
     const task = this.get(id)
     if (!task) throw new Error(`Task ${id} not found`)
-    return this.save(task.waitedOn ? { ...task, status: 'waiting_on', waitingOn: task.waitedOn } : { ...task, status: 'open' })
+    return this.save(task.waitedOn ? { ...task, status: 'waiting_on', waitingOn: task.waitedOn } : { ...task, status: 'open' }, by)
   }
 
   /**
@@ -160,8 +174,11 @@ export class TaskService {
     return this.load(`${SELECT} WHERE w.id = $id`, { id })[0] ?? null
   }
 
-  /** Inserts (id 0) or updates a task including its subtasks, and recomputes its priority. */
-  save(input: TaskInput): Task {
+  /**
+   * Inserts (id 0) or updates a task including its subtasks, and recomputes its priority. Each
+   * changed field is recorded in the task's Activity, with who made the change.
+   */
+  save(input: TaskInput, by: ChangeBy = BY_USER): Task {
     const title = input.title.trim()
     if (!title) throw new Error('A task needs a title.')
     const now = nowIso()
@@ -213,15 +230,16 @@ export class TaskService {
 
       this.syncSubtasks(taskId, input.subtasks)
       this.rescore(taskId)
+      this.events.record(taskId, taskChanges(existing, this.get(taskId)!), by)
       return taskId
     })
     return this.get(id)!
   }
 
-  setStatus(id: number, status: TaskStatus): Task {
+  setStatus(id: number, status: TaskStatus, by: ChangeBy = BY_USER): Task {
     const task = this.get(id)
     if (!task) throw new Error(`Task ${id} not found`)
-    return this.save({ ...task, status })
+    return this.save({ ...task, status }, by)
   }
 
   delete(id: number): void {

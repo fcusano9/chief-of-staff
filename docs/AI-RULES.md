@@ -61,7 +61,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | Rule | Detail |
 |---|---|
 | ✅ When | The reflection is written only when the user clicks, and only for the current week. The lists need no AI. |
-| ✅ Sent | The week's Completed, New, Slipping and Waiting on lists, up to **40 items** each. |
+| ✅ Sent | The week's Completed, New, Slipping and Waiting on lists, up to **40 items** each. Slipping includes tasks whose due date was pushed back that week, with how far and the moves. |
 | ✅ Output | A summary, then up to **3** points each for Went well, Slipped and Focus next. Text only. |
 | ✅ Out of date | Says so when tasks have changed since it was written. |
 | ✅ Kept | The AI log for the newest **5** weeks. |

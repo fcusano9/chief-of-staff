@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task activity log</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 0 16px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex: none; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); padding: 0 6px; }
+.btn.ghost:hover { color: var(--text); background: var(--hover); }
+.link { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; }
+.danger { color: var(--danger); border: 0; background: none; cursor: pointer; padding: 5px 0; }
+.page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+.editor { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.stripe { height: 3px; background: #378ADD; }
+.inner { padding: 18px 22px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.score { font: 600 16px var(--mono); color: var(--warn); min-width: 26px; }
+.title-inp { flex: 1; font-size: 17px; font-weight: 600; border: 0; background: none; outline: 0; min-width: 0; }
+.iconbtn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; margin-top: 14px; }
+.label { color: var(--muted); font-size: 12.5px; margin: 16px 0 5px; }
+.label:first-child { margin-top: 0; }
+.label .faint { font-size: 11.5px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 7px 9px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { min-height: 64px; resize: vertical; display: block; }
+.ai-box { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 55%, transparent); border-radius: 8px; padding: 10px 12px; color: var(--muted); }
+.ai-box b { color: var(--accent); font-weight: 500; display: block; font-size: 12.5px; }
+.check { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.box { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--bg); display: grid; place-items: center; font-size: 11px; cursor: pointer; padding: 0; flex: none; }
+.box.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.check input[type=text] { flex: 1; border: 0; background: none; outline: 0; padding: 2px 0; min-width: 0; }
+.check .done-ttl { color: var(--faint); text-decoration: line-through; }
+.check .x { border: 0; background: none; color: var(--faint); cursor: pointer; visibility: hidden; }
+.check:hover .x { visibility: visible; }
+.hist { font-size: 12.5px; color: var(--muted); line-height: 1.9; }
+.hist .d { font-family: var(--mono); color: var(--faint); font-size: 11.5px; display: inline-block; min-width: 48px; }
+.field { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; padding: 4px 0; }
+.field > span { color: var(--muted); }
+.field .inp { padding: 5px 8px; }
+.card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 12.5px; }
+.card .label { margin: 0 0 2px; }
+.foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.new { outline: 2px dashed var(--ok); outline-offset: 4px; border-radius: 6px; }
+.gone { position: relative; opacity: .55; }
+.gone::after { content: attr(data-why); position: absolute; right: 6px; top: 6px; font-size: 11px; background: var(--danger); color: #fff; padding: 1px 7px; border-radius: 4px; opacity: 1; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 18px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; padding: 16px; z-index: 5; }
+.win { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; width: min(560px, 100%); max-height: 85vh; overflow: auto; padding: 16px 18px; box-shadow: 0 16px 48px rgba(0,0,0,.25); }
+.upd { padding: 8px 0; border-top: 1px solid var(--border); }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+@media (max-width: 760px) { .dgrid { grid-template-columns: minmax(0, 1fr); } .top .logo span { display: none; } }
+
+.nx { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 55%, transparent); border-radius: 8px; padding: 10px 12px; }
+.nx .h { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--accent); }
+.nx .act { margin: 4px 0 2px; font-size: 14px; }
+.nx .why { color: var(--muted); font-size: 12.5px; }
+.nx .meta { color: var(--faint); font-size: 11.5px; margin-top: 6px; }
+.stale { color: var(--warn); }
+.brief { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 14px 18px; }
+.brief .item { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
+.brief .item:first-of-type { border-top: 0; }
+.tag { font-size: 11px; background: var(--danger); color: #fff; border-radius: 4px; padding: 0 6px; margin-left: 6px; }
+.nextline { color: var(--accent); font-size: 12.5px; margin-top: 2px; }
+
+.act { font-size: 12.5px; line-height: 1.5; }
+.act .e { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; padding: 3px 0; }
+.act .d { font-family: var(--mono); color: var(--faint); font-size: 11.5px; padding-top: 1px; }
+.act .w { color: var(--faint); }
+.act .what { color: var(--text); }
+.act .old { color: var(--faint); font-style: italic; padding: 4px 0 0 64px; }
+.lnk { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; }
+.wk-sec { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px 12px; max-width: 520px; }
+.wk-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.wk-i { display: flex; gap: 10px; align-items: flex-start; padding: 6px 4px; border-top: 1px solid var(--border); }
+.wk-i:first-of-type { border-top: 0; }
+.wk-i .t { flex: 1; }
+.wk-i .sub { color: var(--muted); font-size: 12px; }
+.tag-over { font-size: 11px; font-weight: 500; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
+.tag-push { font-size: 11px; font-weight: 500; color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Activity mockup</span></div>
+  <div class="seg"><button data-v="task" class="on">Task Activity</button><button data-v="old">Older task</button><button data-v="week">Weekly: Slipping</button></div>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+<div class="page"><div id="stage"></div><div class="notes" id="notes"></div></div>
+<script>
+const $ = (id) => document.getElementById(id)
+let view = 'task', all = false
+const ev = [
+  ['Nov 14', 'Marked done', 'by you'],
+  ['Nov 13', 'AI priority change removed (was +10)', 'by you'],
+  ['Nov 12', 'Due date moved: Nov 8 → Nov 14', 'from “Re: DM-NVX FAQ – final”, accepted in Review'],
+  ['Nov 11', 'AI priority change +10: Dana’s launch review depends on this.', 'by the AI, daily briefing'],
+  ['Nov 10', 'Linked: Teams chat “Kenji Mori”', 'from import'],
+  ['Nov 9', 'Follow-ups: 1 → 2', 'by you'],
+  ['Nov 9', 'Priority set by hand: 80', 'by you'],
+  ['Nov 8', 'Status: Waiting on Kenji Mori', 'from “Teams chat with Kenji Mori”, accepted in Review'],
+  ['Nov 6', 'Status: Open (was Waiting on Kenji Mori)', 'by you'],
+  ['Nov 5', 'Project: DM-NVX 3.2 launch (was none)', 'by you'],
+  ['Nov 4', 'Renamed from “Dealer FAQ”', 'by you'],
+  ['Nov 4', 'Asked by: Kenji Mori', 'by you'],
+  ['Nov 3', 'Due date set: Nov 8', 'by you'],
+  ['Nov 3', 'Created', 'from meeting “DM-NVX launch sync”, accepted in Review'],
+]
+const oldEv = [
+  ['Nov 6', 'Due date moved: Nov 5 → Nov 12', 'by you'],
+  ['Nov 5', 'Status: Waiting on Priya Shah', 'by you'],
+]
+const row = ([d, what, who]) => `<div class="e"><span class="d">${d}</span><span><span class="what">${what}</span> <span class="w">· ${who}</span></span></div>`
+function activity(list, older) {
+  const shown = all ? list : list.slice(0, 8)
+  return `<div class="label">Activity</div>
+  <div class="act new">${shown.map(row).join('')}
+    ${list.length > 8 ? `<div style="padding:4px 0 0 64px"><button class="lnk" id="more">${all ? 'Show fewer' : `Show all ${list.length}`}</button></div>` : ''}
+    ${older ? `<div class="e"><span class="d">Oct 21</span><span><span class="what">Created</span> <span class="w">· by you</span></span></div><div class="old">Changes before Nov 5, 2026 weren’t recorded.</div>` : ''}
+  </div>`
+}
+const editor = (list, older) => `
+<div class="editor"><div class="stripe"></div><div class="inner">
+  <div class="row"><span class="score">72</span><input class="title-inp" value="${older ? 'Margin model for new tiers' : 'Dealer FAQ for DM-NVX 3.2 firmware'}"><button class="iconbtn">✕</button></div>
+  <div class="dgrid"><div>
+    <div class="label">Notes</div><textarea class="inp" style="min-height:100px"></textarea>
+    <div class="label">Updates <span class="faint">· 3</span></div>
+    <div class="card" style="margin-top:0">Kenji approved the final draft.</div>
+    ${activity(list, older)}
+  </div><div>
+    <label class="field"><span>Status</span><select class="inp"><option>Open</option></select></label>
+    <label class="field"><span>Due</span><input class="inp" type="date" value="2026-11-14"></label>
+  </div></div>
+</div></div>`
+const week = `<div class="wk-sec new">
+  <div class="wk-h"><b>Slipping</b><span class="mono muted">4</span><span class="spacer"></span><span class="faint" style="font-size:11.5px">overdue or pushed back</span></div>
+  <div class="wk-i"><span class="t">Dealer FAQ for DM-NVX 3.2 firmware<div class="sub">Due Oct 31</div></span><span class="tag-over">Overdue 5 days</span></div>
+  <div class="wk-i"><span class="t">Submit October expense report<div class="sub">Due Nov 4 · pushed back from Nov 1, by you</div></span><span class="tag-over">Overdue 1 day</span></div>
+  <div class="wk-i"><span class="t">Roadmap slides for Q1 planning<div class="sub">Nov 9 → Nov 17, from “Roadmap review moved up”</div></span><span class="tag-push">Pushed back 8 days</span></div>
+  <div class="wk-i"><span class="t">Review SOW from Northside AV<div class="sub">Nov 6 → Nov 11, then Nov 13, by you</div></span><span class="tag-push">Pushed back 7 days</span></div>
+</div>`
+const NOTES = {
+  task: ['Task Activity', ['<b>Newest first</b>, with the date on the left (hover for the time). The newest 8 show; <b>Show all</b> lists the rest.','<b>Always says who:</b> “by you” for your edits; “from “Import”, accepted in Review” when a Review suggestion made the change; “by the AI, daily briefing” or “…, import “X”” for AI priority changes.','<b>Recorded:</b> created, status (Open, Waiting on whom, Done, Reopened), due date set, moved or removed, project, asked by, title, priority set or cleared by hand, follow-ups, and AI priority changes added, replaced or removed. Linked imports stay as today.','<b>Not recorded:</b> notes, subtasks, updates (they have their own window) and the score’s own daily recalculation.','One save that changes several fields adds one line per field.']],
+  old: ['A task from before this change', ['History starts when this ships. Older tasks keep their Created line and say <i>Changes before Nov 5, 2026 weren’t recorded.</i>']],
+  week: ['Weekly review: Slipping', ['<b>Overdue tasks, as today</b> (red tag), plus <b>tasks whose due date was pushed later during the week</b> (amber tag, total days pushed). A task that’s both shows the overdue tag and says it was pushed back.','The line underneath says the move and who made it. Several moves in a week are combined (Nov 6 → Nov 11, then Nov 13).','Pulled-in dates (moved earlier) and removed dates don’t count as slipping.','Weeks before the log started show overdue only, as now. Saved weeks keep what they showed.','The AI reflection is sent the pushed-back items too, so “Slipped” can mention them.']],
+}
+function render() {
+  document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.v === view))
+  $('stage').innerHTML = view === 'week' ? week : view === 'old' ? editor(oldEv, true) : editor(ev, false)
+  const [h, l] = NOTES[view]
+  $('notes').innerHTML = `<h3>${h}</h3><ul>${l.map((x) => `<li>${x}</li>`).join('')}</ul>`
+  const m = $('more'); if (m) m.onclick = () => { all = !all; render() }
+}
+document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { view = b.dataset.v; all = false; render() }))
+$('theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+render()
+</script>
+</body>
+</html>

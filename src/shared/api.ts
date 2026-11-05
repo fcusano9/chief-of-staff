@@ -33,6 +33,7 @@ import type {
   ProjectInput,
   ProjectSummary,
   Task,
+  TaskActivity,
   TaskFilter,
   TaskInput,
   TaskStatus,
@@ -62,6 +63,8 @@ export interface Api {
   'tasks.dismissNextAction': (taskId: number, dismissed: boolean) => NextAction | null
   /** Takes the AI's priority adjustment off a task. Returns the task with its score as it now is. */
   'tasks.removeAiAdjustment': (taskId: number) => Task
+  /** The task's recorded changes for its Activity log, newest first. */
+  'tasks.activity': (taskId: number) => TaskActivity
   'projects.list': () => ProjectSummary[]
   /** Archived projects, which projects.list leaves out. */
   'projects.listArchived': () => ProjectSummary[]
@@ -170,6 +173,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'tasks.nextAction',
   'tasks.dismissNextAction',
   'tasks.removeAiAdjustment',
+  'tasks.activity',
   'projects.list',
   'projects.listArchived',
   'projects.save',

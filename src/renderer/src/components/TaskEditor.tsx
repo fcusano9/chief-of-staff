@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Subtask, Task, TaskInput, TaskStatus } from '@shared/types'
-import { effectivePriority, NO_PROJECT_COLOR, SOURCE_KIND_LABELS, STATUS_LABELS } from '@shared/types'
+import { effectivePriority, NO_PROJECT_COLOR, STATUS_LABELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
 import { ConfirmButton, scoreClass } from './bits'
+import { ActivityLog } from './ActivityLog'
 import { NextActionCard } from './NextActionCard'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from './UpdatesWindow'
 
@@ -247,14 +248,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             )}
 
             <div className="label" style={{ margin: '14px 0 4px' }}>Activity</div>
-            <div className="muted" style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.8 }}>
-              {task?.linkedSources.map((s) => (
-                <div key={`src-${s.id}`}>
-                  {new Date(s.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · Linked: {SOURCE_KIND_LABELS[s.kind].toLowerCase()} “{s.title}”
-                </div>
-              ))}
-              {task ? <div>{new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · Created</div> : 'Not saved yet'}
-            </div>
+            <ActivityLog task={task} />
           </div>
 
           <div className="meta">

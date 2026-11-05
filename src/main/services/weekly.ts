@@ -6,7 +6,9 @@ import type { AiCallRecord, AiProvider } from '../ai/provider'
 import { assembleReflection, type WeeklyInput } from '../ai/weekly'
 import { nowIso, transaction } from '../db'
 import type { TaskService } from './tasks'
+import { type DueMove, TaskEventService } from './task-events'
 import { paidModelOf, UsageService } from './usage'
+import { eventWho, shortDate } from '@shared/events'
 
 /** Weeks whose reflection requests are kept for the AI log. Reflections themselves are all kept. */
 export const WEEKLY_CALLS_KEPT = 5
@@ -39,7 +41,10 @@ export class WeeklyService {
     private readonly now: () => Date = () => new Date(),
   ) {
     this.usage = new UsageService(db)
+    this.events = new TaskEventService(db, now)
   }
+
+  private readonly events: TaskEventService
 
   /** The week the weekly review started: set the first time this runs. Weeks before it are only partly known. */
   startedWeek(): string {
@@ -177,7 +182,14 @@ export class WeeklyService {
         lastDay: now.getDay() === 6,
         completed: lists.completed.map((i) => ({ title: i.title, project: i.project, day: i.at ? weekday(i.at) : '' })),
         added: lists.added.map((i) => ({ title: i.title, project: i.project, source: i.detail })),
-        slipping: (lists.slipping ?? []).map((i) => ({ title: i.title, project: i.project, due: byId.get(i.taskId)?.dueDate ?? '', overdueDays: i.overdueDays ?? 0 })),
+        slipping: (lists.slipping ?? []).map((i) => ({
+          title: i.title,
+          project: i.project,
+          due: byId.get(i.taskId)?.dueDate ?? '',
+          overdueDays: i.overdueDays ?? 0,
+          pushedDays: i.pushedDays ?? null,
+          pushed: i.pushedDays ? i.detail : null,
+        })),
         waiting: (lists.waiting ?? []).map((i) => ({ title: i.title, project: i.project, waitingOn: i.detail, days: i.days })),
       },
     }
@@ -269,10 +281,32 @@ export class WeeklyService {
     const asOf = live ? this.now().getTime() : dayStart(asOfDay).getTime()
     const finishedLater = (t: Task) => t.status === 'done' && (t.completedAt ?? '') >= to
     const openThen = (t: Task) => (live ? t.status === 'open' : t.status === 'open' || (finishedLater(t) && !t.waitedOn))
-    const slipping = tasks
+    const overdue = tasks
       .filter((t) => openThen(t) && t.dueDate && t.dueDate < asOfDay)
       .map((t) => item(t, `Due ${dueLabel(t.dueDate!)}`, { overdueDays: daysBetween(t.dueDate!, asOfDay) }))
       .sort((a, b) => b.overdueDays! - a.overdueDays! || a.title.localeCompare(b.title))
+    // Also slipping: tasks whose due date was pushed later during the week (net, from the event log),
+    // unless they were finished by the week's end. Dates moved earlier, set or removed don't count.
+    const byTask = new Map(tasks.map((t) => [t.id, t]))
+    const moves = new Map<number, DueMove[]>()
+    for (const m of this.events.dueMoves(from, to)) moves.set(m.taskId, [...(moves.get(m.taskId) ?? []), m])
+    const pushed: WeeklyItem[] = []
+    for (const [taskId, list] of moves) {
+      const t = byTask.get(taskId)
+      const net = daysBetween(list[0]!.from, list.at(-1)!.to)
+      if (!t || net <= 0 || (t.status === 'done' && (live || (t.completedAt ?? '') < to))) continue
+      const who = eventWho(list.at(-1)!)
+      const late = overdue.find((i) => i.taskId === taskId)
+      if (late) {
+        late.detail += ` · pushed back from ${shortDate(list[0]!.from)}, ${who}`
+        late.pushedDays = net
+        continue
+      }
+      const chain = [`${shortDate(list[0]!.from)} → ${shortDate(list[0]!.to)}`, ...list.slice(1).map((m) => `then ${shortDate(m.to)}`)].join(', ')
+      pushed.push(item(t, `${chain}, ${who}`, { pushedDays: net }))
+    }
+    pushed.sort((a, b) => b.pushedDays! - a.pushedDays! || a.title.localeCompare(b.title))
+    const slipping = [...overdue, ...pushed]
     // A task finished after a saved week was still waiting then; how long isn't kept once it's done.
     const waitingThen = (t: Task) => (live ? t.status === 'waiting_on' : (t.status === 'waiting_on' && (t.waitingSince ?? '') < to) || (finishedLater(t) && !!t.waitedOn))
     const waiting = tasks
