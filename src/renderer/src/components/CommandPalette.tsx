@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { DENSITIES, type Task } from '@shared/types'
 import { cos } from '../api'
 import { useApp, type View } from '../context'
+import { startReflection } from '../screens/WeeklyScreen'
 import { startBriefing } from './Briefing'
 
 interface Command {
@@ -13,13 +14,13 @@ interface Command {
 
 export const TABS: [View, string][] = [
   ['today', 'Today'],
+  ['weekly', 'Weekly'],
   ['tasks', 'Tasks'],
   ['review', 'Review'],
   ['waiting', 'Waiting'],
   ['projects', 'Projects'],
   ['people', 'People'],
   ['prep', 'Prep'],
-  ['weekly', 'Weekly'],
   ['archive', 'Archive'],
   ['import', 'Import'],
 ]
@@ -48,6 +49,14 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         run: () => {
           go('today')
           startBriefing()
+        },
+      },
+      {
+        group: 'Actions',
+        label: 'Write weekly reflection',
+        run: () => {
+          go('weekly')
+          startReflection()
         },
       },
       { group: 'Actions', label: 'New project', run: () => go('projects') },

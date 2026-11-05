@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { localModelLabel, type SuggestionKind } from '@shared/types'
 import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
+import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
 import { ALL_KINDS, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
 import { AiError, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
@@ -155,6 +156,14 @@ export function buildOllamaBriefingRequest(model: string, input: BriefingInput, 
   return chatRequest(model, system, user, format, reasoning)
 }
 
+/** The request for the weekly reflection. */
+export function buildOllamaWeeklyRequest(model: string, input: WeeklyInput, reasoning: Reasoning = 'low') {
+  const { system, user } = buildWeeklyPrompt(input)
+  const format = z.toJSONSchema(WeeklySchema) as Record<string, unknown>
+  delete format.$schema
+  return chatRequest(model, system, user, format, reasoning)
+}
+
 /** Totals for the last extract() call, for the benchmark. */
 export interface OllamaStats {
   requests: number
@@ -233,6 +242,13 @@ export class OllamaProvider implements AiProvider {
   async writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing> {
     const body = await this.chat(buildOllamaBriefingRequest(this.model, input, this.options.reasoning), 'Write the briefing', log)
     const parsed = BriefingSchema.safeParse(this.parseJson(body))
+    if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
+    return parsed.data
+  }
+
+  async writeWeeklyReflection(input: WeeklyInput, log?: AiCallLog): Promise<RawReflection> {
+    const body = await this.chat(buildOllamaWeeklyRequest(this.model, input, this.options.reasoning), 'Write the weekly reflection', log)
+    const parsed = WeeklySchema.safeParse(this.parseJson(body))
     if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
     return parsed.data
   }

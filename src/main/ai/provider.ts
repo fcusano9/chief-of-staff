@@ -1,5 +1,6 @@
 import type { PersonBriefInput, ProjectBriefInput } from './brief'
 import type { BriefingInput, RawBriefing } from './briefing'
+import type { RawReflection, WeeklyInput } from './weekly'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { RawSuggestion } from './schema'
 
@@ -20,6 +21,8 @@ export interface AiProvider {
   writeProjectBrief(input: ProjectBriefInput, log?: AiCallLog): Promise<string>
   /** The daily briefing's summary and picks from the tasks given. The caller checks the ids (assembleBriefing). */
   writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing>
+  /** The weekly review's reflection: a summary and short points. Text only; the caller tidies it (assembleReflection). */
+  writeWeeklyReflection(input: WeeklyInput, log?: AiCallLog): Promise<RawReflection>
   /** Cheap check that the provider is reachable and configured. Throws a readable error if not. */
   test(): Promise<string>
 }

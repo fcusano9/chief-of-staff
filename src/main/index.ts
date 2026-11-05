@@ -14,6 +14,7 @@ import { chooseDataLocation, findRedirectingPackage } from './paths'
 import { applyPendingRestore, createBackup, listBackups, requestRestore, snapshotNow } from './services/backup'
 import { FixtureOutlook, PowerShellOutlook } from './mail/outlook'
 import { BriefingService } from './services/briefings'
+import { WeeklyService } from './services/weekly'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { MailService } from './services/mail'
 import { nodeHost, OllamaManager } from './services/ollama-setup'
@@ -123,6 +124,7 @@ function providerFor(id: AiProviderId, localModel = settings.current.localModel)
 }
 const sources = new SourceService(db, currentProvider, () => settings.current.userName)
 const briefings = new BriefingService(db, tasks, currentProvider, () => settings.current.userName)
+const weekly = new WeeklyService(db, tasks, currentProvider, () => settings.current.userName)
 const usage = new UsageService(db)
 // Test data folders can read mail from a fixture file instead of Outlook (see e2e/README.md).
 const outlookFixture = isSeparateData ? process.env.COS_OUTLOOK_FIXTURE : undefined
@@ -325,6 +327,11 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'briefing.write': () => briefings.write('manual'),
   'briefing.isWriting': () => briefings.isWriting(),
   'briefing.aiCalls': (id) => briefings.aiCalls(id),
+  'weekly.list': () => weekly.list(),
+  'weekly.get': (weekStart) => weekly.get(weekStart),
+  'weekly.writeReflection': () => weekly.writeReflection(),
+  'weekly.isWriting': () => weekly.isWriting(),
+  'weekly.aiCalls': (weekStart) => weekly.aiCalls(weekStart),
   'usage.spending': () => usage.spending(),
 }
 
@@ -371,14 +378,25 @@ app.on('second-instance', () => {
   mainWindow?.focus()
 })
 
+/** Saves weekly reviews for weeks that have ended. A failure is logged and tried again later. */
+function saveEndedWeeks(): void {
+  try {
+    weekly.saveEndedWeeks()
+  } catch (err) {
+    console.error('Saving ended weeks failed', err)
+  }
+}
+
 void app.whenReady().then(() => {
   if (!isMac) Menu.setApplicationMenu(null)
   tasks.recomputeAll()
+  saveEndedWeeks()
   registerIpc()
   createWindow()
   backupIfDue()
   setInterval(() => {
     tasks.recomputeAll() // due dates and staleness change as time passes
+    saveEndedWeeks() // a week that ended while the app was open is saved soon after Saturday midnight
     backupIfDue()
   }, 30 * 60_000)
   app.on('activate', () => {

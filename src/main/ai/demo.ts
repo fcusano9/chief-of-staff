@@ -1,6 +1,7 @@
 import { BASIC_LABEL } from '@shared/types'
 import type { PersonBriefInput, ProjectBriefInput } from './brief'
 import { demoBriefing, type BriefingInput, type RawBriefing } from './briefing'
+import { demoReflection, type RawReflection, type WeeklyInput } from './weekly'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { AiCallLog, AiProvider } from './provider'
 import type { RawSuggestion } from './schema'
@@ -153,6 +154,23 @@ export class DemoProvider implements AiProvider {
       purpose: 'Write the briefing (demo rules)',
       endpoint: 'Basic, on this computer: fixed rules, no prompt',
       request: { note: 'Basic sends no prompt. It picks overdue and highest-priority tasks, and waits of 5 days or more, from this input.', input },
+      response: out,
+      error: null,
+      startedAt: new Date().toISOString(),
+      durationMs: 0,
+      inputTokens: null,
+      outputTokens: null,
+    })
+    return out
+  }
+
+  /** Counts, the oldest overdue tasks and the longest waits, by fixed rules. */
+  async writeWeeklyReflection(input: WeeklyInput, log?: AiCallLog): Promise<RawReflection> {
+    const out = demoReflection(input)
+    log?.record({
+      purpose: 'Write the weekly reflection (Basic rules)',
+      endpoint: 'Basic, on this computer: fixed rules, no prompt',
+      request: { note: 'Basic sends no prompt. It counts the lists and picks the oldest overdue tasks and longest waits from this input.', input },
       response: out,
       error: null,
       startedAt: new Date().toISOString(),

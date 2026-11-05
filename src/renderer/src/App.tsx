@@ -16,8 +16,9 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { TasksScreen } from './screens/TasksScreen'
 import { TodayScreen } from './screens/TodayScreen'
 import { WaitingScreen } from './screens/WaitingScreen'
+import { WeeklyScreen } from './screens/WeeklyScreen'
 
-const G_KEYS: Record<string, View> = { t: 'today', k: 'tasks', r: 'review', w: 'waiting', p: 'projects', e: 'people' }
+const G_KEYS: Record<string, View> = { t: 'today', v: 'weekly', k: 'tasks', r: 'review', w: 'waiting', p: 'projects', e: 'people' }
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
 const FALLBACK_AI: AiStatus = { provider: 'demo', model: '', hasKey: false, encryptionAvailable: false, label: 'Basic', sendsDataExternally: false, available: true, problem: null }
 const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -166,6 +167,7 @@ export function App() {
 
   const screen =
     view === 'today' ? <TodayScreen />
+    : view === 'weekly' ? <WeeklyScreen />
     : view === 'tasks' ? <TasksScreen />
     : view === 'waiting' ? <WaitingScreen />
     : view === 'projects' ? <ProjectsScreen />
@@ -176,7 +178,7 @@ export function App() {
     : view === 'ailog' ? <AiLogScreen />
     : view === 'aispending' ? <AiSpendingScreen />
     : <ComingSoonScreen view={view} />
-  const fill = view === 'tasks' || view === 'projects' || view === 'people'
+  const fill = view === 'tasks' || view === 'projects' || view === 'people' || view === 'weekly'
 
   return (
     <AppContext.Provider value={ctx}>

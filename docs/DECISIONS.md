@@ -2,6 +2,16 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-05 · Weekly review: live lists, saved weeks, a reflection on click (Frank)
+Frank's choices, asked up front (mockup `design/weekly-review.html`, approved):
+- **Weeks run Sunday to Saturday.** The current week shows Sunday to today and updates as he works; every week is kept so he can go back to any of them. Its own **Weekly tab** next to Today (G then V; W was taken by Waiting).
+- **Four lists:** Completed, New, Slipping, Waiting on. **Slipping is overdue tasks only**; due dates that move aren't tracked (Frank chose not to start recording them).
+- **The reflection is for Frank alone**, not a report for others: a summary, Went well, Slipped, Focus next. The lists update on their own with no AI; the reflection is written only when he clicks, and says when tasks changed since. Text only; nothing goes to Review.
+- **Ended weeks are saved automatically** the first time the app runs after Saturday midnight, and never change after. The lists are rebuilt as they stood at Saturday midnight from task dates (a task finished on Sunday still counts as overdue that week), so opening the app a few days late doesn't change them much.
+- **Weeks before this feature** show Completed and New (from task dates) and mark Slipping and Waiting on as not recorded (Frank: "Yes, partly"). A week the app wasn't opened at all the week after is saved the same way; this was in the mockup notes and Frank approved it.
+
+**How it's built:** `weekly_meta.started_week` is set the first time the app runs with this version. Saved weeks are JSON in `weekly_reviews` with titles as they were. A week's reflection is in `weekly_reflections` (refreshing replaces it), with the ids of the tasks it was written from, to count what changed. Its AI requests are kept for the newest 5 weeks only (`weekly_ai_calls`), and Claude usage counts toward AI spending as "Weekly reflections". A waiting item finished after a saved week shows no day count for that week, because the wait start isn't kept once a task is done.
+
 ### 2026-11-05 · Qwen 3.8 27B added to the tested local models (Frank)
 Benchmarked on the M5 MacBook Pro (32 GB), 15 cases, standard (GGUF, `-q4_K_M`) builds:
 

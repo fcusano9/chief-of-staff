@@ -60,6 +60,9 @@ class FakeBriefer implements AiProvider {
       return this.out
     }, (r) => ({ response: r, inputTokens: 100, outputTokens: 20 }))
   }
+  async writeWeeklyReflection() {
+    return { summary: '', went_well: [], slipped: [], focus_next: [] }
+  }
   async test() {
     return 'ok'
   }

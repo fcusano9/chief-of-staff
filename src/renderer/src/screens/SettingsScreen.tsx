@@ -30,6 +30,7 @@ export const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
     title: 'Go to',
     keys: [
       ['G then T', 'Today'],
+      ['G then V', 'Weekly'],
       ['G then K', 'Tasks'],
       ['G then R', 'Review'],
       ['G then W', 'Waiting'],

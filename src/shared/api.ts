@@ -8,6 +8,8 @@ import type {
   OllamaSetupStatus,
   Briefing,
   BriefingListItem,
+  WeekListItem,
+  WeeklyReview,
   ImportRequest,
   ImportResult,
   MailCheck,
@@ -131,6 +133,16 @@ export interface Api {
   'briefing.isWriting': () => boolean
   /** The requests sent to the AI for a briefing and what came back (kept for the newest few). */
   'briefing.aiCalls': (id: number) => AiCall[]
+  /** Every week from the first task to this one, newest first. Saves weeks that have ended first. */
+  'weekly.list': () => WeekListItem[]
+  /** One week's review, by its Sunday ('YYYY-MM-DD'). The current week is rebuilt each time. */
+  'weekly.get': (weekStart: string) => WeeklyReview
+  /** Asks the AI for this week's reflection and saves it. Reads only; changes nothing else. */
+  'weekly.writeReflection': () => WeeklyReview
+  /** True while a reflection is being written. */
+  'weekly.isWriting': () => boolean
+  /** The requests behind a week's reflection (kept for the newest few weeks). */
+  'weekly.aiCalls': (weekStart: string) => AiCall[]
   /** Estimated Claude costs this month and over the last 30 days, by purpose and by model. */
   'usage.spending': () => AiSpending
 }
@@ -203,6 +215,11 @@ export const API_CHANNELS: ApiChannel[] = [
   'briefing.write',
   'briefing.isWriting',
   'briefing.aiCalls',
+  'weekly.list',
+  'weekly.get',
+  'weekly.writeReflection',
+  'weekly.isWriting',
+  'weekly.aiCalls',
   'usage.spending',
 ]
 
