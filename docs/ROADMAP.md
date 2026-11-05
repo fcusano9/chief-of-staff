@@ -1,17 +1,17 @@
 # Roadmap
 
-The milestones agreed with Frank, what's done, and what each remaining one includes. Update this file when a milestone lands or the plan changes.
+The agreed milestones, what's done, and what each remaining one includes. Update this file when a milestone lands or the plan changes.
 
 ## Background
 
-Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each week to summarize email, Teams and meeting transcripts, then turned those summaries into action items by hand. Chief of Staff, inspired by Lon.tv's app of the same name, aims to:
+The app is for people who track work in Microsoft To Do and OneNote and use M365 Copilot to summarize email, Teams and meeting transcripts, then turn those summaries into action items by hand. Chief of Staff, inspired by Lon.tv's app of the same name, aims to:
 
 - replace To Do as the task system
 - pull work items from email, Teams and transcripts
 - use a pluggable AI (Claude first, M365 Copilot and others later) to propose tasks, write status updates, rank by urgency, recommend next actions and draft replies
 - keep a knowledge archive that can be queried years later
 
-**Hard rule: nothing is sent or decided without Frank.**
+**Hard rule: nothing is sent or decided without the user.**
 
 ## Status
 
@@ -33,17 +33,17 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 
 ## Milestone 3: priorities and briefings
 
-- ✅ **Daily briefing (AI)** on Today, when Frank clicks: a one-line summary, then Top priorities (overdue first, tagged), Waiting-on nudges, and New since last briefing. Every briefing is saved and browsable in History. A schedule (for example 7:30) can be added later; see DECISIONS.md.
+- ✅ **Daily briefing (AI)** on Today, when the user clicks: a one-line summary, then Top priorities (overdue first, tagged), Waiting-on nudges, and New since last briefing. Every briefing is saved and browsable in History. A schedule (for example 7:30) can be added later; see DECISIONS.md.
 - ✅ **Per-task "suggested next action"** on the task editor's card: one sentence plus why, written as part of a daily briefing or an import, never on its own. Tried on made-up demo data (AI-RULES.md, "How the AI has done in tests"): specific with all three Claude models, weak with gpt-oss:20b. The extraction benchmark hasn't been rerun since the prompt gained it.
 - **AI-written status updates** for open items. They go through Review like everything else.
-- ✅ **Weekly review** (Weekly tab): each Sunday-to-Saturday week's Completed, New, Slipping and Waiting on, live for the current week and saved when a week ends, plus an AI reflection for Frank (written on click, with Copy). A status report for others (or saving to Outlook drafts in milestone 4) isn't part of it; Frank chose a reflection for himself.
+- ✅ **Weekly review** (Weekly tab): each Sunday-to-Saturday week's Completed, New, Slipping and Waiting on, live for the current week and saved when a week ends, plus an AI reflection for the user (written on click, with Copy). A status report for others (or saving to Outlook drafts in milestone 4) isn't part of it; the reflection is for the user alone.
 - ✅ **An AI adjustment to the deterministic priority score** (±15), with a one-line reason, written as part of a briefing or an import. Overrides always win. Tried on made-up demo data: sensible with all three Claude models; gpt-oss:20b made no changes.
 - **Tray icon, start with Windows, Windows notifications, and a scheduler.**
-- **Decided (2026-11-04):** the daily briefing runs only when Frank clicks, for now. A schedule may come later.
+- **Decided (2026-11-04):** the daily briefing runs only when the user clicks, for now. A schedule may come later.
 
 ## Milestone 4: Outlook
 
-- Classic Outlook on Windows through COM, via a small helper, since Electron can't call COM directly. ✅ A bundled PowerShell script (`src/main/mail/outlook.ps1`); no security prompt on Frank's PC.
+- Classic Outlook on Windows through COM, via a small helper, since Electron can't call COM directly. ✅ A bundled PowerShell script (`src/main/mail/outlook.ps1`); no security prompt on the Windows PC it was tested on.
 - ✅ **Mail import** (Import → Outlook mail): a button, not a schedule. "Check Outlook" reads Inbox, its subfolders and Sent Items since the last import (7 days on the first run, or any date) and shows what it found and skipped; "Read" sends each new conversation to the AI. Review gets "Needs reply" tasks, action items, waiting-on items from sent mail (flagged for follow-up after 3 business days), and "Reply arrived" to clear them.
 - A calendar read for meeting prep.
 - "Draft reply" saves to Outlook Drafts with `MailItem.Save()` and is **never sent**.
@@ -64,7 +64,7 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 
 ## Later: in-app updates (not scheduled)
 
-Frank wants the app to keep itself up to date (requested 2026-11-05; not to be built yet):
+The app should keep itself up to date (requested 2026-11-05; not to be built yet):
 
 - **Detect new versions** published on GitHub.
 - **Prompt** when one is available, with **one-click update**.
@@ -73,7 +73,7 @@ Frank wants the app to keep itself up to date (requested 2026-11-05; not to be b
 **To decide before building:**
 - **Releases:** the repo has no GitHub Releases yet; today the app is built on each computer from source. Updates need versioned, built installers published as releases.
 - **Private repo:** the repo is private, so the app can't read its releases without a GitHub token. Options include a read-only token stored with `KeyStore`, or publishing releases somewhere public.
-- **Signing:** unsigned updates may trigger Windows SmartScreen. On Mac, automatic updates generally require a signed, notarized app. Signing certificates cost money, which is Frank's call.
+- **Signing:** unsigned updates may trigger Windows SmartScreen. On Mac, automatic updates generally require a signed, notarized app. Signing certificates cost money, which needs the owner's approval.
 - **Data safety:** an update that changes the database already gets the automatic safety copy before upgrading.
 
 ## Smaller backlog

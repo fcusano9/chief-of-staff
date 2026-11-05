@@ -1,6 +1,6 @@
 # Extraction benchmark
 
-Scores AI providers on fifteen made-up imports shaped like Frank's real work: Copilot summaries, emails (from his manager, a vendor with a prompt injection, a dealer, a customer with a question), Teams chats, meeting transcripts (long, a kickoff with a new project and person, a partner call starting an initiative), Outlook conversations, a newsletter with nothing to do, and recaps of finished work and decisions. The last four were added later to check that prompt changes help beyond the original cases. Each case lists the suggestions a careful assistant should make, extras that are fine, and things it must not do.
+Scores AI providers on fifteen made-up imports shaped like a product manager's real work: Copilot summaries, emails (from the user's manager, a vendor with a prompt injection, a dealer, a customer with a question), Teams chats, meeting transcripts (long, a kickoff with a new project and person, a partner call starting an initiative), Outlook conversations, a newsletter with nothing to do, and recaps of finished work and decisions. The last four were added later to check that prompt changes help beyond the original cases. Each case lists the suggestions a careful assistant should make, extras that are fine, and things it must not do.
 
 ```bash
 npm run bench:ai                                          # demo, every installed Ollama model, and Claude if a key is available
@@ -18,7 +18,7 @@ BENCH_RESCORE=bench/results/a.json,bench/results/b.json npm run bench:ai   # re-
 |---|---|
 | Found | Expected suggestions the model made, after the app's own validation |
 | Dates right | Of the expected suggestions with a deadline, how many got the right date |
-| Extra | Suggestions Frank would probably reject |
+| Extra | Suggestions the user would probably reject |
 | Rule breaks | Someone else's task, a duplicate of an open task, a finished task marked done wrongly, or following an injected instruction |
 | Failed | Errors or unreadable output |
 
