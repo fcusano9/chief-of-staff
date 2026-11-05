@@ -265,3 +265,14 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .model-row .state { font-size: var(--fs-xs); color: var(--muted); }
 .progress { height: 5px; border-radius: 3px; background: var(--sel); overflow: hidden; margin-top: 4px; max-width: 320px; }
 .progress > i { display: block; height: 100%; background: var(--accent); transition: width 0.2s; }
+
+/* AI spending screen and cost estimates */
+.usage-table { width: 100%; border-collapse: collapse; }
+.usage-table th { text-align: left; font-weight: 500; font-size: var(--fs-sm); color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.usage-table td { padding: var(--row-py) 8px; border-bottom: 1px solid var(--border); }
+.usage-table tr:last-child td { border-bottom: 0; }
+.usage-table .n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.usage-bar { height: 6px; border-radius: 3px; background: var(--accent); opacity: 0.7; }
+.callout-warn { border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 8%, transparent); padding: 6px 10px; border-radius: 0 6px 6px 0; font-size: var(--fs-sm); margin-top: 8px; }
+.callout-warn a { color: var(--accent); }
+.cost-chip { font-size: var(--fs-sm); white-space: nowrap; color: var(--muted); }

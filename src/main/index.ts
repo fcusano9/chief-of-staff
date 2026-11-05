@@ -22,6 +22,7 @@ import { SettingsStore } from './services/settings'
 import { SourceService } from './services/sources'
 import { SuggestionService } from './services/suggestions'
 import { TaskService } from './services/tasks'
+import { UsageService } from './services/usage'
 
 // Only the installed app touches real data; dev runs and tests get their own folder (see paths.ts).
 const location = chooseDataLocation({
@@ -122,6 +123,7 @@ function providerFor(id: AiProviderId, localModel = settings.current.localModel)
 }
 const sources = new SourceService(db, currentProvider, () => settings.current.userName)
 const briefings = new BriefingService(db, tasks, currentProvider, () => settings.current.userName)
+const usage = new UsageService(db)
 // Test data folders can read mail from a fixture file instead of Outlook (see e2e/README.md).
 const outlookFixture = isSeparateData ? process.env.COS_OUTLOOK_FIXTURE : undefined
 const mail = new MailService(
@@ -219,7 +221,7 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'projects.suggestBrief': async (id) => {
     const input = buildProjectBriefInput(db, id, settings.current.userName)
     const provider = currentProvider()
-    return { text: cleanProjectBrief(await provider.writeProjectBrief(input)), writtenBy: provider.label }
+    return { text: cleanProjectBrief(await provider.writeProjectBrief(input, usage.logFor('project_brief'))), writtenBy: provider.label }
   },
   'projects.saveBrief': (id, text, by) => projects.saveBrief(id, text, by),
   'projects.delete': (id) => projects.delete(id),
@@ -236,7 +238,7 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'people.suggestBrief': async (id) => {
     const input = buildPersonBriefInput(db, id, settings.current.userName)
     const provider = currentProvider()
-    return { text: cleanBrief(await provider.writePersonBrief(input)), writtenBy: provider.label }
+    return { text: cleanBrief(await provider.writePersonBrief(input, usage.logFor('person_brief'))), writtenBy: provider.label }
   },
   'people.saveBrief': (id, text, by) => people.saveBrief(id, text, by),
   'briefs.get': (scope, ownerId) => briefs.get(scope, ownerId),
@@ -323,6 +325,7 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'briefing.write': () => briefings.write('manual'),
   'briefing.isWriting': () => briefings.isWriting(),
   'briefing.aiCalls': (id) => briefings.aiCalls(id),
+  'usage.spending': () => usage.spending(),
 }
 
 function registerIpc(): void {

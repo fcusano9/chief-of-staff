@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AiProviderId, OllamaSetupStatus } from '@shared/types'
+import { formatCost } from '@shared/pricing'
 import { CLAUDE_MODELS, TESTED_LOCAL_MODELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
@@ -95,8 +96,12 @@ function TestButton({ provider, disabled }: { provider: AiProviderId; disabled: 
 }
 
 function ClaudeProvider() {
-  const { ai, setAi, toast } = useApp()
+  const { ai, setAi, toast, go, version } = useApp()
   const [key, setKey] = useState('')
+  const [monthCost, setMonthCost] = useState<number | null>(null)
+  useEffect(() => {
+    if (ai.hasKey) void cos['usage.spending']().then((s) => setMonthCost(s.month.total.cost))
+  }, [ai.hasKey, version])
   const saveKey = async (value: string | null) => {
     try {
       setAi(await cos['ai.setKey'](value))
@@ -115,6 +120,14 @@ function ClaudeProvider() {
         <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>
           Anthropic API. Most accurate. Paid per use.
         </span>
+        {ai.hasKey && (
+          <>
+            <div className="spacer" />
+            <button className="btn sm" data-ai-spending-btn onClick={() => go('aispending')}>
+              AI spending{monthCost != null ? ` · ${formatCost(monthCost)} this month` : ''}
+            </button>
+          </>
+        )}
       </div>
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <div className="field">

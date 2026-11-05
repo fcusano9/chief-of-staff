@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { AiCall, Briefing, BriefingItem, BriefingListItem } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
+import { formatCost } from '@shared/pricing'
 import { CallCard } from '../screens/AiLogScreen'
 import { useShortcutHints } from './hints'
 
@@ -217,6 +218,7 @@ function BriefingHistory({ latestId, onClose }: { latestId: number; onClose: () 
                 <div style={{ fontWeight: 500 }}>{day(b.createdAt)}</div>
                 <div className="faint" style={{ fontSize: 'var(--fs-xs)' }}>
                   {time(b.createdAt)} · {howStarted(b)}
+                  {b.estimatedCost != null && ` · est. ${formatCost(b.estimatedCost)}`}
                 </div>
               </button>
             ))}

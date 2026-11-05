@@ -3,6 +3,7 @@ import type { AiCall, AiRun } from '@shared/types'
 import type { AiCallLog, AiCallRecord } from '../ai/provider'
 import type { DroppedSuggestion } from '../ai/schema'
 import { nowIso } from '../db'
+import { paidModelOf, UsageService } from './usage'
 
 /** Runs kept per import. Older runs (and their requests) are deleted. */
 export const RUNS_KEPT = 5
@@ -24,7 +25,11 @@ const count = (json: string | null) => {
  * database next to the import itself, never anywhere else.
  */
 export class AiLogService {
-  constructor(private readonly db: DatabaseSync) {}
+  private readonly usage: UsageService
+
+  constructor(private readonly db: DatabaseSync) {
+    this.usage = new UsageService(db)
+  }
 
   startRun(sourceId: number, provider: string): number {
     return Number(this.db.prepare('INSERT INTO extraction_runs (source_id, provider, started_at) VALUES (?, ?, ?)').run(sourceId, provider, nowIso()).lastInsertRowid)
@@ -37,8 +42,10 @@ export class AiLogService {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     return {
-      record: (c: AiCallRecord) =>
-        void insert.run(runId, c.purpose, c.endpoint, pretty(c.request), c.response == null ? null : pretty(c.response), c.error, c.startedAt, c.durationMs, c.inputTokens, c.outputTokens),
+      record: (c: AiCallRecord) => {
+        insert.run(runId, c.purpose, c.endpoint, pretty(c.request), c.response == null ? null : pretty(c.response), c.error, c.startedAt, c.durationMs, c.inputTokens, c.outputTokens)
+        this.usage.record(c, 'import')
+      },
     }
   }
 
@@ -87,6 +94,7 @@ export class AiLogService {
               durationMs: Number(c.duration_ms),
               inputTokens: c.input_tokens == null ? null : Number(c.input_tokens),
               outputTokens: c.output_tokens == null ? null : Number(c.output_tokens),
+              paidModel: paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null),
             }),
           ),
       }

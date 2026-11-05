@@ -1,5 +1,6 @@
 import type {
   AiRun,
+  AiSpending,
   AiCall,
   AiStatus,
   AiChoiceGroup,
@@ -130,6 +131,8 @@ export interface Api {
   'briefing.isWriting': () => boolean
   /** The requests sent to the AI for a briefing and what came back (kept for the newest few). */
   'briefing.aiCalls': (id: number) => AiCall[]
+  /** Estimated Claude costs this month and over the last 30 days, by purpose and by model. */
+  'usage.spending': () => AiSpending
 }
 
 export type ApiChannel = keyof Api
@@ -200,6 +203,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'briefing.write',
   'briefing.isWriting',
   'briefing.aiCalls',
+  'usage.spending',
 ]
 
 /** The renderer sees every call as async. */

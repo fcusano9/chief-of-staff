@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { AiStatus, AppInfo, AppSettings, PersonSummary, ProjectSummary } from '@shared/types'
 
-export type View = 'today' | 'tasks' | 'review' | 'waiting' | 'projects' | 'people' | 'prep' | 'weekly' | 'archive' | 'import' | 'settings' | 'ailog'
+export type View = 'today' | 'tasks' | 'review' | 'waiting' | 'projects' | 'people' | 'prep' | 'weekly' | 'archive' | 'import' | 'settings' | 'ailog' | 'aispending'
 
 /** Which task the Tasks screen shows on the right: an id, a new task (with optional defaults), or none. */
 /** `waiting` picks the tab: Waiting for waiting-on items. Left out, Tasks and Waiting keep their own tab. */

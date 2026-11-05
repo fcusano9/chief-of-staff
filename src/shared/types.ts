@@ -1,6 +1,8 @@
 // Domain model shared by the main process (database, services) and the renderer (UI).
 // Dates: due dates are local calendar dates 'YYYY-MM-DD'; timestamps are ISO-8601 UTC strings.
 
+import { priceLabel } from './pricing'
+
 export type TaskStatus = 'proposed' | 'open' | 'in_progress' | 'waiting_on' | 'done' | 'dismissed'
 export const ACTIVE_STATUSES: readonly TaskStatus[] = ['open', 'in_progress', 'waiting_on']
 export const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -237,9 +239,9 @@ export interface AiModelOption {
 
 /** Claude models offered in the model picker. */
 export const CLAUDE_MODELS: AiModelOption[] = [
-  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', note: 'Most capable', price: '$4 / $20 per million tokens' },
-  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', note: 'Balanced', price: '$2 / $10 per million tokens' },
-  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', note: 'Fastest, cheapest', price: '$0.10 / $0.50 per million tokens' },
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', note: 'Most capable', price: priceLabel('claude-opus-5-5') },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', note: 'Balanced', price: priceLabel('claude-sonnet-5-5') },
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', note: 'Fastest, cheapest', price: priceLabel('claude-haiku-5-5') },
 ]
 
 /** The rule-based reader built into the app (provider id 'demo'). It isn't actually AI. */
@@ -430,6 +432,8 @@ export interface AiCall {
   durationMs: number
   inputTokens: number | null
   outputTokens: number | null
+  /** The Claude model that answered, for paid requests only (null for Basic and Ollama). */
+  paidModel: string | null
 }
 
 /** One time the AI read an import ("Run again" makes another). The newest few are kept. */
@@ -489,6 +493,45 @@ export interface BriefingListItem {
   id: number
   createdAt: string
   trigger: BriefingTrigger
+  /** Estimated cost in US dollars of the Claude requests behind it; null when it cost nothing or the price isn't known. */
+  estimatedCost: number | null
+}
+
+/** What a paid AI request was for. */
+export type UsagePurpose = 'import' | 'briefing' | 'person_brief' | 'project_brief'
+
+export const USAGE_PURPOSE_LABELS: Record<UsagePurpose, string> = {
+  import: 'Imports',
+  briefing: 'Daily briefings',
+  person_brief: 'Person briefs',
+  project_brief: 'Project briefs',
+}
+
+/** Claude requests added up by purpose or by model. */
+export interface UsageGroup {
+  /** A UsagePurpose, or a model id. */
+  key: string
+  requests: number
+  inputTokens: number
+  outputTokens: number
+  /** Estimated US dollars, at the list prices in pricing.ts. */
+  cost: number
+  /** Requests to a model with no known price, left out of `cost`. */
+  unpriced: number
+}
+
+export interface UsagePeriod {
+  /** Start of the period (ISO). */
+  from: string
+  total: UsageGroup
+  byPurpose: UsageGroup[]
+  byModel: UsageGroup[]
+}
+
+/** The AI spending screen: estimated Claude costs this calendar month and over the last 30 days. */
+export interface AiSpending {
+  month: UsagePeriod
+  last30: UsagePeriod
 }
 
 export type BackupKind = 'daily' | 'before-upgrade' | 'before-restore'

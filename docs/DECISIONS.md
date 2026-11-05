@@ -2,6 +2,14 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-04 · AI spending: estimated Claude costs on their own screen (Frank)
+Frank wants to see what Claude costs as usage grows, so he can trim what's sent (mockup `design/ai-spending.html`, approved after three rounds). **Frank's choices:**
+- **Its own screen**, opened from an "AI spending · $X this month" button on the Claude provider in Settings, so Settings stays short. It shows this month, the last 30 days, the average import (with tokens sent per import), and tables by purpose and by model.
+- **The prices used are listed** on the screen, with a note that they may have changed and a link to Anthropic's pricing page. Prices are built in, not looked up online.
+- **Estimated costs in the AI logs** for imports and briefings. The model and cost sit at the right of each request's header so they're never cut off in the narrower History window.
+
+**Why a separate `ai_usage` table:** the AI logs are pruned (5 runs per import, deleted with the import; briefing requests for the newest 5 only), so monthly totals would shrink. The migration fills `ai_usage` from the Claude requests already in the logs. Person and project briefs weren't logged at all before; they now report usage too.
+
 ### 2026-11-04 · One model picker, AI providers set up in Settings, Basic replaces "Demo AI" (Frank)
 Frank asked for a simpler way to choose the AI (mockup `design/ai-models-providers.html`, approved after two rounds). **Frank's choices:**
 - **One Model picker** replaces Provider + Model. It lists whatever is set up: Basic, Claude Opus / Sonnet / Haiku 5.5 once a key is saved, and every model in Ollama as "Ollama <name>" (no "(local)"; the group header says where it runs). The same menu opens from the AI button at the bottom right, which used to jump to Settings.
