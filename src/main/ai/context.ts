@@ -1,12 +1,13 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { ACTIVE_STATUSES, SOURCE_KIND_LABELS, type SourceKind, type SuggestionKind } from '@shared/types'
+import { recentNotes, UPDATES_FOR_AI } from '@shared/notes'
 
 export const ALL_KINDS: SuggestionKind[] = ['new_task', 'needs_reply', 'status_update', 'mark_done', 'waiting_on', 'new_project', 'new_person', 'brief_update']
 
 export interface ExtractionContext {
   today: string
   userName: string
-  tasks: { id: number; title: string; status: string; dueDate: string | null; project: string | null; requester: string | null; waitingOn: string | null }[]
+  tasks: { id: number; title: string; status: string; dueDate: string | null; project: string | null; requester: string | null; waitingOn: string | null; updates: string[] }[]
   projects: { id: number; name: string; overview: string; brief: string; instructions: string }[]
   people: { id: number; name: string; role: string | null; company: string | null; brief: string }[]
 }
@@ -26,8 +27,9 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
   const active = ACTIVE_STATUSES.map((s) => `'${s}'`).join(', ')
   const tasks = db
     .prepare(
-      `SELECT w.id, w.title, w.status, w.due_date, w.waiting_on, p.name AS project, r.name AS requester
+      `SELECT w.id, w.title, w.status, w.due_date, w.waiting_on, p.name AS project, r.name AS requester, IFNULL(b.summary, '') AS updates
        FROM work_items w LEFT JOIN projects p ON p.id = w.project_id LEFT JOIN people r ON r.id = w.requester_id
+       LEFT JOIN context_briefs b ON b.scope = 'task' AND b.owner_id = w.id
        WHERE w.status IN (${active}) ORDER BY w.id`,
     )
     .all() as Record<string, unknown>[]
@@ -56,22 +58,24 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
       project: (t.project as string) ?? null,
       requester: (t.requester as string) ?? null,
       waitingOn: (t.waiting_on as string) ?? null,
+      // The task's latest updates, whole ones only, so the AI can match new items to it.
+      updates: recentNotes(String(t.updates), UPDATES_FOR_AI),
     })),
-    // A project's overview and status brief; without a brief, the newest notes in its history.
+    // A project's overview and status brief; without a brief, its latest updates (whole ones only).
     projects: projects.map((p) => ({
       id: Number(p.id),
       name: String(p.name),
       overview: (p.overview as string) ?? '',
-      brief: (p.brief as string) || newest(String(p.history), 400),
+      brief: (p.brief as string) || recentNotes(String(p.history), 400).join(' | '),
       instructions: String(p.instructions),
     })),
-    // A person's one-line brief; without one, the newest notes in their context history.
+    // A person's one-line brief; without one, their latest updates (whole ones only).
     people: people.map((p) => ({
       id: Number(p.id),
       name: String(p.name),
       role: (p.role as string) ?? null,
       company: (p.company as string) ?? null,
-      brief: (p.brief as string) || newest(String(p.history), 300),
+      brief: (p.brief as string) || recentNotes(String(p.history), UPDATES_FOR_AI).join(' | '),
     })),
   }
 }
@@ -131,7 +135,7 @@ export function calendar(today: string): string {
 export function buildUserPrompt(ctx: ExtractionContext, source: SourceForExtraction): string {
   const tasks = ctx.tasks.length
     ? ctx.tasks
-        .map((t) => `- [${t.id}] ${t.title} (${t.status.replace('_', ' ')}${t.dueDate ? `, due ${t.dueDate}` : ''}${t.project ? `, project: ${t.project}` : ''}${t.requester ? `, asked by ${t.requester}` : ''}${t.waitingOn ? `, waiting on ${t.waitingOn}` : ''})`)
+        .map((t) => `- [${t.id}] ${t.title} (${t.status.replace('_', ' ')}${t.dueDate ? `, due ${t.dueDate}` : ''}${t.project ? `, project: ${t.project}` : ''}${t.requester ? `, asked by ${t.requester}` : ''}${t.waitingOn ? `, waiting on ${t.waitingOn}` : ''})${t.updates.length ? ` Updates: ${t.updates.join(' | ')}` : ''}`)
         .join('\n')
     : '(none)'
   const projects = ctx.projects.length
@@ -163,10 +167,5 @@ Propose suggestions for ${ctx.userName} based on the imported item.`
 const oneLine = (s: string, max: number) => {
   const t = s.replace(/\s+/g, ' ').trim()
   return t.length > max ? `${t.slice(0, max)}…` : t
-}
-/** The end of a context history, where the newest notes are. */
-const newest = (s: string, max: number) => {
-  const t = s.replace(/\s+/g, ' ').trim()
-  return t.length > max ? `…${t.slice(-(max - 1))}` : t
 }
 const escapeAttr = (s: string) => s.replace(/"/g, "'").replace(/[<>]/g, '')

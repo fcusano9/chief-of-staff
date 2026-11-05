@@ -98,11 +98,13 @@ describe('people: company, counts and one-line briefs', () => {
     const alex = people.save({ id: 0, name: 'Alex Rivera', role: null, company: null, email: null, priorityWeight: 3 })
     history(dana.id, `${'Old note. '.repeat(40)}Newest note about Dana.`)
     people.saveBrief(dana.id, 'Dana Lee is VP of Product at Crestron.', 'ai')
-    history(alex.id, `${'Old note. '.repeat(40)}Newest note about Alex.`)
+    history(alex.id, `${'Nov 1, 2026: Old note.\n'.repeat(40)}Nov 2, 2026: Newest note about Alex.`)
     const user = buildUserPrompt(buildExtractionContext(db, 'Frank Cusano'), { kind: 'note', title: 'n', fromName: null, occurredAt: '2026-11-02T00:00:00Z', content: 'x' })
     expect(user).toContain(`- [${dana.id}] Dana Lee, VP, Product, Crestron: Dana Lee is VP of Product at Crestron.`)
     expect(user).not.toContain('Newest note about Dana')
-    expect(user).toContain('Newest note about Alex.')
+    expect(user).toContain('Alex Rivera: Nov 2, 2026: Newest note about Alex. | Nov 1, 2026: Old note.')
+    // Whole updates only, up to the limit: no note is cut mid-sentence.
+    expect(user).not.toMatch(/Old note\.?…/)
   })
 
   it('collects what the AI needs to write a brief, and refuses without any context', () => {

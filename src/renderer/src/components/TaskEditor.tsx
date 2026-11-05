@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ContextBrief, Subtask, Task, TaskInput, TaskStatus } from '@shared/types'
+import type { Subtask, Task, TaskInput, TaskStatus } from '@shared/types'
 import { effectivePriority, NO_PROJECT_COLOR, SOURCE_KIND_LABELS, STATUS_LABELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
 import { ConfirmButton, scoreClass } from './bits'
+import { LatestUpdate, UpdatesButton, UpdatesWindow } from './UpdatesWindow'
 
-const EDITABLE_STATUSES: TaskStatus[] = ['open', 'in_progress', 'waiting_on', 'done']
+const EDITABLE_STATUSES: TaskStatus[] = ['open', 'waiting_on', 'done']
 
+/** The editable part of a task. Its Updates are saved on their own, from the Updates window. */
 interface Form {
   input: TaskInput
-  brief: { summary: string; standingInstructions: string }
 }
 
 const emptyInput = (projectId: number | null = null, waiting = false): TaskInput => ({
@@ -40,15 +41,8 @@ const toInput = (t: Task): TaskInput => ({
   subtasks: t.subtasks,
 })
 
-/** Saves a task and its brief. Returns the saved task. */
-async function persist(form: Form): Promise<Task> {
-  const saved = await cos['tasks.save'](form.input)
-  const { summary, standingInstructions } = form.brief
-  if (summary.trim() || standingInstructions.trim() || form.input.id) {
-    await cos['briefs.save']({ scope: 'task', ownerId: saved.id, summary, standingInstructions, updatedAt: null })
-  }
-  return saved
-}
+/** Saves a task. Returns the saved task. */
+const persist = (form: Form): Promise<Task> => cos['tasks.save'](form.input)
 
 interface Props {
   taskId: number | 'new'
@@ -69,10 +63,11 @@ interface Props {
 export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = false, onClose, onSaved, onDone, onDeleted }: Props) {
   const { projects, people, toast, refresh } = useApp()
   const [task, setTask] = useState<Task | null>(null)
-  const [form, setForm] = useState<Form | null>(taskId === 'new' ? { input: emptyInput(defaultProjectId, defaultWaiting), brief: { summary: '', standingInstructions: '' } } : null)
+  const [form, setForm] = useState<Form | null>(taskId === 'new' ? { input: emptyInput(defaultProjectId, defaultWaiting) } : null)
   const [snapshot, setSnapshot] = useState(() => (form ? JSON.stringify(form) : ''))
-  const [projectBrief, setProjectBrief] = useState<ContextBrief | null>(null)
-  const [personBrief, setPersonBrief] = useState<ContextBrief | null>(null)
+  const [updates, setUpdates] = useState('')
+  const [showUpdates, setShowUpdates] = useState(false)
+  const [adjust, setAdjust] = useState(false)
   const [newSubtask, setNewSubtask] = useState('')
   const titleRef = useRef<HTMLInputElement>(null)
 
@@ -88,7 +83,8 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
     let cancelled = false
     void Promise.all([cos['tasks.get'](taskId), cos['briefs.get']('task', taskId)]).then(([t, brief]) => {
       if (cancelled || !t) return
-      const loaded: Form = { input: toInput(t), brief: { summary: brief.summary, standingInstructions: brief.standingInstructions } }
+      const loaded: Form = { input: toInput(t) }
+      setUpdates(brief.summary)
       setTask(t)
       setForm(loaded)
       setSnapshot(JSON.stringify(loaded))
@@ -119,19 +115,10 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
 
   const projectId = form?.input.projectId ?? null
   const requesterId = form?.input.requesterId ?? null
-  useEffect(() => {
-    if (projectId) void cos['briefs.get']('project', projectId).then(setProjectBrief)
-    else setProjectBrief(null)
-  }, [projectId])
-  useEffect(() => {
-    if (requesterId) void cos['briefs.get']('person', requesterId).then(setPersonBrief)
-    else setPersonBrief(null)
-  }, [requesterId])
 
   if (!form) return <div className="empty">Loading…</div>
 
   const set = (patch: Partial<TaskInput>) => setForm((f) => (f ? { ...f, input: { ...f.input, ...patch } } : f))
-  const setBrief = (patch: Partial<Form['brief']>) => setForm((f) => (f ? { ...f, brief: { ...f.brief, ...patch } } : f))
   const setSubtask = (i: number, patch: Partial<Subtask>) => set({ subtasks: form.input.subtasks.map((s, j) => (j === i ? { ...s, ...patch } : s)) })
 
   const project = projects.find((p) => p.id === projectId) ?? null
@@ -147,7 +134,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
     }
     try {
       const saved = await persist(next)
-      const savedForm: Form = { input: toInput(saved), brief: next.brief }
+      const savedForm: Form = { input: toInput(saved) }
       // Mark clean right away: the parent may unmount this editor before React re-renders,
       // and the unmount autosave must not save (or create) the task a second time.
       latest.current = { form: savedForm, dirty: false }
@@ -167,13 +154,6 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
     setNewSubtask('')
   }
 
-  const knows: [boolean, string][] = [
-    [!!(project?.overview || project?.brief || projectBrief?.summary || projectBrief?.standingInstructions), project ? `Project brief (${project.name})` : 'Project brief (no project)'],
-    [!!(form.brief.summary || form.brief.standingInstructions), 'Task brief'],
-    [!!(personBrief?.summary || personBrief?.standingInstructions), requesterId ? 'Person brief' : 'Person brief (nobody)'],
-    [!!(form.input.notes || form.input.subtasks.length), 'Notes and subtasks'],
-    [!!task?.linkedSources.length, task?.linkedSources.length ? `${task.linkedSources.length} linked source${task.linkedSources.length === 1 ? '' : 's'}` : 'Linked sources (none yet)'],
-  ]
 
   return (
     <div
@@ -233,23 +213,31 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             </div>
 
             <div className="label" style={{ margin: '14px 0 4px' }}>Notes</div>
-            <textarea className="inp" value={form.input.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} placeholder="Anything worth remembering about this task" />
+            <textarea
+              className="inp notes-inp"
+              aria-label="Notes"
+              value={form.input.notes ?? ''}
+              onChange={(e) => set({ notes: e.target.value })}
+              placeholder="Your own notes. The AI never changes these."
+            />
 
-            <div className="label" style={{ margin: '14px 0 4px' }}>Task brief</div>
-            <textarea className="inp" value={form.brief.summary} onChange={(e) => setBrief({ summary: e.target.value })} placeholder="Background, goals, decisions so far" />
-            <textarea className="inp" style={{ marginTop: 6, minHeight: 44 }} value={form.brief.standingInstructions} onChange={(e) => setBrief({ standingInstructions: e.target.value })} placeholder="Standing instructions, e.g. keep replies formal" />
+            {!isNew && (
+              <>
+                <div className="row" style={{ margin: '14px 0 4px' }}>
+                  <span className="label">Updates</span>
+                  <div className="spacer" />
+                  <UpdatesButton updates={updates} onOpen={() => setShowUpdates(true)} />
+                </div>
+                <LatestUpdate updates={updates} onOpen={() => setShowUpdates(true)} />
+                {!updates.trim() && <div className="faint" style={{ fontSize: 'var(--fs-sm)' }}>No updates yet. What you accept from imports in Review lands here.</div>}
+              </>
+            )}
 
             <div className="label" style={{ margin: '14px 0 4px' }}>Activity</div>
             <div className="muted" style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.8 }}>
-              {task?.statusUpdates.map((u) => (
-                <div key={u.id}>
-                  {new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {u.isAiGenerated ? '✦ ' : ''}
-                  {u.text}
-                </div>
-              ))}
               {task?.linkedSources.map((s) => (
                 <div key={`src-${s.id}`}>
-                  {new Date(s.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · From {SOURCE_KIND_LABELS[s.kind].toLowerCase()}: {s.title}
+                  {new Date(s.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · Linked: {SOURCE_KIND_LABELS[s.kind].toLowerCase()} “{s.title}”
                 </div>
               ))}
               {task ? <div>{new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · Created</div> : 'Not saved yet'}
@@ -301,12 +289,23 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             </label>
 
             <div className="card" style={{ marginTop: 10, padding: '8px 10px' }}>
-              <div className="label">Priority {score ?? ''}</div>
+              <div className="row">
+                <span className="label">
+                  Priority {score ?? ''}
+                  {form.input.priorityOverride != null ? ' (set by you)' : ''}
+                </span>
+                <div className="spacer" />
+                <button type="button" className="link-btn" onClick={() => setAdjust(!adjust)}>
+                  {adjust ? 'Done' : 'Adjust'}
+                </button>
+              </div>
               <div style={{ fontSize: 'var(--fs-sm)' }}>{task?.priorityRationale ?? 'Calculated when you save'}</div>
+              {adjust && (
+              <>
               <div className="row" style={{ marginTop: 6, fontSize: 'var(--fs-sm)' }}>
                 <label className="row muted" style={{ gap: 6 }}>
                   <input type="checkbox" checked={form.input.priorityOverride != null} onChange={(e) => set({ priorityOverride: e.target.checked ? (task?.priorityScore ?? 50) : null })} />
-                  Override
+                  Set by hand
                 </label>
                 {form.input.priorityOverride != null && (
                   <input
@@ -331,15 +330,8 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
                   </button>
                 )}
               </div>
-            </div>
-
-            <div className="card" style={{ marginTop: 10, padding: '8px 10px', fontSize: 'var(--fs-sm)', lineHeight: 1.8 }}>
-              <div className="label">What the AI knows</div>
-              {knows.map(([ok, text]) => (
-                <div key={text}>
-                  <span style={{ color: ok ? 'var(--ok)' : 'var(--faint)' }}>{ok ? '✓' : '○'}</span> {text}
-                </div>
-              ))}
+              </>
+              )}
             </div>
           </div>
         </div>
@@ -385,6 +377,25 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
           </button>
         </div>
       </div>
+      {showUpdates && task && (
+        <UpdatesWindow
+          scope="task"
+          ownerId={task.id}
+          title={
+            <>
+              <span style={{ width: 3, height: 18, borderRadius: 2, background: project?.color ?? NO_PROJECT_COLOR }} />
+              <b>{form.input.title || task.title}</b>
+            </>
+          }
+          updates={updates}
+          newCount={0}
+          hint="One update per line. The AI reads the latest ones on imports and in the daily briefing."
+          empty="No updates yet. Status updates and context you accept from imports in Review land here, newest first."
+          placeholder="Add an update, e.g. Kenji wants it by Friday"
+          onChange={setUpdates}
+          onClose={() => setShowUpdates(false)}
+        />
+      )}
     </div>
   )
 }

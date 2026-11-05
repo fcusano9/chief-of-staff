@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite'
+import { noteLines, noteStamp, parseNote } from '@shared/notes'
 
 /**
  * Schema migrations, applied in order. PRAGMA user_version records how many have run.
@@ -219,7 +220,48 @@ export const MIGRATIONS: Migration[] = [
   );
   CREATE INDEX ix_briefing_ai_calls_briefing ON briefing_ai_calls(briefing_id);
   `,
+  // Simpler task editor: a task's Updates are its context brief's summary, like projects and people.
+  // Status updates move there as dated notes, task standing instructions are kept as an undated
+  // note, and "In progress" (which nothing used) becomes Open.
+  (db) => mergeTaskUpdates(db),
 ]
+
+/** Moves status updates and task standing instructions into each task's Updates (see the migration above). */
+function mergeTaskUpdates(db: DatabaseSync): void {
+  const now = new Date().toISOString()
+  const briefs = new Map<number, { summary: string; instructions: string }>()
+  for (const b of db.prepare(`SELECT owner_id, summary, standing_instructions FROM context_briefs WHERE scope = 'task'`).all() as Record<string, unknown>[])
+    briefs.set(Number(b.owner_id), { summary: String(b.summary), instructions: String(b.standing_instructions) })
+  const updates = new Map<number, { at: number; line: string }[]>()
+  for (const u of db.prepare('SELECT work_item_id, text, created_at FROM status_updates ORDER BY created_at, id').all() as Record<string, unknown>[]) {
+    const at = new Date(String(u.created_at))
+    const list = updates.get(Number(u.work_item_id)) ?? []
+    list.push({ at: at.getTime(), line: `${noteStamp(at)}: ${String(u.text).replace(/\s+/g, ' ').trim()}` })
+    updates.set(Number(u.work_item_id), list)
+  }
+  const upsert = db.prepare(
+    `INSERT INTO context_briefs (scope, owner_id, summary, standing_instructions, updated_at) VALUES ('task', ?, ?, '', ?)
+     ON CONFLICT (scope, owner_id) DO UPDATE SET summary = excluded.summary, standing_instructions = '', updated_at = excluded.updated_at`,
+  )
+  for (const id of new Set([...briefs.keys(), ...updates.keys()])) {
+    const brief = briefs.get(id)
+    const undated: string[] = []
+    const dated: { at: number; line: string }[] = []
+    for (const line of noteLines(brief?.summary ?? '')) {
+      const date = parseNote(line).date
+      const at = date ? Date.parse(date) : NaN
+      if (Number.isNaN(at)) undated.push(line)
+      else dated.push({ at, line })
+    }
+    dated.push(...(updates.get(id) ?? []))
+    dated.sort((a, b) => a.at - b.at) // stable: same-day notes keep their order
+    const instructions = brief?.instructions.replace(/\s+/g, ' ').trim()
+    if (instructions) undated.push(`Standing instructions: ${instructions}`)
+    const summary = [...undated, ...dated.map((d) => d.line)].join('\n')
+    if (summary || brief) upsert.run(id, summary, now)
+  }
+  db.exec(`DELETE FROM status_updates; UPDATE work_items SET status = 'open' WHERE status = 'in_progress';`)
+}
 
 /** Adds TEXT columns that aren't there yet (SQLite has no ADD COLUMN IF NOT EXISTS). */
 function addMissingColumns(db: DatabaseSync, table: string, columns: string[]): void {

@@ -1,5 +1,5 @@
 // Projects: the hand-written overview (pencil, Esc, Ctrl+Enter), the AI status brief (Write brief
-// with the demo AI, Keep, the "new notes" hint, Edit) and the History window (newest first, new
+// with the demo AI, Keep, the "new notes" hint, Edit) and the Updates window (newest first, new
 // notes marked, Add, Edit, Esc).
 import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -30,7 +30,7 @@ try {
   await app.waitFor('.pane.right .title-inp')
   await app.click('.pane.right .title-inp')
   await app.type('Q1 roadmap')
-  check('a new project has no overview, brief or History yet', !(await app.eval(`return !!document.querySelector('[data-overview], [data-brief]')`)))
+  check('a new project has no overview, brief or updates yet', !(await app.eval(`return !!document.querySelector('[data-overview], [data-brief]')`)))
   await app.clickText('Save', '.pane.right button')
   await app.waitFor('.pane.left .r')
   await app.sleep(300)
@@ -66,7 +66,8 @@ try {
 
   // Brief: write with the demo AI, keep it
   check('no brief yet', (await text(app, '[data-brief]')).startsWith('No brief yet'))
-  check('History button shows the note count', (await app.eval(`return [...document.querySelectorAll('.pane.right button')].find(b => b.textContent.startsWith('History')).textContent.replace(/\\s+/g, ' ')`)) === 'History 2')
+  check('Updates button shows the count', (await app.eval(`return [...document.querySelectorAll('.pane.right button')].find(b => b.textContent.startsWith('Updates')).textContent.replace(/\\s+/g, ' ')`)) === 'Updates 2')
+  check('Latest card shows the newest update', !!(await app.eval(`return document.querySelector('.pane.right [data-latest]')`)))
   await app.clickText('Write brief', '.pane.right button')
   await app.waitFor('.pane.right .ai')
   const suggested = await text(app, '.pane.right .ai')
@@ -80,12 +81,12 @@ try {
   check('byline says written by AI', (await text(app, '.pane.right')).includes('Written by AI on'))
   check('unsaved name edit survives', (await app.eval(`return document.querySelector('.pane.right .title-inp').value`)) === 'Spring pricing launch 2027')
 
-  // History window: newest first, add a note, new-note marks and hint
-  await app.clickText('History', '.pane.right button')
+  // Updates window: newest first, add a note, new-note marks and hint
+  await app.clickText('Updates', '.pane.right button')
   await app.waitFor('.dialog')
   const notes = await app.eval(`return [...document.querySelectorAll('.dialog [data-note]')].map(n => n.textContent)`)
   check('history newest first, year dropped, source shown', notes.length === 2 && notes[0].startsWith('Nov 1Northwind AV pilots') && notes[0].includes('from “Dealer call”'), JSON.stringify(notes))
-  check('add box focused', await app.eval(`return document.activeElement === document.querySelector('input[aria-label="New note"]')`))
+  check('add box focused', await app.eval(`return document.activeElement === document.querySelector('input[aria-label="New update"]')`))
   await app.type('EMEA will use the same four tiers, priced in euros.')
   await app.key('Enter')
   await app.sleep(400)
@@ -96,14 +97,14 @@ try {
 
   // Edit the whole history: Esc cancels the edit only, Ctrl+Enter saves
   await app.clickText('Edit', '.dialog button')
-  await app.waitFor('textarea[aria-label="History"]')
+  await app.waitFor('textarea[aria-label="Updates"]')
   await app.type('\nJunk line')
   await app.key('Escape')
-  check('Esc leaves history editing but keeps the window open', !!(await app.eval(`return document.querySelector('.dialog') && !document.querySelector('textarea[aria-label="History"]')`)))
+  check('Esc leaves history editing but keeps the window open', !!(await app.eval(`return document.querySelector('.dialog') && !document.querySelector('textarea[aria-label="Updates"]')`)))
   check('cancelled edit not saved', !(await history(app)).includes('Junk line'))
   await app.clickText('Edit', '.dialog button')
-  await app.waitFor('textarea[aria-label="History"]')
-  await app.eval(`const t = document.querySelector('textarea[aria-label="History"]'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); return true`)
+  await app.waitFor('textarea[aria-label="Updates"]')
+  await app.eval(`const t = document.querySelector('textarea[aria-label="Updates"]'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); return true`)
   await app.type('\nNov 3, 2026: Finance reviews margins first.')
   await app.key('Enter', { ctrl: true })
   await app.sleep(400)
@@ -111,7 +112,7 @@ try {
   await app.key('Escape')
   await app.sleep(200)
   check('Esc closes the window', !(await app.eval(`return !!document.querySelector('.dialog')`)))
-  check('new notes hint', (await text(app, '.pane.right')).includes('2 new notes since this brief'))
+  check('new notes hint', (await text(app, '.pane.right')).includes('2 new updates since this brief'))
 
   // Save keeps the history and saves the name and instructions
   await app.clickText('Save', '.pane.right button')

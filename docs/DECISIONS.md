@@ -2,6 +2,14 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-04 · Simpler task editor: Notes, Updates and Activity (Frank)
+Frank found the task editor confusing (Notes, Task brief and Standing instructions overlapped, and "What the AI knows" claimed more than was sent). Mockup `design/task-editor-simplified.html`, approved after several rounds:
+- **Notes are his own**; the AI never writes them. **Updates** replace the task brief and the old status updates: everything learned from imports (status updates and context, each dated with its source) plus anything he adds. Tasks now work like projects and people.
+- **"History" is renamed "Updates"** on Projects and People too, because History clashed with the daily briefing's History. Each has a **Latest** card under the button (Frank asked for it everywhere). **Activity** keeps its name (Frank) and is a plain log: created and linked imports. Recording status and due-date changes is on the roadmap backlog, kept out of this change (Frank).
+- **Removed:** task standing instructions and "What the AI knows" (no AI read them), and the **In progress** status (nothing used it, and the AI couldn't set it; Frank). The "Suggested next action" placeholder stays (Frank).
+- **The AI sees task updates.** Each open task sends its latest updates on imports, to match new items to the right task (Frank's choice; more work text goes to Anthropic when Claude is selected). **Whole updates only, up to 300 characters** (Frank chose 300 over a larger limit for now; 600 could be compared with `bench:ai` later). People and projects switched to whole updates too, so nothing is cut mid-sentence. The daily briefing reads Notes and Updates (Frank), and Updates on waiting items.
+- **Migration (schema v11):** status updates become dated lines in each task's Updates, merged in date order with the old task brief; standing instructions become an undated "Standing instructions: …" line; In progress tasks become Open. The usual safety copy is taken first.
+
 ### 2026-11-04 · Daily briefing: on click only, ready for a schedule later (Frank)
 Frank's choices, asked up front (mockup `design/daily-briefing.html`, approved):
 - **Only when he clicks** (Write briefing, Refresh, or "Write briefing" in Ctrl+K). This settles the roadmap's pending decision for now. He may add a schedule later, so `BriefingService.write(trigger)` takes `'manual'` or `'scheduled'` and each briefing records it (`briefings.started_by`); a scheduler only needs a time setting that calls `write('scheduled')`. No keyboard shortcut (Frank).

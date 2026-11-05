@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { PROJECT_COLORS, type BriefScope, type SourceKind, type Suggestion, type SuggestionKind, type SuggestionPayload, type TaskStatus } from '@shared/types'
 import { nowIso, transaction } from '../db'
+import { noteStamp } from '@shared/notes'
 import type { BriefService, PersonService, ProjectService } from './directory'
 import type { TaskService } from './tasks'
 
@@ -121,14 +122,14 @@ export class SuggestionService {
           break
         case 'status_update': {
           const task = this.requireTask(p.taskId)
-          this.addUpdate(task.id, p.details)
+          this.addUpdate(task.id, p.details, sourceTitle)
           if (p.dueDate && p.dueDate !== task.dueDate) this.tasks.save({ ...this.requireTask(task.id), dueDate: p.dueDate })
           taskId = task.id
           break
         }
         case 'mark_done': {
           const task = this.requireTask(p.taskId)
-          if (p.details) this.addUpdate(task.id, p.details)
+          if (p.details) this.addUpdate(task.id, p.details, sourceTitle)
           this.tasks.save({ ...this.requireTask(task.id), status: 'done' })
           taskId = task.id
           break
@@ -211,18 +212,17 @@ export class SuggestionService {
     }).id
   }
 
-  private addUpdate(taskId: number, text: string): void {
+  /** A status update goes into the task's Updates, like context, and counts as activity on the task. */
+  private addUpdate(taskId: number, text: string, sourceTitle: string): void {
     if (!text.trim()) return
-    const now = nowIso()
-    this.db.prepare('INSERT INTO status_updates (work_item_id, text, is_ai_generated, created_at) VALUES (?, ?, 1, ?)').run(taskId, text.trim(), now)
-    this.db.prepare('UPDATE work_items SET last_activity_at = ? WHERE id = ?').run(now, taskId)
+    this.appendBrief('task', taskId, text, sourceTitle)
+    this.db.prepare('UPDATE work_items SET last_activity_at = ? WHERE id = ?').run(nowIso(), taskId)
   }
 
   private appendBrief(scope: BriefScope | null, ownerId: number | null, text: string, sourceTitle: string): void {
     if (!scope || !ownerId || !text.trim()) throw new Error('This brief update is missing what it applies to.')
     const brief = this.briefs.get(scope, ownerId)
-    const stamp = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-    const line = `${stamp}: ${text.trim()} (from “${sourceTitle}”)`
+    const line = `${noteStamp()}: ${text.replace(/\s+/g, ' ').trim()} (from “${sourceTitle}”)`
     this.briefs.save({ ...brief, summary: brief.summary.trim() ? `${brief.summary.trim()}\n${line}` : line })
   }
 }
