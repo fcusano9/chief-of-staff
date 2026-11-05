@@ -45,6 +45,67 @@ An AI-assisted work manager for Windows and Mac. It replaces Microsoft To Do: ta
 | `design` | Clickable mockups, one per feature, approved before it was built (open in a browser) |
 | `docs` | Roadmap, design decisions, and Copilot prompts |
 
+## Install
+
+The app is built from this repository on your own computer. There's no download yet.
+
+**You need:** [Node.js](https://nodejs.org) (the current LTS) and [Git](https://git-scm.com). Clone the repository once:
+
+```bash
+git clone https://github.com/fcusano9/chief-of-staff.git
+```
+
+### Windows
+
+1. Close Chief of Staff if it's running.
+2. In a PowerShell window, get the latest code and build it into `%LOCALAPPDATA%\Programs\Chief of Staff (build)`:
+
+   ```powershell
+   cd chief-of-staff
+   git switch main
+   git pull
+   npm install
+   npm run install:win
+   ```
+
+3. The first time, make a shortcut to `win-unpacked\Chief of Staff.exe` in that folder (for example, pin it to Start). Later updates replace the files in place, so the shortcut keeps working.
+
+Run these from a normal PowerShell or Terminal window, not from inside Claude Desktop: Claude Desktop gives the commands it runs a private copy of `%LOCALAPPDATA%`, so the app would be installed there instead.
+
+To make a regular installer instead, run `npm run package:win`. It writes `Chief of Staff Setup <version>.exe` to `release\`. The installer isn't signed, so Windows SmartScreen may warn before it runs.
+
+### Mac
+
+Not tested yet. These steps follow the build settings in `electron-builder.yml`.
+
+1. Quit Chief of Staff if it's running.
+2. In Terminal, get the latest code and build the disk image:
+
+   ```bash
+   cd chief-of-staff
+   git switch main
+   git pull
+   npm install
+   npm run package:mac
+   ```
+
+3. Open the `.dmg` that appears in `release/` and drag Chief of Staff to Applications, replacing the old copy.
+
+The app isn't signed. If macOS says it can't be opened, go to System Settings → Privacy & Security and click **Open Anyway**.
+
+## Run from source (dev mode)
+
+For working on the app. Dev mode reloads the window as you edit the code, and uses its own `Chief of Staff (dev)` data folder, so your real data is never touched. The status bar shows "Test data".
+
+```bash
+npm install
+npm run dev
+```
+
+To try it with made-up people, projects, tasks and Review suggestions, run `npm run demo:data` first. Any existing dev data is moved aside, not deleted.
+
+The same commands work on Windows and Mac.
+
 ## Commands
 
 ```bash
