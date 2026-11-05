@@ -53,19 +53,19 @@ try {
     await window.cos['projects.save']({id:0,name:'Partner portal',color:'#378ADD',status:'active'});
     await window.cos['people.save']({id:0,name:'Marcus Webb',role:'UX lead',email:null,priorityWeight:3});
     return true`)
-  // Pick the local provider in Settings, point it at the fake server, then pick its model.
+  // Point Ollama at the fake server in Settings (Advanced), then pick its model from the status bar menu.
   const setInput = (sel, value, kind = 'HTMLInputElement', event = 'input') =>
     `Object.getOwnPropertyDescriptor(${kind}.prototype,'value').set.call(${sel}, ${JSON.stringify(value)}); ${sel}.dispatchEvent(new Event('${event}',{bubbles:true}))`
   const field = (label, tag) => `[...document.querySelectorAll('main .field')].find(f => f.textContent.startsWith('${label}')).querySelector('${tag}')`
   await app.click('.iconbtn[title="Settings"]')
-  await app.eval(setInput(`document.querySelector('main .card select')`, 'local', 'HTMLSelectElement', 'change'))
-  await app.sleep(400)
   await app.eval(`const e = ${field('Ollama address', 'input')}; e.focus(); ${setInput('e', ollamaUrl)}; e.blur()`)
   await app.sleep(800)
-  await app.eval(`const e = ${field('Model', 'select')}; ${setInput('e', 'fake:1b', 'HTMLSelectElement', 'change')}`)
+  await app.click('[data-ai-button]')
+  await app.waitFor('.model-menu .mm-item')
+  await app.clickText('Ollama fake:1b', '.mm-item')
   await app.sleep(400)
   const bar = await app.eval(`return document.querySelector('.statusbar')?.textContent ?? ''`)
-  check('local model selected', bar.includes('fake:1b (local)'), bar.slice(-60))
+  check('local model selected', bar.includes('Ollama fake:1b') && !bar.includes('unavailable'), bar.slice(-60))
 
   await app.clickText('Import', '.tab')
   await app.click('main input[placeholder^="Title"]')

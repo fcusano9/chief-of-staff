@@ -68,7 +68,7 @@ export interface PersonSummary extends Person {
 /** A brief the AI proposed. Nothing is saved until the user keeps it. */
 export interface BriefSuggestion {
   text: string
-  /** The AI that wrote it, e.g. "Demo AI" or "Claude Opus 5.5". */
+  /** The AI that wrote it, e.g. "Basic" or "Claude Opus 5.5". */
   writtenBy: string
 }
 
@@ -231,14 +231,43 @@ export interface AiModelOption {
   id: string
   label: string
   note: string
+  /** Anthropic list price per million tokens (input / output), shown as a tooltip. */
+  price: string
 }
 
-/** Claude models offered in Settings. Prices are Anthropic list prices per million tokens (input / output). */
+/** Claude models offered in the model picker. */
 export const CLAUDE_MODELS: AiModelOption[] = [
-  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', note: 'Most capable · $4 / $20' },
-  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', note: 'Balanced · $2 / $10' },
-  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', note: 'Fastest, cheapest · $0.10 / $0.50' },
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', note: 'Most capable', price: '$4 / $20 per million tokens' },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', note: 'Balanced', price: '$2 / $10 per million tokens' },
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', note: 'Fastest, cheapest', price: '$0.10 / $0.50 per million tokens' },
 ]
+
+/** The rule-based reader built into the app (provider id 'demo'). It isn't actually AI. */
+export const BASIC_LABEL = 'Basic'
+
+/** Local models tested with this app. Only these are offered for download. */
+export const TESTED_LOCAL_MODELS: { name: string; size: string; note: string }[] = [
+  { name: 'gpt-oss:20b', size: '14 GB', note: 'Uses about 13 GB of memory while it runs.' },
+]
+export const isTestedLocalModel = (name: string) => TESTED_LOCAL_MODELS.some((m) => m.name === name)
+export const localModelLabel = (name: string) => `Ollama ${name}`
+
+/** One model you can pick in Settings or the status bar. */
+export interface AiChoice {
+  provider: AiProviderId
+  /** Claude model id or Ollama model name; empty for Basic. */
+  model: string
+  label: string
+  note: string
+  /** Extra detail for a tooltip. */
+  detail?: string
+}
+
+export interface AiChoiceGroup {
+  provider: AiProviderId
+  title: string
+  choices: AiChoice[]
+}
 
 export interface AiStatus {
   provider: AiProviderId
@@ -246,10 +275,31 @@ export interface AiStatus {
   hasKey: boolean
   /** Whether the OS can encrypt the stored key (Windows DPAPI / macOS Keychain). */
   encryptionAvailable: boolean
-  /** Short label for the status bar. */
+  /** Short label for the status bar, e.g. "Claude Opus 5.5" or "Ollama gpt-oss:20b". */
   label: string
   /** True when imports will be sent to an outside service. */
   sendsDataExternally: boolean
+  /** False when the chosen model can't be used right now (no key, Ollama stopped, model not downloaded). */
+  available: boolean
+  /** Why it can't be used, in plain words. Null when available. */
+  problem: string | null
+}
+
+export type OllamaState = 'missing' | 'stopped' | 'ready'
+
+export interface OllamaSetupStatus {
+  /** missing: not installed here; stopped: installed (or a remote address) but not answering; ready: answering. */
+  state: OllamaState
+  url: string
+  /** True when the address is another machine, so the app can't install or start it. */
+  remote: boolean
+  /** Whether this app can install Ollama on this computer (Windows and Mac). */
+  canInstall: boolean
+  /** Models downloaded into Ollama, by name. */
+  models: { name: string; sizeBytes: number }[]
+  install: { phase: 'downloading' | 'installing' | 'failed'; percent: number | null; error: string | null } | null
+  /** Downloads in progress, or ones that failed. */
+  pulls: { name: string; percent: number | null; error: string | null }[]
 }
 
 /** What the UI sends to create (id 0) or update a task. Subtasks with id 0 are new. */
@@ -424,7 +474,7 @@ export interface Briefing {
   id: number
   createdAt: string
   trigger: BriefingTrigger
-  /** The AI that wrote it, e.g. "Claude Opus 5.5" or "Demo AI". */
+  /** The AI that wrote it, e.g. "Claude Opus 5.5" or "Basic". */
   writtenBy: string
   /** Start of the "New since last briefing" window (the previous briefing, or a day back). */
   since: string
