@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simpler task editor</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 0 16px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex: none; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); padding: 0 6px; }
+.btn.ghost:hover { color: var(--text); background: var(--hover); }
+.link { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; }
+.danger { color: var(--danger); border: 0; background: none; cursor: pointer; padding: 5px 0; }
+.page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+.editor { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.stripe { height: 3px; background: #378ADD; }
+.inner { padding: 18px 22px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.score { font: 600 16px var(--mono); color: var(--warn); min-width: 26px; }
+.title-inp { flex: 1; font-size: 17px; font-weight: 600; border: 0; background: none; outline: 0; min-width: 0; }
+.iconbtn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; margin-top: 14px; }
+.label { color: var(--muted); font-size: 12.5px; margin: 16px 0 5px; }
+.label:first-child { margin-top: 0; }
+.label .faint { font-size: 11.5px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 7px 9px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { min-height: 64px; resize: vertical; display: block; }
+.ai-box { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 55%, transparent); border-radius: 8px; padding: 10px 12px; color: var(--muted); }
+.ai-box b { color: var(--accent); font-weight: 500; display: block; font-size: 12.5px; }
+.check { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.box { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--bg); display: grid; place-items: center; font-size: 11px; cursor: pointer; padding: 0; flex: none; }
+.box.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.check input[type=text] { flex: 1; border: 0; background: none; outline: 0; padding: 2px 0; min-width: 0; }
+.check .done-ttl { color: var(--faint); text-decoration: line-through; }
+.check .x { border: 0; background: none; color: var(--faint); cursor: pointer; visibility: hidden; }
+.check:hover .x { visibility: visible; }
+.hist { font-size: 12.5px; color: var(--muted); line-height: 1.9; }
+.hist .d { font-family: var(--mono); color: var(--faint); font-size: 11.5px; display: inline-block; min-width: 48px; }
+.field { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; padding: 4px 0; }
+.field > span { color: var(--muted); }
+.field .inp { padding: 5px 8px; }
+.card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 12.5px; }
+.card .label { margin: 0 0 2px; }
+.foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.new { outline: 2px dashed var(--ok); outline-offset: 4px; border-radius: 6px; }
+.gone { position: relative; opacity: .55; }
+.gone::after { content: attr(data-why); position: absolute; right: 6px; top: 6px; font-size: 11px; background: var(--danger); color: #fff; padding: 1px 7px; border-radius: 4px; opacity: 1; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 18px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; padding: 16px; z-index: 5; }
+.win { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; width: min(560px, 100%); max-height: 85vh; overflow: auto; padding: 16px 18px; box-shadow: 0 16px 48px rgba(0,0,0,.25); }
+.upd { padding: 8px 0; border-top: 1px solid var(--border); }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+@media (max-width: 760px) { .dgrid { grid-template-columns: minmax(0, 1fr); } .top .logo span { display: none; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Task editor mockup</span></div>
+  <div class="seg"><button data-view="before">Before</button><button data-view="after" class="on">After: task</button><button data-view="project">Project</button><button data-view="person">Person</button></div>
+  <label class="row muted" style="font-size:12.5px;margin-left:8px"><input type="checkbox" id="marks" checked> Show changes</label>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+<div class="page">
+  <div class="editor"><div class="stripe"></div><div class="inner" id="ed"></div></div>
+  <div class="notes" id="notes"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id)
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1700) }
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
+
+let view = 'after', marks = true, adjust = false
+const t = {
+  score: 72, title: 'Dealer FAQ for DM-NVX 3.2 firmware',
+  subtasks: [{ title: 'Draft rollback section', done: true }, { title: 'Send to Kenji for review', done: false }],
+  notes: 'Fix the rollback section (still says 3.1).\nAsk Priya about the PDF template.',
+  override: null, followUps: 2,
+}
+let updOpen = false
+const updates = [
+  { date: 'Nov 14, 2026', text: 'Kenji approved the final draft; marketing will post it to the dealer portal.', src: 'Re: DM-NVX FAQ – final' },
+  { date: 'Nov 10, 2026', text: 'Dealers want a one-page PDF, not a web page. Rollback section must cover 3.1 → 3.2 only.', src: 'Teams chat with Kenji Mori' },
+  { date: 'Nov 8, 2026', text: 'Use the new product photos, not the 3.1 ones.', src: null },
+  { date: 'Nov 6, 2026', text: 'Kenji sent the release notes; the HDCP issue on older encoders should be called out.', src: 'Release notes v3.2' },
+  { date: 'Nov 3, 2026', text: 'FAQ needed before the Nov 15 dealer webinar; Kenji owns technical review.', src: 'DM-NVX launch sync' },
+]
+const activity = [
+  ['Nov 14', 'Linked: email “Re: DM-NVX FAQ – final”'],
+  ['Nov 12', 'Due date changed to Nov 14'],
+  ['Nov 10', 'Linked: Teams chat with Kenji Mori'],
+  ['Nov 6', 'Back to In progress'],
+  ['Nov 4', 'Status: Waiting on Kenji Mori'],
+  ['Nov 3', 'Created from meeting “DM-NVX launch sync”'],
+]
+// What the AI would receive for this task: whole updates, newest first, up to 300 characters.
+function aiSlice(max = 300) {
+  const out = []; let used = 0
+  for (const u of updates) {
+    const line = `${u.date}: ${u.text}`
+    if (used + line.length > max) { if (!out.length) out.push(line.slice(0, max - 1) + '…'); break }
+    out.push(line); used += line.length + 1
+  }
+  return out
+}
+function updWindow() {
+  if (!updOpen) return ''
+  return `<div class="scrim" id="scrim"><div class="win" role="dialog">
+    <div class="row" style="margin-bottom:10px"><div style="flex:1"><div style="height:3px;width:40px;background:#378ADD;border-radius:2px;margin-bottom:6px"></div><b>Updates</b> <span class="muted">· ${view === 'project' ? 'DM-NVX 3.2 launch' : view === 'person' ? 'Kenji Mori' : esc(t.title)}</span></div><button class="btn ghost">Edit</button><button class="iconbtn" id="closeUpd">✕</button></div>
+    <div class="row" style="margin-bottom:12px"><input class="inp" id="addUpd" placeholder="Add an update, e.g. Kenji wants it by Friday"><button class="btn" id="addUpdBtn">Add</button></div>
+    ${updates.map((u) => `<div class="upd"><div class="faint mono" style="font-size:11.5px">${u.date}${u.src ? ` · from “${esc(u.src)}”` : ' · added by you'}</div><div>${esc(u.text)}</div></div>`).join('')}
+    <div class="card" style="margin-top:14px"><div class="label">Sent to the AI with this task (mockup only)</div>${aiSlice().map((l) => `<div class="mono" style="font-size:11.5px">${esc(l)}</div>`).join('')}<div class="faint" style="font-size:11.5px;margin-top:4px">Whole updates only, newest first, up to 300 characters.</div></div>
+  </div></div>`
+}
+
+function subtasksHtml() {
+  return t.subtasks.map((s, i) => `<div class="check"><button class="box ${s.done ? 'on' : ''}" data-sub="${i}">${s.done ? '✓' : ''}</button><input type="text" class="${s.done ? 'done-ttl' : ''}" value="${esc(s.title)}" data-subt="${i}"><button class="x" data-rm="${i}">✕</button></div>`).join('')
+    + `<div class="check"><span class="box" style="cursor:default"></span><input type="text" id="addsub" placeholder="Add subtask…"></div>`
+}
+const fieldsFor = (after) => `
+  <label class="field"><span>Project</span><select class="inp"><option>DM-NVX 3.2 launch</option><option>No project</option></select></label>
+  <label class="field"><span>Status</span><select class="inp ${after ? n() : ''}">${after ? '<option>Open</option><option>Waiting on</option><option>Done</option>' : '<option>In progress</option><option>Open</option><option>Waiting on</option><option>Done</option>'}</select></label>
+  <label class="field"><span>Due</span><input class="inp" type="date" value="2026-10-29"></label>
+  <label class="field"><span>Asked by</span><select class="inp"><option>Kenji Mori</option><option>Nobody</option></select></label>`
+const g = (why) => marks ? `class="gone" data-why="${why}"` : ''
+const n = () => marks ? 'new' : ''
+
+function before() {
+  return `
+  <div class="row"><span class="score">${t.score}</span><input class="title-inp" value="${esc(t.title)}"><button class="iconbtn">✕</button></div>
+  <div class="dgrid"><div>
+    <div class="ai-box"><b>✦ Suggested next action</b>Per-task next-action suggestions arrive in milestone 3. Until then, import notes or summaries and review what the AI proposes.</div>
+    <div class="label">Subtasks</div>${subtasksHtml()}
+    <div class="label">Notes</div><textarea class="inp">Fix the rollback section (still says 3.1).</textarea>
+    <div ${g('Moves into Updates')}>
+      <div class="label">Task brief</div><textarea class="inp" placeholder="Background, goals, decisions so far">Nov 3 (from Teams chat with Kenji): dealers want a one-page PDF, not a web page.</textarea>
+      <textarea class="inp" style="margin-top:6px;min-height:44px" placeholder="Standing instructions, e.g. keep replies formal"></textarea>
+    </div>
+    <div class="label">Activity</div>
+    <div class="hist">Nov 3, 2026 · Created</div>
+  </div><div>
+    ${fieldsFor(false)}
+    <div class="card"><div class="label">Priority ${t.score}</div><div>Overdue by 6 days, 2 follow-ups</div>
+      <div class="row muted" style="margin-top:6px"><input type="checkbox"> Override</div>
+      <div class="row muted" style="margin-top:6px">Follow-ups: <span class="mono" style="color:var(--text)">${t.followUps}</span><button class="btn ghost">+1</button><button class="btn ghost">Reset</button></div></div>
+    <div ${g('Removed')}><div class="card" style="line-height:1.8"><div class="label">What the AI knows</div>
+      <div><span style="color:var(--ok)">✓</span> Project brief (DM-NVX 3.2 launch)</div><div><span class="faint">○</span> Task brief</div><div><span class="faint">○</span> Person brief</div><div><span style="color:var(--ok)">✓</span> Notes and subtasks</div><div><span class="faint">○</span> Linked sources (none yet)</div></div></div>
+  </div></div>
+  <div class="foot"><button class="danger">Delete</button><div class="spacer"></div><button class="btn">Mark done</button><button class="btn primary">Save</button></div>`
+}
+
+function after() {
+  const score = t.override ?? t.score
+  return `
+  <div class="row"><span class="score">${score}</span><input class="title-inp" value="${esc(t.title)}"><button class="iconbtn" title="Close (Esc)">✕</button></div>
+  <div class="dgrid"><div>
+    <div class="ai-box"><b>✦ Suggested next action</b>Per-task next-action suggestions arrive in milestone 3. Until then, import notes or summaries and review what the AI proposes.</div>
+    <div class="label">Subtasks</div>${subtasksHtml()}
+    <div class="label">Notes</div>
+    <div class="${n()}"><textarea class="inp" id="notesInp" style="min-height:130px" placeholder="Your own notes. The AI never changes these.">${esc(t.notes)}</textarea></div>
+    <div class="row" style="margin:16px 0 5px"><span class="label" style="margin:0;flex:1">Updates</span><button class="btn ${n()}" id="openUpd" style="padding:3px 10px;font-size:12.5px">Updates <span class="mono muted">${updates.length}</span></button></div>
+    <div class="card ${n()}" style="margin-top:0;cursor:pointer" id="updPreview">
+      <div class="faint" style="font-size:11.5px">Latest · ${updates[0].date}</div>
+      <div>${esc(updates[0].text)}</div>
+    </div>
+    <div class="label">Activity</div>
+    <div class="hist ${n()}">${activity.map(([d, txt]) => `<div><span class="d">${d}</span> ${txt}</div>`).join('')}</div>
+  </div><div>
+    ${fieldsFor(true)}
+    <div class="card ${n()}">
+      <div class="row"><span class="label" style="flex:1">Priority <span class="mono" style="color:var(--text)">${score}</span>${t.override != null ? ' <span class="faint">(set by you)</span>' : ''}</span><button class="link" id="adj">${adjust ? 'Done' : 'Adjust'}</button></div>
+      <div>${t.override != null ? 'You set this by hand' : `Overdue by 6 days${t.followUps ? `, ${t.followUps} follow-up${t.followUps === 1 ? '' : 's'}` : ''}`}</div>
+      ${adjust ? `
+        <div class="row muted" style="margin-top:8px"><label class="row" style="gap:6px"><input type="checkbox" id="ov" ${t.override != null ? 'checked' : ''}> Set by hand</label>${t.override != null ? `<input class="inp" id="ovn" type="number" min="0" max="100" style="width:64px" value="${t.override}">` : ''}</div>
+        <div class="row muted" style="margin-top:6px">Follow-ups <span class="mono" style="color:var(--text)">${t.followUps}</span><button class="btn ghost" id="fu" title="Someone followed up again">+1</button>${t.followUps ? '<button class="btn ghost" id="fur">Reset</button>' : ''}</div>` : ''}
+    </div>
+  </div></div>
+  <div class="foot"><button class="danger">Delete</button><div class="spacer"></div><button class="btn" id="done">Mark done</button><button class="btn primary" id="save">Save</button></div>
+  ${updWindow()}`
+}
+
+
+function latestCard(u) {
+  return `<div class="card ${n()}" style="margin-top:0;cursor:pointer" data-open-upd><div class="faint" style="font-size:11.5px">Latest · ${u.date}${u.src ? ` · from “${esc(u.src)}”` : ''}</div><div>${esc(u.text)}</div></div>`
+}
+function updRow(count) {
+  return `<div class="row" style="margin:16px 0 5px"><span class="label" style="margin:0;flex:1">Updates</span><button class="btn ${n()}" data-open-upd style="padding:3px 10px;font-size:12.5px">Updates <span class="mono muted">${count}</span></button></div>`
+}
+const fade = (txt) => `<div class="faint" style="margin-top:16px;font-size:12.5px">${txt}</div>`
+function project() {
+  return `
+  <div style="font-size:20px;font-weight:600">DM-NVX 3.2 launch</div>
+  <div class="muted" style="margin:2px 0 12px">Firmware 3.2 release, dealer FAQ and webinar.</div>
+  <div class="label">Project brief</div>
+  <div class="card" style="margin-top:0">Status: on track for Nov 15 webinar. Next: final FAQ review. Open: HDCP known issue wording.</div>
+  ${updRow(12)}
+  ${latestCard({ date: 'Nov 14, 2026', text: 'Marketing confirmed the dealer portal post goes live Nov 15 at 9am.', src: 'Re: Portal schedule' })}
+  ${fade('(Standing instructions, Save and Open tasks, unchanged)')}`
+}
+function person() {
+  return `
+  <div style="font-size:20px;font-weight:600">Kenji Mori</div>
+  <div class="muted" style="margin:2px 0 12px">Firmware lead for DM-NVX; reviews every dealer-facing technical doc.</div>
+  ${fade('(Company, role, email, weight and standing instructions, unchanged)')}
+  ${updRow(7)}
+  ${latestCard({ date: 'Nov 10, 2026', text: 'Prefers a one-page PDF for dealer docs; wants rollback steps kept to 3.1 → 3.2.', src: 'Teams chat with Kenji Mori' })}
+  ${fade('(Save and Their open asks, unchanged)')}`
+}
+
+const NOTES = {
+  project: `<h3>Project page (mockup notes)</h3><ul>
+    <li><b>History</b> is renamed <b>Updates</b>, and a <b>Latest</b> card under it shows the most recent update with its source. Click either to open the Updates window.</li>
+    <li>Projects now send whole updates only to the AI (no more cutting off mid-sentence), same as tasks.</li>
+  </ul>`,
+  person: `<h3>Person page (mockup notes)</h3><ul>
+    <li>The <b>History</b> button becomes <b>Updates</b>, with the same <b>Latest</b> card under it.</li>
+    <li>People also send whole updates only to the AI, same as tasks and projects.</li>
+  </ul>`,
+  before: `<h3>Before: what’s there today (not part of the app)</h3><ul>
+    <li>Red tags mark what the simpler version removes or merges. Switch to <b>After</b> to compare.</li>
+    <li><b>Task brief</b> and <b>Standing instructions</b> are never read by the AI. Accepted context from Review is written to the brief, but nothing reads it back.</li>
+    <li><b>What the AI knows</b> ticks off Notes, subtasks and the task brief, but imports only send the task’s title, status, due date, project, who asked and who it’s waiting on.</li>
+  </ul>`,
+  after: `<h3>After: mockup notes (not part of the app)</h3><ul>
+    <li><b>Notes</b> are yours only. The AI never writes to them.</li>
+    <li><b>Updates</b> (the new name for History, on Projects and People too) holds everything learned from imports: status updates and context notes, each dated with the import it came from. You can add or edit updates yourself, as on Projects and People. Click <b>Updates</b> or the newest-update card to open the window.</li>
+    <li>The <b>Latest</b> card shows the most recent update. Projects and People get the same card (see the Project and Person tabs above).</li>
+    <li><b>Activity</b> keeps showing what it can today: created and linked imports. Status, due-date and done events need a small new event log, which is on the roadmap for later (not in this change). The example lines show where it’s headed.</li>
+    <li><b>Sent to the AI:</b> each open task’s newest updates, whole updates only, up to 300 characters (shown at the bottom of the Updates window). The daily briefing reads Notes (about 300 characters) and the newest updates, and also the updates on Waiting-on items.</li>
+    <li><b>Removed:</b> the standing instructions box and the “What the AI knows” card. Existing task-brief and standing-instructions text moves into Updates, so nothing is lost. The “Suggested next action” placeholder stays.</li>
+    <li><b>Status</b> has three choices: Open, Waiting on and Done. “In progress” is removed because nothing used it; tasks that had it become Open.</li>
+    <li><b>Priority</b> shows the score and the reason. <b>Adjust</b> opens the override and follow-up controls.</li>
+  </ul>`,
+}
+
+function render() {
+  $('ed').innerHTML = view === 'before' ? before() : view === 'project' ? project() : view === 'person' ? person() : after()
+  $('notes').innerHTML = NOTES[view]
+  document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === view))
+  const ni = $('notesInp'); if (ni) ni.oninput = (e) => { t.notes = e.target.value }
+  const add = $('addsub'); if (add) add.onkeydown = (e) => { if (e.key === 'Enter' && add.value.trim()) { t.subtasks.push({ title: add.value.trim(), done: false }); render(); $('addsub').focus() } }
+  document.querySelectorAll('[data-subt]').forEach((el) => el.oninput = () => { t.subtasks[el.dataset.subt].title = el.value })
+  const on = (id, f) => { const el = $(id); if (el) el.onclick = f }
+  on('adj', () => { adjust = !adjust; render() })
+  on('openUpd', () => { updOpen = true; render() })
+  on('updPreview', () => { updOpen = true; render() })
+  on('closeUpd', () => { updOpen = false; render() })
+  const sc = $('scrim'); if (sc) sc.onclick = (e) => { if (e.target === sc) { updOpen = false; render() } }
+  const addU = () => { const el = $('addUpd'); if (el.value.trim()) { updates.unshift({ date: 'Nov 4, 2026', text: el.value.trim(), src: null }); render(); toast('Update added') } }
+  on('addUpdBtn', addU)
+  const au = $('addUpd'); if (au) au.onkeydown = (e) => { if (e.key === 'Enter') addU() }
+  on('fu', () => { t.followUps++; render() })
+  on('fur', () => { t.followUps = 0; render() })
+  on('save', () => toast('Saved'))
+  on('done', () => toast('Marked done'))
+  const ov = $('ov'); if (ov) ov.onchange = () => { t.override = ov.checked ? t.score : null; render() }
+  const ovn = $('ovn'); if (ovn) ovn.onchange = () => { t.override = Math.min(100, Math.max(0, Number(ovn.value) || 0)); render() }
+}
+document.addEventListener('click', (e) => {
+  const v = e.target.closest('[data-view]'); if (v) { view = v.dataset.view; render(); return }
+  const s = e.target.closest('[data-sub]'); if (s) { const x = t.subtasks[s.dataset.sub]; x.done = !x.done; render(); return }
+  const ou = e.target.closest('[data-open-upd]'); if (ou) { updOpen = true; $('ed').insertAdjacentHTML('beforeend', updWindow()); const sc = $('scrim'); sc.onclick = (ev) => { if (ev.target === sc || ev.target.id === 'closeUpd') { updOpen = false; render() } }; return }
+  const r = e.target.closest('[data-rm]'); if (r) { t.subtasks.splice(Number(r.dataset.rm), 1); render() }
+})
+$('marks').onchange = (e) => { marks = e.target.checked; render() }
+$('theme').onclick = () => { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme = dark ? 'light' : 'dark' }
+render()
+</script>
+</body>
+</html>

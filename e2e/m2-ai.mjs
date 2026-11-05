@@ -114,7 +114,7 @@ try {
   await app.key('k', { ctrl: true }); await app.type('Send pricing'); await app.key('Enter')
   await app.sleep(500)
   const knows = await app.eval(`return document.querySelector('.pane.right').textContent`)
-  check('task editor shows linked source', knows.includes('1 linked source') && knows.includes('From copilot summary: Copilot summary, week of Oct 26'))
+  check('task editor shows linked source', knows.includes('Linked: copilot summary “Copilot summary, week of Oct 26”'))
 
   // Duplicate import
   await app.clickText('Import', '.tab')

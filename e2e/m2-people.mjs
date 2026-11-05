@@ -1,5 +1,5 @@
 // People: company, the Company and Open asks filters, and the one-line brief (Write brief with
-// the demo AI, Keep, Edit, Esc, and the "new notes" hint).
+// the demo AI, Keep, Edit, Esc, and the "new updates" hint).
 import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -81,12 +81,12 @@ try {
   check('byline says written by AI', (await rightText(app)).includes('Written by AI on'))
   check('unsaved edits survive keeping a brief', (await app.eval(`return document.querySelector('.pane.right input[placeholder="e.g. VP, Product"]').value`)) === 'VP, Product and Design')
 
-  // Context history is a History window now, like Projects: add a note there, then Save (which saves the role edit above)
+  // Updates open in a window, like Projects: add one there, then Save (which saves the role edit above)
   check('no history text box on the page', !(await app.eval(`return !!document.querySelector('.pane.right textarea[placeholder^="Dated notes"]')`)))
-  await app.clickText('History', '.pane.right button')
+  await app.clickText('Updates', '.pane.right button')
   await app.waitFor('[role="dialog"]')
-  check('History window lists the notes', (await app.eval(`return document.querySelectorAll('[role="dialog"] [data-note]').length`)) === 1)
-  await app.click('[role="dialog"] input[aria-label="New note"]')
+  check('Updates window lists the updates', (await app.eval(`return document.querySelectorAll('[role="dialog"] [data-note]').length`)) === 1)
+  await app.click('[role="dialog"] input[aria-label="New update"]')
   await app.type('Wants Finance to review pricing first.')
   await app.key('Enter')
   await app.sleep(400)
@@ -96,7 +96,7 @@ try {
   await app.clickText('Save', '.pane.right button')
   await app.sleep(400)
   check('Save keeps the note added in the window', (await app.eval(`const d = (await window.cos['people.list']()).find(p => p.name === 'Dana Lee'); return (await window.cos['briefs.get']('person', d.id)).summary`)).includes('Wants Finance to review pricing first.'))
-  check('new notes hint', (await rightText(app)).includes('1 new note since this brief'))
+  check('new notes hint', (await rightText(app)).includes('1 new update since this brief'))
   const dana = await app.eval(`return (await window.cos['people.list']()).find(p => p.name === 'Dana Lee')`)
   check('role saved with the note', dana.role === 'VP, Product and Design', dana.role)
 

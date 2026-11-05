@@ -165,8 +165,9 @@ describe('AI import and review queue', () => {
 
     suggestions.accept(byKind('status_update').id)
     const updated = tasks.get(slides.id)!
-    expect(updated.statusUpdates[0]!.text).toBe('Timeline approved by Dana')
-    expect(updated.statusUpdates[0]!.isAiGenerated).toBe(true)
+    // Status updates land in the task's Updates with their source, and count as activity.
+    expect(briefs.get('task', slides.id).summary).toMatch(/: Timeline approved by Dana \(from “Pricing review”\)$/)
+    expect(updated.lastActivityAt >= slides.lastActivityAt).toBe(true)
 
     suggestions.accept(byKind('mark_done').id)
     expect(tasks.get(faq.id)!.status).toBe('done')

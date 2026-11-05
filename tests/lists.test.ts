@@ -29,7 +29,7 @@ describe('Tasks, Waiting and Done lists', () => {
 
   it('keeps waiting items off Tasks and on Waiting, longest waiting first', () => {
     tasks.save(input({ title: 'Send price list' }))
-    tasks.save(input({ title: 'Draft outline', status: 'in_progress' }))
+    tasks.save(input({ title: 'Draft outline' }))
     tasks.save(input({ title: 'Platform quotes', status: 'waiting_on', waitingOn: 'Alex Rivera', waitingSince: '2026-10-28T15:00:00.000Z' }))
     tasks.save(input({ title: 'Margin model', status: 'waiting_on', waitingOn: 'Priya Shah', waitingSince: '2026-11-02T15:00:00.000Z' }))
     expect(tasks.listActive({ list: 'tasks' }).map((t) => t.title).sort()).toEqual(['Draft outline', 'Send price list'])

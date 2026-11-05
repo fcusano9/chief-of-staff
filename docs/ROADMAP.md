@@ -67,6 +67,6 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 - `.docx` import.
 - A Mac build and test.
 - A signed installer.
-- Manually added status updates on a task.
+- A task event log for the task editor's Activity section: record status changes (including Waiting on and back), due-date changes, marked done and reopened, so Activity shows the full life of a task. Today Activity can only show "Created" and linked imports. Needs a small new table (a migration). See `design/task-editor-simplified.html`.
 - Run `npm run bench:ai` on the Windows PC, and try qwen3:30b with thinking on.
 - Grow the benchmark cases from real imports that went wrong.

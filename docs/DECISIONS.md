@@ -2,6 +2,14 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-04 · Simpler task editor: Notes, Updates and Activity (Frank)
+Frank found the task editor confusing (Notes, Task brief and Standing instructions overlapped, and "What the AI knows" claimed more than was sent). Mockup `design/task-editor-simplified.html`, approved after several rounds:
+- **Notes are his own**; the AI never writes them. **Updates** replace the task brief and the old status updates: everything learned from imports (status updates and context, each dated with its source) plus anything he adds. Tasks now work like projects and people.
+- **"History" is renamed "Updates"** on Projects and People too, because History clashed with the daily briefing's History. Each has a **Latest** card under the button (Frank asked for it everywhere). **Activity** keeps its name (Frank) and is a plain log: created and linked imports. Recording status and due-date changes is on the roadmap backlog, kept out of this change (Frank).
+- **Removed:** task standing instructions and "What the AI knows" (no AI read them), and the **In progress** status (nothing used it, and the AI couldn't set it; Frank). The "Suggested next action" placeholder stays (Frank).
+- **The AI sees task updates.** Each open task sends its latest updates on imports, to match new items to the right task (Frank's choice; more work text goes to Anthropic when Claude is selected). **Whole updates only, up to 300 characters** (Frank chose 300 over a larger limit for now; 600 could be compared with `bench:ai` later). People and projects switched to whole updates too, so nothing is cut mid-sentence. The daily briefing reads Notes and Updates (Frank), and Updates on waiting items.
+- **Migration (schema v11):** status updates become dated lines in each task's Updates, merged in date order with the old task brief; standing instructions become an undated "Standing instructions: …" line; In progress tasks become Open. The usual safety copy is taken first.
+
 ### 2026-11-04 · One model picker, AI providers set up in Settings, Basic replaces "Demo AI" (Frank)
 Frank asked for a simpler way to choose the AI (mockup `design/ai-models-providers.html`, approved after two rounds). **Frank's choices:**
 - **One Model picker** replaces Provider + Model. It lists whatever is set up: Basic, Claude Opus / Sonnet / Haiku 5.5 once a key is saved, and every model in Ollama as "Ollama <name>" (no "(local)"; the group header says where it runs). The same menu opens from the AI button at the bottom right, which used to jump to Settings.

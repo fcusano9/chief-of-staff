@@ -7,7 +7,6 @@ import {
   type PriorityWeights,
   type Project,
   type SourceKind,
-  type StatusUpdate,
   type Subtask,
   type Task,
   type TaskFilter,
@@ -70,7 +69,6 @@ function toTask(row: Row): Task {
     lastActivityAt: String(row.last_activity_at),
     completedAt: (row.completed_at as string) ?? null,
     subtasks: [],
-    statusUpdates: [],
     linkedSources: [],
     project,
     requester,
@@ -93,7 +91,7 @@ export class TaskService {
    * items, longest waiting first; with "tasks", everything else that's active.
    */
   listActive(filter: TaskFilter = {}): Task[] {
-    const status = filter.list === 'waiting' ? `w.status = 'waiting_on'` : filter.list === 'tasks' ? `w.status IN ('open', 'in_progress')` : ACTIVE_SQL
+    const status = filter.list === 'waiting' ? `w.status = 'waiting_on'` : filter.list === 'tasks' ? `w.status = 'open'` : ACTIVE_SQL
     const tasks = this.load(`${SELECT} WHERE ${this.where(status, filter)}`, this.params(filter))
     return filter.list === 'waiting' ? tasks.sort(longestWaiting) : tasks.sort(byPriority)
   }
@@ -255,7 +253,7 @@ export class TaskService {
       })
   }
 
-  /** Runs a task query and attaches subtasks and status updates. */
+  /** Runs a task query and attaches subtasks and linked imports. */
   private load(sql: string, params: Record<string, SQLInputValue> = {}): Task[] {
     const tasks = (this.db.prepare(sql).all(params) as Row[]).map(toTask)
     if (tasks.length === 0) return tasks
@@ -263,10 +261,6 @@ export class TaskService {
     const ids = tasks.map((t) => t.id).join(',')
     for (const s of this.db.prepare(`SELECT * FROM subtasks WHERE work_item_id IN (${ids}) ORDER BY sort_order, id`).all() as Row[]) {
       byId.get(Number(s.work_item_id))?.subtasks.push({ id: Number(s.id), title: String(s.title), isDone: Number(s.is_done) === 1 })
-    }
-    for (const u of this.db.prepare(`SELECT * FROM status_updates WHERE work_item_id IN (${ids}) ORDER BY created_at DESC`).all() as Row[]) {
-      const update: StatusUpdate = { id: Number(u.id), text: String(u.text), isAiGenerated: Number(u.is_ai_generated) === 1, createdAt: String(u.created_at) }
-      byId.get(Number(u.work_item_id))?.statusUpdates.push(update)
     }
     const links = this.db
       .prepare(
