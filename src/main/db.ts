@@ -304,6 +304,20 @@ export const MIGRATIONS: Migration[] = [
     dismissed INTEGER NOT NULL DEFAULT 0
   );
   `,
+  // Milestone 3: an AI adjustment to a task's priority score, written as part of a daily briefing
+  // or an import (never on its own). delta is -15 to 15 and is added to the computed score; a score
+  // set by hand still wins. One per task; Remove deletes the row, and a change of 0 clears it.
+  `
+  CREATE TABLE priority_adjustments (
+    work_item_id INTEGER PRIMARY KEY REFERENCES work_items(id) ON DELETE CASCADE,
+    delta INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    written_at TEXT NOT NULL,
+    written_by TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    origin_label TEXT
+  );
+  `,
 ]
 
 /** Moves status updates and task standing instructions into each task's Updates (see the migration above). */

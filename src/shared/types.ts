@@ -93,6 +93,8 @@ export interface Task {
   priorityRationale: string | null
   /** When set, replaces the computed score. */
   priorityOverride: number | null
+  /** The AI's adjustment to the computed score (±15), or null. A score set by hand still wins. */
+  aiAdjustment: PriorityAdjustment | null
   followUpCount: number
   waitingOn: string | null
   waitingSince: string | null
@@ -472,8 +474,26 @@ export interface BriefingItem {
   nextAction?: string | null
 }
 
-/** Where a suggested next action came from. */
+/** Where a suggested next action or priority adjustment came from. */
 export type NextActionOrigin = 'briefing' | 'import'
+
+/** The most the AI may move a task's score, up or down. */
+export const MAX_AI_ADJUSTMENT = 15
+
+/**
+ * The AI's adjustment to a task's priority score: written as part of a daily briefing or an
+ * import, applied at once and shown on the priority card with its reason. Remove takes it off.
+ */
+export interface PriorityAdjustment {
+  /** Added to the computed score, -15 to 15 (never 0). */
+  delta: number
+  reason: string
+  writtenAt: string
+  writtenBy: string
+  origin: NextActionOrigin
+  /** For imports: the import's title. */
+  originLabel: string | null
+}
 
 /**
  * A task's suggested next action: one sentence plus why. Written by the AI as part of a daily
@@ -693,8 +713,9 @@ export interface MailInfo {
 export const PROJECT_COLORS = ['#7F77DD', '#1D9E75', '#D85A30', '#D4537E', '#378ADD', '#639922', '#BA7517', '#E24B4A']
 export const NO_PROJECT_COLOR = '#B4B2A9'
 
-export const effectivePriority = (t: Pick<Task, 'priorityScore' | 'priorityOverride'>): number =>
-  t.priorityOverride ?? t.priorityScore
+/** The score lists sort by: a score set by hand, else the computed score plus any AI adjustment (0 to 100). */
+export const effectivePriority = (t: Pick<Task, 'priorityScore' | 'priorityOverride'> & { aiAdjustment?: Pick<PriorityAdjustment, 'delta'> | null }): number =>
+  t.priorityOverride ?? Math.min(100, Math.max(0, t.priorityScore + (t.aiAdjustment?.delta ?? 0)))
 
 export const isActive = (s: TaskStatus): boolean => ACTIVE_STATUSES.includes(s)
 

@@ -27,13 +27,22 @@ export const NextActionSchema = z.object({
   why: z.string().describe('Why that step, in one short sentence, from the item and the task'),
 })
 
+/** A change to an open task's priority score, -15 to 15 (0 removes an earlier AI change). */
+export const PriorityChangeSchema = z.object({
+  task_id: z.number().int().describe('ID of the existing open task, from the open-task list'),
+  change: z.number().int().describe('Points to add to its score, from -15 to 15; 0 removes an earlier AI change'),
+  reason: z.string().describe('One short sentence on what the score misses'),
+})
+
 export const ExtractionSchema = z.object({
   suggestions: z.array(RawSuggestionSchema),
   next_actions: z.array(NextActionSchema).describe('A next step for each existing open task this item is about; empty if none'),
+  priority_changes: z.array(PriorityChangeSchema).describe('Only for open tasks this item is about whose score clearly misses something; empty if none'),
 })
 
 export type RawSuggestion = z.infer<typeof RawSuggestionSchema>
 export type RawNextAction = z.infer<typeof NextActionSchema>
+export type RawPriorityChange = z.infer<typeof PriorityChangeSchema>
 /** Everything an extraction returns: suggestions for Review, and next actions for task cards. */
 export type RawExtraction = z.infer<typeof ExtractionSchema>
 

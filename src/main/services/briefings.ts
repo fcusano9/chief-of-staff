@@ -1,11 +1,12 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { effectivePriority, type AiCall, type Briefing, type BriefingListItem, type BriefingTrigger, type Task } from '@shared/types'
+import { type AiCall, type Briefing, type BriefingListItem, type BriefingTrigger, type Task } from '@shared/types'
 import { assembleBriefing, type BriefingInput } from '../ai/briefing'
 import { recentNotes, UPDATES_FOR_AI } from '@shared/notes'
 import type { AiCallRecord, AiProvider } from '../ai/provider'
 import { nowIso, transaction } from '../db'
 import type { TaskService } from './tasks'
 import { NextActionService } from './next-actions'
+import { PriorityAdjustmentService } from './priority-adjustments'
 import { paidModelOf, UsageService } from './usage'
 
 /** Briefings whose AI requests are kept. The briefings themselves are all kept. */
@@ -23,8 +24,8 @@ const stamp = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 's
 /**
  * The daily briefing: a short read on the day, written by the AI from the open tasks, the
  * waiting-on list and what's new since the last briefing. Nothing goes to Review and no task is
- * changed; the only thing saved besides the briefing is each listed task's suggested next action,
- * shown on its card. Every briefing is saved.
+ * changed by hand. Besides the briefing it saves each listed task's suggested next action, and any
+ * AI priority changes (applied at once, shown on the priority card with Remove). Every briefing is saved.
  *
  * write() takes a trigger so a scheduler can call it later exactly as the button does.
  */
@@ -32,6 +33,7 @@ export class BriefingService {
   private writing: Promise<Briefing> | null = null
   private readonly usage: UsageService
   private readonly nextActions: NextActionService
+  private readonly adjustments: PriorityAdjustmentService
 
   constructor(
     private readonly db: DatabaseSync,
@@ -42,6 +44,7 @@ export class BriefingService {
   ) {
     this.usage = new UsageService(db)
     this.nextActions = new NextActionService(db)
+    this.adjustments = new PriorityAdjustmentService(db)
   }
 
   /** Writes and saves a new briefing. A second call while one is being written gets the same one. */
@@ -128,7 +131,9 @@ export class BriefingService {
           requester: t.requester?.name ?? null,
           due: t.dueDate,
           overdueDays: overdue(t),
-          priority: effectivePriority(t),
+          // The computed score; the AI sees its own earlier change separately, so it isn't counted twice.
+          priority: t.priorityScore,
+          aiChange: t.aiAdjustment && { delta: t.aiAdjustment.delta, reason: t.aiAdjustment.reason },
           reason: t.priorityRationale,
           notes: t.notes,
           updates: updates(t),
@@ -160,7 +165,7 @@ export class BriefingService {
     const { input, since } = this.buildInput()
     const calls: AiCallRecord[] = []
     const raw = await provider.writeBriefing(input, { record: (c) => void calls.push(c) })
-    const { nextActions, ...sections } = assembleBriefing(input, raw)
+    const { nextActions, adjustments, ...sections } = assembleBriefing(input, raw)
     const createdAt = nowIso()
 
     const id = transaction(this.db, () => {
@@ -184,6 +189,8 @@ export class BriefingService {
         .run()
       // The only thing a briefing saves outside itself: each listed task's suggested next action, shown on its card.
       this.nextActions.save(nextActions, { writtenBy: provider.label, origin: 'briefing' })
+      // Applied at once and shown on each task's priority card, with Remove; a score set by hand still wins.
+      this.adjustments.save(adjustments, { writtenBy: provider.label, origin: 'briefing' })
       return id
     })
     return this.get(id)!

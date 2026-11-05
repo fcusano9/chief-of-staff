@@ -26,7 +26,7 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 | 2.5 | Projects: hand-written overview, AI status brief from the history, History window | ✅ Built |
 | 2.6 | AI log: the exact requests and responses for each import, plus why suggestions were dropped | ✅ Built (`ai-log` e2e suite). Not yet seen with a real Claude or Ollama run |
 | 2.7 | AI spending: estimated Claude costs by month, purpose and model, and per run in the AI logs | ✅ Built (`ai-spending` e2e suite, with seeded usage). Not yet checked against a real Claude bill |
-| 3 | Priorities and briefings | In progress. Daily briefing, weekly review and suggested next actions built (`briefing` and `weekly` e2e suites; next actions have unit tests only); not yet tried with Claude or a local model |
+| 3 | Priorities and briefings | In progress. Daily briefing, weekly review, suggested next actions and the AI priority adjustment built (`briefing` and `weekly` e2e suites; next actions and priority adjustments have unit tests only); not yet tried with Claude or a local model |
 | 4 | Outlook | Mail import built (`mail` e2e suite; checked against real Outlook, AI reading not yet tried on real mail). Calendar and draft replies planned |
 | 5 | Knowledge archive and meeting prep | Planned |
 | 6 | Graph and Copilot connectors | Blocked on IT approval |
@@ -37,7 +37,7 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 - ✅ **Per-task "suggested next action"** on the task editor's card: one sentence plus why, written as part of a daily briefing or an import, never on its own. Not yet tried with Claude or a local model, and the extraction benchmark hasn't been rerun since the prompt gained it.
 - **AI-written status updates** for open items. They go through Review like everything else.
 - ✅ **Weekly review** (Weekly tab): each Sunday-to-Saturday week's Completed, New, Slipping and Waiting on, live for the current week and saved when a week ends, plus an AI reflection for Frank (written on click, with Copy). A status report for others (or saving to Outlook drafts in milestone 4) isn't part of it; Frank chose a reflection for himself.
-- **An AI adjustment to the deterministic priority score**, with a one-line rationale. Overrides always win.
+- ✅ **An AI adjustment to the deterministic priority score** (±15), with a one-line reason, written as part of a briefing or an import. Overrides always win. Not yet tried with Claude or a local model.
 - **Tray icon, start with Windows, Windows notifications, and a scheduler.**
 - **Decided (2026-11-04):** the daily briefing runs only when Frank clicks, for now. A schedule may come later.
 

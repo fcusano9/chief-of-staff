@@ -281,6 +281,11 @@ textarea.notes-inp { min-height: calc(var(--fs) * 1.5 * 6 + var(--inp-py) * 2 + 
 .next-why { color: var(--muted); font-size: var(--fs-sm); }
 .next-meta { color: var(--faint); font-size: var(--fs-xs); margin-top: 4px; }
 .next-meta .stale { color: var(--warn); }
+.ai-adj { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-strong); font-size: var(--fs-sm); }
+.ai-adj.off { opacity: 0.55; }
+.ai-adj-h { color: var(--accent); }
+.ai-adj-meta { color: var(--faint); font-size: var(--fs-xs); margin-top: 2px; }
+.ai-mark { color: var(--accent); font-size: var(--fs-xs); margin-left: 2px; }
 .next-dismissed { margin-bottom: 12px; font-size: var(--fs-sm); color: var(--faint); gap: 8px; }
 .link-btn { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; font-size: var(--fs-sm); }
 .link-btn:hover { text-decoration: underline; }

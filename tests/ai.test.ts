@@ -36,7 +36,7 @@ class FakeProvider implements AiProvider {
   async extract() {
     this.calls++
     if (this.output instanceof Error) throw this.output
-    return { suggestions: this.output, next_actions: this.nextActions }
+    return { suggestions: this.output, next_actions: this.nextActions, priority_changes: [] }
   }
   async writePersonBrief() {
     return 'A brief.'
@@ -45,7 +45,7 @@ class FakeProvider implements AiProvider {
     return 'A status.'
   }
   async writeBriefing() {
-    return { summary: '', priorities: [], nudges: [], new_items: [] }
+    return { summary: '', priorities: [], nudges: [], new_items: [], priority_changes: [] }
   }
   async writeWeeklyReflection() {
     return { summary: '', went_well: [], slipped: [], focus_next: [] }

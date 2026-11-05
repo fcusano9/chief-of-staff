@@ -2,6 +2,15 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-05 · AI priority adjustment: ±15, applied at once, undoable; an AI rules page (Frank)
+Frank's choices, asked up front (mockup `design/priority-adjustment.html`, approved):
+- **Written as part of a daily briefing or an import**, like next actions. Never on its own; Basic makes none.
+- **Applied right away**, shown on the priority card with its reason and a Remove link, rather than going to Review or only being shown. A score set by hand still wins.
+- **At most ±15:** enough to reorder close tasks, not enough to bury an overdue one.
+- **Proposed in the mockup, approved:** the card shows the sum ("54 + 10"); a ✦ marks adjusted scores in lists; with a score set by hand the change stays visible, greyed, as "Not used"; a removed change can come back with a later briefing or import.
+- **Decided while building:** the AI gets the computed score and its current change separately, so it revises its change instead of stacking a new one. A later change replaces the old one and 0 clears it; a briefing or import that skips a task keeps its change (simpler and safer than clearing everything it was sent but didn't mention). Imports now send each open task's score, so every import prompt is slightly longer.
+- **`docs/AI-RULES.md`** (Frank asked): every AI rule and limit on one scannable page, kept current in the same PR as any rule change. DECISIONS.md keeps the reasons.
+
 ### 2026-11-05 · Suggested next action: part of briefings and imports, card only (Frank)
 Frank's choices, asked up front (mockup `design/next-action.html`, approved):
 - **Written as part of a daily briefing or an import**, not on its own and with no Suggest button: the briefing writes one for each top priority, an import for each open task the item is about. Basic writes none (rules can't judge a next step).

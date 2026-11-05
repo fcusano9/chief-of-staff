@@ -124,7 +124,9 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
 
   const project = projects.find((p) => p.id === projectId) ?? null
   const isNew = form.input.id === 0
-  const score = task ? effectivePriority({ priorityScore: task.priorityScore, priorityOverride: form.input.priorityOverride }) : null
+  const score = task ? effectivePriority({ priorityScore: task.priorityScore, priorityOverride: form.input.priorityOverride, aiAdjustment: task.aiAdjustment }) : null
+  const ai = task?.aiAdjustment ?? null
+  const byHand = form.input.priorityOverride != null
 
   const save = async (patch: Partial<TaskInput> = {}) => {
     const next: Form = { ...form, input: { ...form.input, ...patch } }
@@ -146,6 +148,19 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
     } catch (err) {
       toast(errorMessage(err), true)
       return null
+    }
+  }
+
+  // Takes the AI's adjustment off without touching unsaved edits.
+  const removeAi = async () => {
+    if (!task) return
+    try {
+      const updated = await cos['tasks.removeAiAdjustment'](task.id)
+      setTask(updated)
+      toast('Removed')
+      refresh()
+    } catch (err) {
+      toast(errorMessage(err), true)
     }
   }
 
@@ -290,19 +305,47 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
               <div className="row">
                 <span className="label">
                   Priority {score ?? ''}
-                  {form.input.priorityOverride != null ? ' (set by you)' : ''}
+                  {byHand ? ' (set by you)' : ''}
                 </span>
                 <div className="spacer" />
                 <button type="button" className="link-btn" onClick={() => setAdjust(!adjust)}>
                   {adjust ? 'Done' : 'Adjust'}
                 </button>
               </div>
-              <div style={{ fontSize: 'var(--fs-sm)' }}>{task?.priorityRationale ?? 'Calculated when you save'}</div>
+              <div style={{ fontSize: 'var(--fs-sm)' }}>
+                {byHand ? 'Set by hand' : (task?.priorityRationale ?? 'Calculated when you save')}
+                {ai && !byHand && (
+                  <span className="faint mono">
+                    {' '}
+                    · {task!.priorityScore} {ai.delta > 0 ? '+' : '−'} {Math.abs(ai.delta)}
+                  </span>
+                )}
+              </div>
+              {ai && (
+                <div className={`ai-adj ${byHand ? 'off' : ''}`} data-testid="ai-adjustment">
+                  <div className="row">
+                    <span className="ai-adj-h">
+                      ✦ AI <span className="mono">{ai.delta > 0 ? `+${ai.delta}` : `−${Math.abs(ai.delta)}`}</span>
+                    </span>
+                    <div className="spacer" />
+                    {!byHand && (
+                      <button type="button" className="link-btn" onClick={() => void removeAi()}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <div>{ai.reason}</div>
+                  <div className="ai-adj-meta">
+                    {ai.origin === 'briefing' ? 'From the daily briefing' : `From the import “${ai.originLabel ?? 'Imported item'}”`} · {new Date(ai.writtenAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    {byHand ? ' · Not used: your score wins' : ''}
+                  </div>
+                </div>
+              )}
               {adjust && (
               <>
               <div className="row" style={{ marginTop: 6, fontSize: 'var(--fs-sm)' }}>
                 <label className="row muted" style={{ gap: 6 }}>
-                  <input type="checkbox" checked={form.input.priorityOverride != null} onChange={(e) => set({ priorityOverride: e.target.checked ? (task?.priorityScore ?? 50) : null })} />
+                  <input type="checkbox" checked={form.input.priorityOverride != null} onChange={(e) => set({ priorityOverride: e.target.checked ? (task ? effectivePriority({ ...task, priorityOverride: null }) : 50) : null })} />
                   Set by hand
                 </label>
                 {form.input.priorityOverride != null && (

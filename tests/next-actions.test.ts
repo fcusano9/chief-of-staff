@@ -34,7 +34,7 @@ class Fake implements AiProvider {
   readonly sendsDataExternally = false
   constructor(private readonly o: { suggestions?: RawSuggestion[]; next?: RawNextAction[]; briefing?: RawBriefing } = {}) {}
   async extract() {
-    return { suggestions: this.o.suggestions ?? [], next_actions: this.o.next ?? [] }
+    return { suggestions: this.o.suggestions ?? [], next_actions: this.o.next ?? [], priority_changes: [] }
   }
   async writePersonBrief() {
     return ''
@@ -43,7 +43,7 @@ class Fake implements AiProvider {
     return ''
   }
   async writeBriefing() {
-    return this.o.briefing ?? { summary: 'S', priorities: [], nudges: [], new_items: [] }
+    return this.o.briefing ?? { summary: 'S', priorities: [], nudges: [], new_items: [], priority_changes: [] }
   }
   async writeWeeklyReflection() {
     return { summary: '', went_well: [], slipped: [], focus_next: [] }
@@ -56,8 +56,8 @@ class Fake implements AiProvider {
 const briefingInput = (): BriefingInput => ({
   userName: 'Frank Cusano', today: '2026-11-04', weekday: 'Wednesday', sinceLabel: 'Nov 3, 4:40 PM',
   tasks: [
-    { id: 1, title: 'Roadmap slides', project: null, requester: null, due: '2026-11-04', overdueDays: null, priority: 92, reason: 'Due today', notes: null, updates: [] },
-    { id: 2, title: 'Margin model', project: null, requester: null, due: '2026-11-03', overdueDays: 1, priority: 74, reason: 'Overdue', notes: null, updates: [] },
+    { id: 1, title: 'Roadmap slides', project: null, requester: null, due: '2026-11-04', overdueDays: null, priority: 92, reason: 'Due today', notes: null, updates: [], aiChange: null },
+    { id: 2, title: 'Margin model', project: null, requester: null, due: '2026-11-03', overdueDays: 1, priority: 74, reason: 'Overdue', notes: null, updates: [], aiChange: null },
   ],
   waiting: [{ id: 10, title: 'Pilot agreement', project: null, waitingOn: 'Northwind AV', days: 8, followUps: 1, due: null, updates: [] }],
   newTasks: [],
@@ -79,7 +79,7 @@ describe('next actions: checking what the AI wrote', () => {
         { task_id: 99, note: 'Made up.', next_action: 'Nothing.', next_why: 'x' },
       ],
       nudges: [],
-      new_items: [],
+      new_items: [], priority_changes: [],
     })
     // Task 2 is overdue so it's listed, but the AI gave it no next action.
     expect(b.priorities.map((p) => [p.taskId, p.nextAction])).toEqual([[2, null], [1, 'Finish the last two slides.']])
@@ -96,7 +96,7 @@ describe('next actions: checking what the AI wrote', () => {
     const pass2 = extractionJsonSchema(['new_project', 'new_person', 'brief_update']) as { properties: object; required: string[] }
     expect(Object.keys(pass2.properties)).toEqual(['suggestions'])
     expect(pass2.required).toEqual(['suggestions'])
-    expect(Object.keys((extractionJsonSchema() as { properties: object }).properties)).toEqual(['suggestions', 'next_actions'])
+    expect(Object.keys((extractionJsonSchema() as { properties: object }).properties)).toEqual(['suggestions', 'next_actions', 'priority_changes'])
   })
 })
 
@@ -159,7 +159,7 @@ describe('next actions: saving and showing', () => {
 
   it('a briefing saves next actions for its top priorities; Basic writes none', async () => {
     const t = tasks.save(task({ title: 'Roadmap slides', dueDate: '2026-11-04' }))
-    const fake = new Fake({ briefing: { summary: 'S', priorities: [{ task_id: t.id, note: 'Due.', next_action: 'Finish the slides.', next_why: 'Due today.' }], nudges: [], new_items: [] } })
+    const fake = new Fake({ briefing: { summary: 'S', priorities: [{ task_id: t.id, note: 'Due.', next_action: 'Finish the slides.', next_why: 'Due today.' }], nudges: [], new_items: [], priority_changes: [] } })
     const b = await new BriefingService(db, tasks, () => fake, () => 'Frank Cusano').write()
     expect(b.priorities[0]).toMatchObject({ taskId: t.id, nextAction: 'Finish the slides.' })
     expect(nextActions.get(t.id)).toMatchObject({ action: 'Finish the slides.', why: 'Due today.', origin: 'briefing', originLabel: null })
