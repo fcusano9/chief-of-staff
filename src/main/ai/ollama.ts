@@ -304,6 +304,9 @@ export class OllamaProvider implements AiProvider {
     const body = (await response.json().catch(() => ({}))) as T & { error?: string }
     if (!response.ok) {
       if (response.status === 404) throw new AiError(`${this.model} isn't downloaded. Download it in Settings → AI providers, or pick another model.`)
+      // Ollama's MLX engine (the default build for some models on a Mac) refuses fixed-format answers.
+      if (response.status === 501 && /structured output/i.test(body.error ?? ''))
+        throw new AiError(`${this.model} can't give the fixed-format answers this app needs. On a Mac this usually means an Apple-chip (MLX) build. Pick a model from the tested list in Settings → AI providers.`)
       throw new AiError(`Ollama error ${response.status}: ${body.error ?? response.statusText}`)
     }
     return body
