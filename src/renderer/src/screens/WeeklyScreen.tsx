@@ -227,7 +227,7 @@ export function WeeklyScreen() {
                     </>
                   )}
                 </Section>
-                <Section name="Slipping" note={live ? 'overdue now' : 'overdue at week’s end'} items={r.lists.slipping} empty="Nothing is overdue." over onOpen={open}>
+                <Section name="Slipping" note={live ? 'overdue now, or pushed back' : 'overdue at week’s end, or pushed back'} items={r.lists.slipping} empty="Nothing is overdue or pushed back." over onOpen={open}>
                   {(i) => (
                     <>
                       <span>
@@ -235,9 +235,13 @@ export function WeeklyScreen() {
                         <div className="wk-sub">{i.detail}</div>
                       </span>
                       <span className="wk-r">
-                        <span className="tag-over" style={{ margin: 0 }}>
-                          Overdue {plural(i.overdueDays ?? 0, 'day')}
-                        </span>
+                        {i.overdueDays ? (
+                          <span className="tag-over" style={{ margin: 0 }}>
+                            Overdue {plural(i.overdueDays, 'day')}
+                          </span>
+                        ) : (
+                          <span className="tag-push">Pushed back {plural(i.pushedDays ?? 0, 'day')}</span>
+                        )}
                       </span>
                     </>
                   )}
@@ -406,7 +410,7 @@ function Section({
         <div className="wk-none">{empty}</div>
       ) : (
         items.map((i) => (
-          <button key={i.taskId} className={`wk-it ${over ? 'over' : ''}`} onClick={() => onOpen(i)}>
+          <button key={i.taskId} className={`wk-it ${over && i.overdueDays ? 'over' : ''}`} onClick={() => onOpen(i)}>
             <span className="stripe" style={{ background: i.projectColor ?? 'var(--border-strong)' }} />
             {children(i)}
           </button>

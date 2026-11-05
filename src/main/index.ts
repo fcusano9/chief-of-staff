@@ -222,6 +222,7 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'tasks.summary': () => tasks.summary(),
   'tasks.nextAction': (taskId) => nextActions.get(taskId),
   'tasks.dismissNextAction': (taskId, dismissed) => nextActions.setDismissed(taskId, dismissed),
+  'tasks.activity': (taskId) => tasks.activity(taskId),
   'tasks.removeAiAdjustment': (taskId) => {
     adjustments.remove(taskId)
     const t = tasks.get(taskId)

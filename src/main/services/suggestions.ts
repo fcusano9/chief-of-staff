@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { PROJECT_COLORS, type BriefScope, type SourceKind, type Suggestion, type SuggestionKind, type SuggestionPayload, type TaskStatus } from '@shared/types'
+import { PROJECT_COLORS, type BriefScope, type ChangeBy, type SourceKind, type Suggestion, type SuggestionKind, type SuggestionPayload, type TaskStatus } from '@shared/types'
 import { nowIso, transaction } from '../db'
 import { noteStamp } from '@shared/notes'
 import type { BriefService, PersonService, ProjectService } from './directory'
@@ -75,6 +75,8 @@ export class SuggestionService {
     const p: SuggestionPayload = { ...(JSON.parse(String(row.payload)) as SuggestionPayload), ...edits }
     const sourceId = Number(row.source_id)
     const sourceTitle = String((this.db.prepare('SELECT title FROM source_items WHERE id = ?').get(sourceId) as { title: string }).title)
+    // Changes to tasks are recorded in their Activity as coming from this import, accepted in Review.
+    const by: ChangeBy = { by: 'review', label: sourceTitle }
 
     return transaction(this.db, () => {
       let taskId: number | null = null
@@ -109,28 +111,28 @@ export class SuggestionService {
         }
         case 'new_task':
         case 'needs_reply':
-          taskId = this.createTask(p, 'open')
+          taskId = this.createTask(p, 'open', by)
           break
         case 'waiting_on':
           if (p.taskId) {
             const task = this.requireTask(p.taskId)
-            this.tasks.save({ ...task, status: 'waiting_on', waitingOn: p.waitingOn || task.waitingOn || 'someone', waitingSince: p.waitingSince ?? null })
+            this.tasks.save({ ...task, status: 'waiting_on', waitingOn: p.waitingOn || task.waitingOn || 'someone', waitingSince: p.waitingSince ?? null }, by)
             taskId = task.id
           } else {
-            taskId = this.createTask(p, 'waiting_on')
+            taskId = this.createTask(p, 'waiting_on', by)
           }
           break
         case 'status_update': {
           const task = this.requireTask(p.taskId)
           this.addUpdate(task.id, p.details, sourceTitle)
-          if (p.dueDate && p.dueDate !== task.dueDate) this.tasks.save({ ...this.requireTask(task.id), dueDate: p.dueDate })
+          if (p.dueDate && p.dueDate !== task.dueDate) this.tasks.save({ ...this.requireTask(task.id), dueDate: p.dueDate }, by)
           taskId = task.id
           break
         }
         case 'mark_done': {
           const task = this.requireTask(p.taskId)
           if (p.details) this.addUpdate(task.id, p.details, sourceTitle)
-          this.tasks.save({ ...this.requireTask(task.id), status: 'done' })
+          this.tasks.save({ ...this.requireTask(task.id), status: 'done' }, by)
           taskId = task.id
           break
         }
@@ -193,7 +195,7 @@ export class SuggestionService {
     return task
   }
 
-  private createTask(p: SuggestionPayload, status: 'open' | 'waiting_on'): number {
+  private createTask(p: SuggestionPayload, status: 'open' | 'waiting_on', by: ChangeBy): number {
     const title = p.title.trim()
     if (!title) throw new Error('A new task needs a title.')
     return this.tasks.save({
@@ -209,7 +211,7 @@ export class SuggestionService {
       waitingOn: status === 'waiting_on' ? p.waitingOn || 'someone' : null,
       waitingSince: status === 'waiting_on' ? (p.waitingSince ?? null) : null,
       subtasks: [],
-    }).id
+    }, by).id
   }
 
   /** A status update goes into the task's Updates, like context, and counts as activity on the task. */

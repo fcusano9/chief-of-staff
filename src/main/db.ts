@@ -318,6 +318,29 @@ export const MIGRATIONS: Migration[] = [
     origin_label TEXT
   );
   `,
+  // Task event log, for each task's Activity and the weekly review's pushed-back dates. One row per
+  // changed field: kind is created, status, due, project, requester, title, override, followups or
+  // ai_priority; from_value / to_value are as they were then (names, not ids, so renames don't
+  // rewrite history); note is extra detail (who it's waiting on, the AI's reason). by is user,
+  // review (a Review suggestion; by_label is the import) or ai (by_label is the briefing or import).
+  // task_events_meta records when the log started, so older tasks can say what wasn't recorded.
+  `
+  CREATE TABLE task_events (
+    id INTEGER PRIMARY KEY,
+    work_item_id INTEGER NOT NULL REFERENCES work_items(id) ON DELETE CASCADE,
+    at TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    from_value TEXT,
+    to_value TEXT,
+    note TEXT,
+    by TEXT NOT NULL,
+    by_label TEXT
+  );
+  CREATE INDEX ix_task_events_item ON task_events(work_item_id);
+  CREATE INDEX ix_task_events_kind_at ON task_events(kind, at);
+  CREATE TABLE task_events_meta (started_at TEXT NOT NULL);
+  INSERT INTO task_events_meta (started_at) VALUES (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+  `,
 ]
 
 /** Moves status updates and task standing instructions into each task's Updates (see the migration above). */

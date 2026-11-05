@@ -228,6 +228,7 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .b-item .w { color: var(--muted); }
 .b-item .b-next { display: block; color: var(--accent); font-size: var(--fs-sm); margin-top: 1px; }
 .b-item.over { box-shadow: inset 2px 0 0 var(--danger); border-radius: 0 5px 5px 0; }
+.tag-push { display: inline-block; font-size: var(--fs-xs); font-weight: 500; color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
 .tag-over { display: inline-block; font-size: var(--fs-xs); font-weight: 500; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 4px; padding: 0 6px; margin-right: 6px; white-space: nowrap; }
 .b-none { color: var(--faint); padding: 3px 0; }
 .b-stale { display: inline-block; background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); border-radius: 6px; padding: 3px 8px; font-size: var(--fs-sm); margin: 6px 0 2px; }
@@ -286,6 +287,13 @@ textarea.notes-inp { min-height: calc(var(--fs) * 1.5 * 6 + var(--inp-py) * 2 + 
 .ai-adj-h { color: var(--accent); }
 .ai-adj-meta { color: var(--faint); font-size: var(--fs-xs); margin-top: 2px; }
 .ai-mark { color: var(--accent); font-size: var(--fs-xs); margin-left: 2px; }
+.activity { font-size: var(--fs-sm); line-height: 1.5; }
+.act-e { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; padding: 2px 0; }
+.act-d { font-family: var(--mono); color: var(--faint); font-size: var(--fs-xs); padding-top: 1px; }
+.act-what { color: var(--text); }
+.act-who { color: var(--faint); }
+.act-more, .act-old { padding: 4px 0 0 60px; }
+.act-old { color: var(--faint); font-style: italic; }
 .next-dismissed { margin-bottom: 12px; font-size: var(--fs-sm); color: var(--faint); gap: 8px; }
 .link-btn { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; font-size: var(--fs-sm); }
 .link-btn:hover { text-decoration: underline; }

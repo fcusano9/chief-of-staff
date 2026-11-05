@@ -477,6 +477,37 @@ export interface BriefingItem {
 /** Where a suggested next action or priority adjustment came from. */
 export type NextActionOrigin = 'briefing' | 'import'
 
+/** Who made a change to a task, for its Activity log. */
+export type ChangeBy =
+  | { by: 'user' }
+  /** Accepting a Review suggestion; label is the import's title. */
+  | { by: 'review'; label: string }
+  /** The AI itself (priority changes); label says where, e.g. "daily briefing" or 'import “Team sync”'. */
+  | { by: 'ai'; label: string }
+
+export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority'
+
+/** One recorded change to a task. Values are as they were then (names, not ids). */
+export interface TaskEvent {
+  id: number
+  taskId: number
+  at: string
+  kind: TaskEventKind
+  from: string | null
+  to: string | null
+  /** Extra detail: who a task waits on, or the AI's reason. */
+  note: string | null
+  by: ChangeBy['by']
+  byLabel: string | null
+}
+
+/** A task's Activity: its recorded changes, newest first, and when recording started. */
+export interface TaskActivity {
+  events: TaskEvent[]
+  /** When the event log started; changes to older tasks before this weren't recorded. */
+  loggedSince: string
+}
+
 /** The most the AI may move a task's score, up or down. */
 export const MAX_AI_ADJUSTMENT = 15
 
@@ -557,6 +588,8 @@ export interface WeeklyItem {
   at: string | null
   /** Slipping: days past due (at the end of a saved week). */
   overdueDays: number | null
+  /** Slipping: net days the due date was pushed later during the week (missing in weeks saved before the event log). */
+  pushedDays?: number | null
   /** Waiting on: days waited so far, when known. */
   days: number | null
 }

@@ -26,7 +26,7 @@ The app is for people who track work in Microsoft To Do and OneNote and use M365
 | 2.5 | Projects: hand-written overview, AI status brief from the history, History window | ✅ Built |
 | 2.6 | AI log: the exact requests and responses for each import, plus why suggestions were dropped | ✅ Built (`ai-log` e2e suite). Not yet seen with a real Claude or Ollama run |
 | 2.7 | AI spending: estimated Claude costs by month, purpose and model, and per run in the AI logs | ✅ Built (`ai-spending` e2e suite, with seeded usage). Not yet checked against a real Claude bill |
-| 3 | Priorities and briefings | In progress. Daily briefing, weekly review, suggested next actions and the AI priority adjustment built (`briefing` and `weekly` e2e suites; next actions and priority adjustments have unit tests only). Next actions and priority changes tried on made-up demo data on Nov 5 with Claude Opus, Sonnet and Haiku (good) and gpt-oss:20b (not useful yet); see AI-RULES.md. Briefing and reflection not yet tried on real data |
+| 3 | Priorities and briefings | In progress. Daily briefing, weekly review, suggested next actions, the AI priority adjustment and the task Activity log (with pushed-back dates in weekly Slipping) built (`briefing` and `weekly` e2e suites; next actions and priority adjustments have unit tests only). Next actions and priority changes tried on made-up demo data on Nov 5 with Claude Opus, Sonnet and Haiku (good) and gpt-oss:20b (not useful yet); see AI-RULES.md. Briefing and reflection not yet tried on real data |
 | 4 | Outlook | Mail import built (`mail` e2e suite; checked against real Outlook, AI reading not yet tried on real mail). Calendar and draft replies planned |
 | 5 | Knowledge archive and meeting prep | Planned |
 | 6 | Graph and Copilot connectors | Blocked on IT approval |
@@ -82,6 +82,5 @@ The app should keep itself up to date (requested 2026-11-05; not to be built yet
 - `.docx` import.
 - A Mac build and test.
 - A signed installer.
-- A task event log for the task editor's Activity section: record status changes (including Waiting on and back), due-date changes, marked done and reopened, so Activity shows the full life of a task. Today Activity can only show "Created" and linked imports. Needs a small new table (a migration). See `design/task-editor-simplified.html`.
 - Run `npm run bench:ai` on the Windows PC, and try qwen3:30b with thinking on.
 - Grow the benchmark cases from real imports that went wrong.
