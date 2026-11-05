@@ -3,7 +3,7 @@ import type { BriefSuggestion, ProjectStatus, ProjectSummary, Task } from '@shar
 import { PROJECT_COLORS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { ConfirmButton, SearchBox, TaskRow } from '../components/bits'
-import { HistoryWindow } from '../components/HistoryWindow'
+import { LatestUpdate, UpdatesButton, UpdatesWindow } from '../components/UpdatesWindow'
 import { SplitView } from '../components/SplitView'
 import { useAutosave } from '../components/useAutosave'
 import { useShortcutHints } from '../components/hints'
@@ -221,14 +221,15 @@ export function ProjectsScreen() {
         </div>
         {project && (
           <>
-            <div className="row" style={{ marginBottom: 4 }}>
-              <span className="label">Project brief</span>
-              <div className="spacer" />
-              <button className="btn sm" onClick={() => setShowHistory(true)}>
-                History <span className="mono muted">{noteCount}</span>
-              </button>
-            </div>
+            <div className="label" style={{ marginBottom: 4 }}>Project brief</div>
             <ProjectBrief key={project.id} project={project} hasHistory={noteCount > 0} />
+            <div className="row" style={{ margin: '12px 0 4px' }}>
+              <span className="label">Updates</span>
+              <div className="spacer" />
+              <UpdatesButton updates={history} onOpen={() => setShowHistory(true)} />
+            </div>
+            <LatestUpdate updates={history} onOpen={() => setShowHistory(true)} />
+            <div style={{ height: 12 }} />
           </>
         )}
         <div className="label">Standing instructions</div>
@@ -270,7 +271,7 @@ export function ProjectsScreen() {
         )}
       </div>
       {project && showHistory && (
-        <HistoryWindow
+        <UpdatesWindow
           scope="project"
           ownerId={project.id}
           title={
@@ -279,11 +280,12 @@ export function ProjectsScreen() {
               <b>{project.name}</b>
             </>
           }
-          history={history}
+          updates={history}
           newCount={project.brief ? project.newNotes : 0}
-          hint="One note per line. The AI reads this when it writes the brief."
-          empty={'No history yet. Accepted "Project context" suggestions from imports land here, newest first.'}
-          placeholder="Add a note, e.g. Launch moved to April"
+          hint="One update per line. The AI reads these when it writes the brief."
+          empty={'No updates yet. Accepted "Project context" suggestions from imports land here, newest first.'}
+          placeholder="Add an update, e.g. Launch moved to April"
+          onChange={setHistory}
           onClose={() => setShowHistory(false)}
         />
       )}
@@ -435,7 +437,7 @@ function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHis
             {project.brief ?? (
               <span className="faint">
                 No brief yet.{' '}
-                {hasHistory ? 'Click Write brief, or Edit to write one yourself.' : 'Imports add history here as you accept them in Review. You can also Edit to write one yourself.'}
+                {hasHistory ? 'Click Write brief, or Edit to write one yourself.' : 'Imports add updates as you accept them in Review. You can also Edit to write one yourself.'}
               </span>
             )}
           </div>
@@ -443,7 +445,7 @@ function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHis
             {byline && <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{byline}</span>}
             {project.brief && project.newNotes > 0 && (
               <span className="note">
-                {project.newNotes} new note{project.newNotes === 1 ? '' : 's'} since this brief
+                {project.newNotes} new update{project.newNotes === 1 ? '' : 's'} since this brief
               </span>
             )}
             <div className="spacer" />

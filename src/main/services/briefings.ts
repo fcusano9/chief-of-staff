@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { effectivePriority, type AiCall, type Briefing, type BriefingListItem, type BriefingTrigger, type Task } from '@shared/types'
 import { assembleBriefing, type BriefingInput } from '../ai/briefing'
+import { recentNotes, UPDATES_FOR_AI } from '@shared/notes'
 import type { AiCallRecord, AiProvider } from '../ai/provider'
 import { nowIso, transaction } from '../db'
 import type { TaskService } from './tasks'
@@ -103,6 +104,10 @@ export class BriefingService {
     const waiting = this.tasks.listWaiting().slice(0, WAITING_SENT)
     const isNew = (t: Task) => t.createdAt > since || (t.status === 'waiting_on' && (t.waitingSince ?? '') > since)
     const fresh = active.filter(isNew).sort((a, b) => Math.max(+new Date(b.createdAt), +new Date(b.waitingSince ?? 0)) - Math.max(+new Date(a.createdAt), +new Date(a.waitingSince ?? 0)))
+    const summaries = new Map(
+      (this.db.prepare(`SELECT owner_id, summary FROM context_briefs WHERE scope = 'task'`).all() as Record<string, unknown>[]).map((r) => [Number(r.owner_id), String(r.summary)]),
+    )
+    const updates = (t: Task) => recentNotes(summaries.get(t.id) ?? '', UPDATES_FOR_AI)
     const newReviewCount = Number((this.db.prepare(`SELECT COUNT(*) AS n FROM suggestions WHERE status = 'pending' AND created_at > ?`).get(since) as { n: number }).n)
 
     return {
@@ -122,6 +127,7 @@ export class BriefingService {
           priority: effectivePriority(t),
           reason: t.priorityRationale,
           notes: t.notes,
+          updates: updates(t),
         })),
         waiting: waiting.map((t) => ({
           id: t.id,
@@ -131,6 +137,7 @@ export class BriefingService {
           days: Math.max(0, Math.floor((now.getTime() - Date.parse(t.waitingSince ?? t.lastActivityAt)) / DAY)),
           followUps: t.followUpCount,
           due: t.dueDate,
+          updates: updates(t),
         })),
         newTasks: fresh.map((t) => ({
           id: t.id,

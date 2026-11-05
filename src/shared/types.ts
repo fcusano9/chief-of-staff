@@ -3,12 +3,11 @@
 
 import { priceLabel } from './pricing'
 
-export type TaskStatus = 'proposed' | 'open' | 'in_progress' | 'waiting_on' | 'done' | 'dismissed'
-export const ACTIVE_STATUSES: readonly TaskStatus[] = ['open', 'in_progress', 'waiting_on']
+export type TaskStatus = 'proposed' | 'open' | 'waiting_on' | 'done' | 'dismissed'
+export const ACTIVE_STATUSES: readonly TaskStatus[] = ['open', 'waiting_on']
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   proposed: 'Proposed',
   open: 'Open',
-  in_progress: 'In progress',
   waiting_on: 'Waiting on',
   done: 'Done',
   dismissed: 'Dismissed',
@@ -80,13 +79,6 @@ export interface Subtask {
   isDone: boolean
 }
 
-export interface StatusUpdate {
-  id: number
-  text: string
-  isAiGenerated: boolean
-  createdAt: string
-}
-
 export interface Task {
   id: number
   title: string
@@ -110,7 +102,6 @@ export interface Task {
   lastActivityAt: string
   completedAt: string | null
   subtasks: Subtask[]
-  statusUpdates: StatusUpdate[]
   /** Imported emails, chats, transcripts, or summaries this task came from or was updated by. */
   linkedSources: SourceRef[]
   project: Project | null

@@ -3,7 +3,7 @@ import type { BriefSuggestion, PeopleFilter, PersonSummary, Task } from '@shared
 import { NO_COMPANY } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { Avatar, ConfirmButton, SearchBox, Stars, TaskRow } from '../components/bits'
-import { HistoryWindow } from '../components/HistoryWindow'
+import { LatestUpdate, UpdatesButton, UpdatesWindow } from '../components/UpdatesWindow'
 import { SplitView } from '../components/SplitView'
 import { useAutosave } from '../components/useAutosave'
 import { useShortcutHints } from '../components/hints'
@@ -26,7 +26,7 @@ export function PeopleScreen() {
   const { people, openTask, refresh, toast, version, settings, saveSettings } = useApp()
   const [selected, setSelected] = useState<number | 'new' | null>(people[0]?.id ?? null)
   const [draft, setDraft] = useState<Draft | null>(null)
-  // The context history (their brief's summary). It's edited in the History window, not the form.
+  // Their Updates (their brief's summary). They're edited in the Updates window, not the form.
   const [history, setHistory] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [search, setSearch] = useState('')
@@ -216,10 +216,13 @@ export function PeopleScreen() {
       <div className="label" style={{ marginTop: 12 }}>Standing instructions</div>
       <textarea className="inp" style={{ margin: '4px 0 10px', minHeight: 44 }} value={draft.standingInstructions} placeholder="e.g. Lead with the ask; keep it to three bullets" onChange={(e) => setDraft({ ...draft, standingInstructions: e.target.value })} />
       {draft.id !== 0 && (
-        <div className="row" style={{ marginBottom: 12 }}>
-          <button className="btn sm" onClick={() => setShowHistory(true)}>
-            History <span className="mono muted">{history.split('\n').filter((l) => l.trim()).length}</span>
-          </button>
+        <div style={{ marginBottom: 12 }}>
+          <div className="row" style={{ marginBottom: 4 }}>
+            <span className="label">Updates</span>
+            <div className="spacer" />
+            <UpdatesButton updates={history} onOpen={() => setShowHistory(true)} />
+          </div>
+          <LatestUpdate updates={history} onOpen={() => setShowHistory(true)} />
         </div>
       )}
       <div className="row" style={{ marginBottom: 18 }}>
@@ -253,15 +256,16 @@ export function PeopleScreen() {
         </>
       )}
       {person && showHistory && (
-        <HistoryWindow
+        <UpdatesWindow
           scope="person"
           ownerId={person.id}
           title={<b>{person.name}</b>}
-          history={history}
+          updates={history}
           newCount={person.brief ? person.newNotes : 0}
-          hint="One note per line. The AI reads this when it writes their brief, and on imports when they have no brief."
-          empty={'No history yet. Accepted "Person context" suggestions from imports land here, newest first.'}
-          placeholder="Add a note, e.g. Prefers Teams over email"
+          hint="One update per line. The AI reads these when it writes their brief, and the latest ones on imports when they have no brief."
+          empty={'No updates yet. Accepted "Person context" suggestions from imports land here, newest first.'}
+          placeholder="Add an update, e.g. Prefers Teams over email"
+          onChange={setHistory}
           onClose={() => setShowHistory(false)}
         />
       )}
@@ -346,14 +350,14 @@ function PersonBrief({ person, hasContext }: { person: PersonSummary; hasContext
         <>
           <div data-brief style={{ fontSize: 'calc(var(--fs) + 1px)' }}>
             {person.brief ?? (
-              <span className="faint">No brief yet. {hasContext ? 'Click Write brief, or Edit to write one yourself.' : 'Add some context below, or Edit to write one yourself.'}</span>
+              <span className="faint">No brief yet. {hasContext ? 'Click Write brief, or Edit to write one yourself.' : 'Add an update below, or Edit to write one yourself.'}</span>
             )}
           </div>
           <div className="row" style={{ marginTop: 4, flexWrap: 'wrap' }}>
             {byline && <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{byline}</span>}
             {person.brief && person.newNotes > 0 && (
               <span className="note">
-                {person.newNotes} new note{person.newNotes === 1 ? '' : 's'} since this brief
+                {person.newNotes} new update{person.newNotes === 1 ? '' : 's'} since this brief
               </span>
             )}
             <div className="spacer" />
