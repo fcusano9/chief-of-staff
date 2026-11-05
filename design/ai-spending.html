@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI spending</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; display: grid; grid-template-rows: 44px auto minmax(0, 1fr); }
+button, input, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; min-height: 28px; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+.label { font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.pill { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 28px; border-bottom: 1px dashed var(--border-strong); background: var(--bg); }
+.controls .grp { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.controls .grp > span { font-size: 11px; color: var(--faint); margin-right: 2px; text-transform: uppercase; letter-spacing: .04em; }
+.page { overflow: auto; padding: 22px 28px 60px; }
+.grid { display: grid; gap: 12px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px 12px; }
+.field { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; margin: 6px 0; }
+.inp { border: 1px solid var(--border-strong); border-radius: 6px; padding: 4px 8px; background: var(--surface); width: 100%; }
+.stat { font: 600 20px var(--mono); letter-spacing: -0.02em; }
+.ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip { font-size: 11px; border-radius: 4px; padding: 0 6px; }
+.subtab { border: 0; background: none; padding: 6px 10px; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; font-size: 12px; }
+.subtab.on { color: var(--text); border-bottom-color: var(--accent); }
+.code-block { margin: 0; padding: 10px 12px; font: 12px/1.5 var(--mono); max-height: 110px; overflow: auto; color: var(--muted); white-space: pre-wrap; }
+.new { background: color-mix(in srgb, var(--accent-bg) 70%, transparent); border-radius: 4px; padding: 0 4px; box-shadow: 0 0 0 1px var(--accent); }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 500; font-size: 12px; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--border); }
+td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.bar { height: 6px; border-radius: 3px; background: var(--accent); opacity: .7; }
+.est { font-size: 12px; color: var(--muted); margin: 2px 0 10px; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); max-width: 900px; }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.scrim { position: relative; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); box-shadow: 0 12px 40px rgb(0 0 0 / .15); max-width: 900px; }
+.dialog-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.dialog-body { display: grid; grid-template-columns: 200px minmax(0, 1fr); min-height: 360px; }
+.h-list { border-right: 1px solid var(--border); padding: 6px; }
+.h-row { padding: 6px 8px; border-radius: 6px; }
+.h-row.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.h-row .d { font-weight: 500; } .h-row .s { font-size: 11px; color: var(--faint); }
+.h-view { padding: 14px 18px; }
+.empty { color: var(--muted); padding: 14px; text-align: center; }
+.provider { border-top: 1px solid var(--border); padding: 14px 0 4px; }
+.provider:first-of-type { border-top: 0; padding-top: 2px; }
+.provider-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--sel); color: var(--muted); white-space: nowrap; }
+.tag.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.prices td { padding: 3px 8px; }
+.callout { border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 8%, transparent); padding: 6px 10px; border-radius: 0 6px 6px 0; font-size: 12px; margin-top: 8px; }
+@media (max-width: 900px) { .two { grid-template-columns: minmax(0, 1fr) !important; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab" data-tab="today">Today</button><button class="tab">Tasks</button><button class="tab" data-tab="import">Review</button>
+  <button class="tab">Waiting</button><button class="tab">Projects</button><button class="tab">People</button>
+  <div class="spacer"></div>
+  <button class="tab" data-tab="settings">Settings</button>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="controls">
+  <div class="grp"><span>Mockup</span><button class="pill" data-v="before">Before (today)</button><button class="pill" data-v="after">After</button></div>
+  <div class="grp"><span>Screen</span>
+    <button class="pill" data-s="settings">Settings → AI</button>
+    <button class="pill" data-s="spend">AI spending screen</button>
+    <button class="pill" data-s="import">Import AI log</button>
+    <button class="pill" data-s="briefing">Briefing History → AI log</button>
+  </div>
+  <div class="grp" id="dataGrp"><span>Data</span><button class="pill" data-d="some">Some use</button><button class="pill" data-d="none">Nothing yet</button></div>
+</div>
+
+<div class="page" id="page"></div>
+
+<script>
+const $ = (s) => document.querySelector(s)
+const state = { v: 'after', s: 'settings', d: 'some', period: 'month' }
+
+// Prices per million tokens (Anthropic list price, checked 4 Nov 2026)
+const PRICES = { 'Opus 5.5': [4, 20], 'Sonnet 5.5': [2, 10], 'Haiku 5.5': [0.1, 0.5] }
+const money = (n) => (n === 0 ? '$0.00' : n < 0.01 ? 'under $0.01' : n < 1 ? '$' + n.toFixed(3) : '$' + n.toFixed(2))
+const num = (n) => n.toLocaleString()
+const cost = (model, i, o) => (i * PRICES[model][0] + o * PRICES[model][1]) / 1e6
+
+// rows: purpose, model, requests, input tokens, output tokens
+const DATA = {
+  month: [
+    ['Imports', 'Opus 5.5', 31, 312400, 41800],
+    ['Imports', 'Sonnet 5.5', 7, 66100, 9200],
+    ['Daily briefings', 'Opus 5.5', 4, 24800, 3700],
+    ['Person briefs', 'Opus 5.5', 3, 5400, 600],
+    ['Project briefs', 'Opus 5.5', 1, 3100, 400],
+  ],
+  d30: [
+    ['Imports', 'Opus 5.5', 214, 2153000, 288600],
+    ['Imports', 'Sonnet 5.5', 41, 391200, 54300],
+    ['Imports', 'Haiku 5.5', 12, 118000, 15100],
+    ['Daily briefings', 'Opus 5.5', 22, 136400, 20300],
+    ['Person briefs', 'Opus 5.5', 15, 27100, 3100],
+    ['Project briefs', 'Opus 5.5', 6, 18600, 2500],
+  ],
+}
+
+function group(rows, key) {
+  const out = new Map()
+  for (const r of rows) {
+    const k = key === 'purpose' ? r[0] : r[1]
+    const g = out.get(k) ?? { req: 0, i: 0, o: 0, c: 0 }
+    g.req += r[2]; g.i += r[3]; g.o += r[4]; g.c += cost(r[1], r[3], r[4])
+    out.set(k, g)
+  }
+  return [...out.entries()].sort((a, b) => b[1].c - a[1].c)
+}
+const total = (rows) => rows.reduce((t, r) => t + cost(r[1], r[3], r[4]), 0)
+const reqs = (rows) => rows.reduce((t, r) => t + r[2], 0)
+
+function table(rows, key, title) {
+  const g = group(rows, key)
+  const max = Math.max(...g.map(([, v]) => v.c))
+  return `<div class="label" style="margin:12px 0 4px">${title}</div>
+  <table><thead><tr><th>${key === 'purpose' ? 'Used for' : 'Model'}</th><th class="n">Requests</th><th class="n">Tokens in</th><th class="n">Tokens out</th><th class="n">Avg per request</th><th class="n">Est. cost</th><th style="width:90px"></th></tr></thead><tbody>
+  ${g.map(([k, v]) => `<tr><td>${key === 'model' ? 'Claude ' + k : k}</td><td class="n">${v.req}</td><td class="n">${num(v.i)}</td><td class="n">${num(v.o)}</td><td class="n">${money(v.c / v.req)}</td><td class="n"><b style="font-weight:500">${money(v.c)}</b></td><td><div class="bar" style="width:${Math.max(4, (v.c / max) * 100)}%"></div></td></tr>`).join('')}
+  </tbody></table>`
+}
+
+function aiCards() {
+  const btn = state.v === 'after' ? `<div class="spacer"></div><button class="btn sm ${'new'}" data-go="spend">AI spending · ${money(total(DATA.month))} this month</button>` : ''
+  return `<div class="card" style="grid-column:1/-1"><div style="font-weight:500;margin-bottom:8px">AI</div>
+    <div class="grid two" style="grid-template-columns:1fr 1fr;gap:20px"><div>
+      <label class="field"><span>Your name</span><input class="inp" value="Frank" /></label>
+      <div class="field"><span>Model</span><button class="inp" style="text-align:left">✳ Claude Opus 5.5 <span class="faint" style="float:right">▾</span></button></div>
+    </div><div style="font-size:12px;line-height:1.6"><p style="margin:4px 0 6px">Imports, open-task titles, briefs and names are sent to Anthropic.</p><p class="faint" style="margin:0">The AI only proposes. Every suggestion waits in Review until you accept it, and nothing is ever sent on your behalf.</p></div></div></div>
+  <div class="card" style="grid-column:1/-1"><div style="font-weight:500;margin-bottom:8px">AI providers</div>
+    <div class="provider"><div class="provider-head">✳ <span style="font-weight:500">Claude</span><span class="tag ok">Set up · 3 models</span><span class="faint" style="font-size:12px">Anthropic API. Most accurate. Paid per use.</span>${btn}</div>
+      <div class="grid two" style="grid-template-columns:1fr 1fr;gap:20px"><div class="field"><span>API key</span><span class="row"><span style="color:var(--ok)">✓</span>Stored, encrypted on this computer<div class="spacer"></div><button class="btn ghost">Remove</button></span></div><div class="row"><button class="btn">Test connection</button></div></div></div>
+    <div class="provider"><div class="provider-head">◎ <span style="font-weight:500">Ollama</span><span class="tag ok">Running · 1 model</span><span class="faint" style="font-size:12px">Runs on this computer. Free. Slower.</span></div><div class="muted">gpt-oss:20b · 14 GB</div></div>
+  </div>`
+}
+
+function pricesBox() {
+  return `<div class="card" style="background:var(--bg);margin-top:12px">
+    <div style="font-weight:500;margin-bottom:4px">Prices used for these estimates</div>
+    <table class="prices" style="max-width:560px"><thead><tr><th>Model</th><th class="n">Input, per million tokens</th><th class="n">Output, per million tokens</th></tr></thead><tbody>
+      <tr><td>Claude Opus 5.5</td><td class="n">$4.00</td><td class="n">$20.00</td></tr>
+      <tr><td>Claude Sonnet 5.5</td><td class="n">$2.00</td><td class="n">$10.00</td></tr>
+      <tr><td>Claude Haiku 5.5</td><td class="n">$0.10</td><td class="n">$0.50</td></tr>
+      <tr><td class="muted">Claude Haiku 5.5, requests over 100,000 tokens</td><td class="n">$0.50</td><td class="n">$2.50</td></tr>
+    </tbody></table>
+    <div class="callout">These are Anthropic's list prices as of 4 Nov 2026, built into this version of the app. Prices may have changed since. Your Anthropic Console billing page has the exact amount you were charged.
+      <div style="margin-top:4px"><a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noreferrer" style="color:var(--accent)">Check Anthropic's current prices ↗</a> <span class="faint">Opens platform.claude.com in your browser.</span></div></div>
+  </div>`
+}
+
+function spendScreen() {
+  const head = `<div class="head"><button class="btn ghost" data-go="settings">← Settings</button><h1>AI spending</h1><div class="spacer"></div>
+    ${state.d === 'some' ? `<button class="pill ${state.period === 'month' ? 'on' : ''}" data-p="month">This month</button><button class="pill ${state.period === 'd30' ? 'on' : ''}" data-p="d30">Last 30 days</button>` : ''}</div>`
+  const intro = `<div class="est">Estimated cost of Claude requests, worked out from the tokens each one used. Basic and Ollama models are free and aren't counted.</div>`
+  if (state.d === 'none') return head + intro + `<div class="card empty">No Claude requests yet.</div>` + pricesBox()
+  const m = DATA.month, d = DATA.d30, rows = DATA[state.period]
+  const imp = group(rows, 'purpose').find(([k]) => k === 'Imports')[1]
+  return head + intro + `
+    <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="card"><div class="label">This month (November)</div><div class="stat">${money(total(m))}</div><div class="faint" style="font-size:12px">${reqs(m)} requests</div></div>
+      <div class="card"><div class="label">Last 30 days</div><div class="stat">${money(total(d))}</div><div class="faint" style="font-size:12px">${reqs(d)} requests</div></div>
+      <div class="card"><div class="label">Average import</div><div class="stat">${money(imp.c / imp.req)}</div><div class="faint" style="font-size:12px">${num(Math.round(imp.i / imp.req))} tokens sent per import</div></div>
+    </div>
+    <div class="card" style="margin-top:12px">${table(rows, 'purpose', 'By what it was used for')}${table(rows, 'model', 'By model')}</div>
+    ${pricesBox()}`
+}
+
+function settings() {
+  const rest = `<div class="card"><div style="font-weight:500;margin-bottom:8px">Appearance</div><label class="field"><span>Theme</span><select class="inp"><option>Follow system</option></select></label><label class="field"><span>Density</span><select class="inp"><option>Comfortable</option></select></label></div>
+    <div class="card"><div style="font-weight:500;margin-bottom:8px">Priority weights</div><div class="muted">Due date · Who is asking · Staleness</div></div>`
+  return `<div class="head"><h1>Settings</h1></div><div class="grid two" style="grid-template-columns:1fr 1fr">${aiCards()}${rest}</div>`
+}
+
+function callCard(purpose, sec, i, o, model) {
+  const c = cost(model, i, o)
+  return `<div class="card" style="padding:0;margin-bottom:12px">
+    ${state.v === 'after' ? `<div style="padding:8px 12px;border-bottom:1px solid var(--border)">
+      <div class="row">
+        <b style="font-weight:500">${purpose}</b><div class="spacer"></div>
+        <span class="new" style="font-size:12px;white-space:nowrap" title="Claude ${model} estimated at $${PRICES[model][0]} per million tokens in, $${PRICES[model][1]} out. List price as of 4 Nov 2026; prices may have changed.">Claude ${model} · est. ${money(c)}</span>
+        <button class="btn ghost">Copy</button>
+      </div>
+      <div class="muted" style="font-size:12px">Anthropic Messages API (POST /v1/messages) · ${sec} s · ${num(i)} in · ${num(o)} out</div>
+    </div>` : `<div class="row" style="padding:8px 12px;border-bottom:1px solid var(--border)">
+      <b style="font-weight:500">${purpose}</b>
+      <span class="muted ttl" style="font-size:12px;flex:1">Anthropic Messages API (POST /v1/messages) · ${sec} s · ${num(i)} in · ${num(o)} out</span>
+      <button class="btn ghost">Copy</button>
+    </div>`}
+    <div class="row" style="gap:0;padding:0 8px;border-bottom:1px solid var(--border)"><button class="subtab on">Instructions</button><button class="subtab">Message</button><button class="subtab">Answer form</button><button class="subtab">Response</button><button class="subtab">Full request</button></div>
+    <pre class="code-block">You help Frank Cusano, a Technology Product Manager, turn emails, chats and meeting notes into proposed tasks…</pre>
+  </div>`
+}
+
+function importLog() {
+  const i = 9840, o = 1390, model = 'Opus 5.5'
+  return `<div class="head"><button class="btn ghost">← Review</button><h1 class="ttl">Re: DM-NVX firmware schedule</h1><span class="muted">· AI log</span></div>
+    <div class="row" style="gap:6px;margin-bottom:10px;flex-wrap:wrap"><span class="label">Runs</span><button class="pill on">Run 2 · claude · Nov 4, 9:12 AM</button><button class="pill">Run 1 · claude · Nov 3, 4:40 PM</button></div>
+    <div class="card row" style="gap:20px;margin-bottom:12px;flex-wrap:wrap;background:var(--bg)">
+      <span><span class="muted">Requests</span> <b style="font-weight:500">1</b></span>
+      <span><span class="muted">Time</span> <b style="font-weight:500">14.2 s</b></span>
+      <span><span class="muted">Tokens</span> <b style="font-weight:500">${num(i)} in · ${num(o)} out</b></span>
+      ${state.v === 'after' ? `<span class="new"><span class="muted">Est. cost</span> <b style="font-weight:500">${money(cost(model, i, o))}</b></span>` : ''}
+      <span><span class="muted">Suggestions</span> <b style="font-weight:500">5 proposed → 4 sent to Review</b></span>
+    </div>
+    ${callCard('Find suggestions', '14.2', i, o, model)}
+    <div class="card"><div style="font-weight:500;margin-bottom:6px">After the app's checks</div><div class="muted">4 sent to Review · 1 dropped</div></div>`
+}
+
+function briefingLog() {
+  const i = 6120, o = 910, model = 'Opus 5.5'
+  return `<div class="head"><h1>Today</h1></div>
+  <div class="scrim">
+    <div class="dialog-head"><b style="font-weight:600">Briefing history</b><div class="spacer"></div><button class="btn ghost sm">Back to briefing</button><button class="btn ghost sm">✕</button></div>
+    <div class="dialog-body">
+      <div class="h-list">
+        <div class="h-row on"><div class="d">Today, 8:02 AM</div><div class="s">Manual${state.v === 'after' ? ' · est. ' + money(cost(model, i, o)) : ''}</div></div>
+        <div class="h-row"><div class="d">Nov 3, 8:15 AM</div><div class="s">Manual${state.v === 'after' ? ' · est. $0.039' : ''}</div></div>
+        <div class="h-row"><div class="d">Nov 2, 7:58 AM</div><div class="s">Manual${state.v === 'after' ? ' · est. $0.044' : ''}</div></div>
+      </div>
+      <div class="h-view">${callCard('Write the briefing', '6.8', i, o, model)}</div>
+    </div>
+  </div>`
+}
+
+const NOTES = {
+  settings: `<li>Settings stays the same size: the Claude provider gets one <b>AI spending</b> button showing this month's estimate. It opens its own screen.</li>
+    <li>The button only appears once a Claude key is saved.</li>`,
+  spend: `<li>Its own screen, opened from Settings, with ← Settings to go back.</li>
+    <li>Switch between <b>This month</b> and <b>Last 30 days</b>; the tables follow the switch, and both totals always show.</li>
+    <li><b>Average import</b> and <b>tokens sent per import</b> show whether trimming what's sent with each import (briefs, open tasks) is worth it.</li>
+    <li>Counts every Claude request: imports, daily briefings, and person and project briefs (Regenerate). A small separate usage record is kept, so totals don't shrink when old AI logs are cleaned up. Requests already in the AI logs are counted from the start.</li>
+    <li><b>Prices used</b> lists exactly what the estimate is based on, with a note that prices may have changed and a link to Anthropic's pricing page to check them.</li>`,
+  import: `<li>The run summary gets an <b>Est. cost</b> next to the token counts.</li>
+    <li>Each request shows which Claude model answered and its estimated cost at the right of its header, so it's never cut off; the endpoint, time and tokens move to a second line that wraps. Hovering the cost shows the price it was worked out from.</li>
+    <li>Small amounts show three decimals ($0.067), so the difference between runs stays visible.</li>`,
+  briefing: `<li>Each briefing in History shows its estimated cost under the date.</li>
+    <li>The AI log for a briefing shows the model and estimated cost per request, like the Import AI log. The request header now wraps onto two lines, so nothing gets cut off in the narrower History window.</li>`,
+}
+
+function render() {
+  document.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === state.v))
+  document.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', b.dataset.s === state.s))
+  document.querySelectorAll('[data-d]').forEach((b) => b.classList.toggle('on', b.dataset.d === state.d))
+  if (state.v === 'before' && state.s === 'spend') state.s = 'settings'
+  document.querySelector('[data-s="spend"]').style.display = state.v === 'after' ? '' : 'none'
+  $('#dataGrp').style.display = state.s === 'spend' ? '' : 'none'
+  document.querySelectorAll('.tab[data-tab]').forEach((t) => t.classList.toggle('on', t.dataset.tab === (state.s === 'briefing' ? 'today' : state.s === 'spend' ? 'settings' : state.s)))
+  const body = state.s === 'settings' ? settings() : state.s === 'spend' ? spendScreen() : state.s === 'import' ? importLog() : briefingLog()
+  $('#page').innerHTML = body + (state.v === 'after'
+    ? `<div class="notes"><h3>What changes</h3><ul>${NOTES[state.s]}</ul>
+       <h3 style="margin-top:10px">How the estimate works</h3><ul>
+       <li>Tokens × the built-in list price for the model that answered. The AI's thinking is billed as output and is already in "tokens out".</li>
+       <li>Prices don't update on their own; a new app version is needed if Anthropic changes them. The Anthropic Console stays the exact figure.</li></ul></div>`
+    : `<div class="notes"><h3>Today</h3><ul><li>Token counts only; no dollar figures anywhere.</li></ul></div>`)
+  document.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => { state.period = b.dataset.p; render() }))
+  document.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => { state.s = b.dataset.go; render() }))
+}
+document.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => { state.v = b.dataset.v; render() }))
+document.querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { state.s = b.dataset.s; render() }))
+document.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => { state.d = b.dataset.d; render() }))
+$('#theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+render()
+</script>
+</body>
+</html>

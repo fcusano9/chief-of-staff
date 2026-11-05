@@ -25,6 +25,7 @@ Frank tracked work in Microsoft To Do and OneNote and used M365 Copilot each wee
 | 2.4 | Data safety: safety copy before upgrades, separate dev/test data, Restore from backup | ✅ Built (`data-safety` e2e suite) |
 | 2.5 | Projects: hand-written overview, AI status brief from the history, History window | ✅ Built |
 | 2.6 | AI log: the exact requests and responses for each import, plus why suggestions were dropped | ✅ Built (`ai-log` e2e suite). Not yet seen with a real Claude or Ollama run |
+| 2.7 | AI spending: estimated Claude costs by month, purpose and model, and per run in the AI logs | ✅ Built (`ai-spending` e2e suite, with seeded usage). Not yet checked against a real Claude bill |
 | 3 | Priorities and briefings | In progress. Daily briefing built (`briefing` e2e suite); not yet tried with Claude or a local model |
 | 4 | Outlook | Mail import built (`mail` e2e suite; checked against real Outlook, AI reading not yet tried on real mail). Calendar and draft replies planned |
 | 5 | Knowledge archive and meeting prep | Planned |

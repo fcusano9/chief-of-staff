@@ -224,6 +224,35 @@ export const MIGRATIONS: Migration[] = [
   // Status updates move there as dated notes, task standing instructions are kept as an undated
   // note, and "In progress" (which nothing used) becomes Open.
   (db) => mergeTaskUpdates(db),
+  // AI spending: one row per paid (Claude) request, for the cost estimates on the AI spending
+  // screen. Unlike the AI logs this is never pruned, so monthly totals don't shrink. Rows are
+  // filled in from the Claude requests already in the AI logs; the model is the one that answered
+  // (response), else the one asked for (request).
+  `
+  CREATE TABLE ai_usage (
+    id INTEGER PRIMARY KEY,
+    at TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    model TEXT NOT NULL,
+    input_tokens INTEGER NOT NULL,
+    output_tokens INTEGER NOT NULL,
+    briefing_id INTEGER REFERENCES briefings(id) ON DELETE SET NULL
+  );
+  CREATE INDEX ix_ai_usage_at ON ai_usage(at);
+  CREATE INDEX ix_ai_usage_briefing ON ai_usage(briefing_id);
+  INSERT INTO ai_usage (at, purpose, model, input_tokens, output_tokens)
+    SELECT started_at, 'import', COALESCE(json_extract(response, '$.model'), json_extract(request, '$.model')), input_tokens, output_tokens
+    FROM ai_calls
+    WHERE endpoint LIKE 'Anthropic%' AND input_tokens IS NOT NULL AND json_valid(request)
+      AND (response IS NULL OR json_valid(response)) AND json_extract(request, '$.model') IS NOT NULL
+    ORDER BY started_at;
+  INSERT INTO ai_usage (at, purpose, model, input_tokens, output_tokens, briefing_id)
+    SELECT started_at, 'briefing', COALESCE(json_extract(response, '$.model'), json_extract(request, '$.model')), input_tokens, output_tokens, briefing_id
+    FROM briefing_ai_calls
+    WHERE endpoint LIKE 'Anthropic%' AND input_tokens IS NOT NULL AND json_valid(request)
+      AND (response IS NULL OR json_valid(response)) AND json_extract(request, '$.model') IS NOT NULL
+    ORDER BY started_at;
+  `,
 ]
 
 /** Moves status updates and task standing instructions into each task's Updates (see the migration above). */

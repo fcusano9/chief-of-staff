@@ -5,6 +5,7 @@ import { recentNotes, UPDATES_FOR_AI } from '@shared/notes'
 import type { AiCallRecord, AiProvider } from '../ai/provider'
 import { nowIso, transaction } from '../db'
 import type { TaskService } from './tasks'
+import { paidModelOf, UsageService } from './usage'
 
 /** Briefings whose AI requests are kept. The briefings themselves are all kept. */
 export const BRIEFING_CALLS_KEPT = 5
@@ -27,6 +28,7 @@ const stamp = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 's
  */
 export class BriefingService {
   private writing: Promise<Briefing> | null = null
+  private readonly usage: UsageService
 
   constructor(
     private readonly db: DatabaseSync,
@@ -34,7 +36,9 @@ export class BriefingService {
     private readonly provider: () => AiProvider,
     private readonly userName: () => string,
     private readonly now: () => Date = () => new Date(),
-  ) {}
+  ) {
+    this.usage = new UsageService(db)
+  }
 
   /** Writes and saves a new briefing. A second call while one is being written gets the same one. */
   write(trigger: BriefingTrigger = 'manual'): Promise<Briefing> {
@@ -65,6 +69,7 @@ export class BriefingService {
       id: Number(r.id),
       createdAt: String(r.created_at),
       trigger: r.started_by as BriefingTrigger,
+      estimatedCost: this.usage.briefingCost(Number(r.id)),
     }))
   }
 
@@ -81,6 +86,7 @@ export class BriefingService {
       durationMs: Number(c.duration_ms),
       inputTokens: c.input_tokens == null ? null : Number(c.input_tokens),
       outputTokens: c.output_tokens == null ? null : Number(c.output_tokens),
+      paidModel: paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null),
     }))
   }
 
@@ -166,6 +172,7 @@ export class BriefingService {
       const pretty = (v: unknown) => JSON.stringify(v, null, 2)
       for (const c of calls) {
         insert.run(id, c.purpose, c.endpoint, pretty(c.request), c.response == null ? null : pretty(c.response), c.error, c.startedAt, c.durationMs, c.inputTokens, c.outputTokens)
+        this.usage.record(c, 'briefing', id)
       }
       // The AI requests are the bulky part; keep them for the newest few briefings only.
       this.db

@@ -7,6 +7,7 @@ import { ModelMenu, ProviderIcon } from './components/ModelMenu'
 import { AppContext, type AppContextValue, type TaskSelection, type View } from './context'
 import { ComingSoonScreen } from './screens/ComingSoonScreen'
 import { AiLogScreen } from './screens/AiLogScreen'
+import { AiSpendingScreen } from './screens/AiSpendingScreen'
 import { ImportScreen } from './screens/ImportScreen'
 import { ReviewScreen } from './screens/ReviewScreen'
 import { PeopleScreen } from './screens/PeopleScreen'
@@ -173,6 +174,7 @@ export function App() {
     : view === 'review' ? <ReviewScreen />
     : view === 'import' ? <ImportScreen />
     : view === 'ailog' ? <AiLogScreen />
+    : view === 'aispending' ? <AiSpendingScreen />
     : <ComingSoonScreen view={view} />
   const fill = view === 'tasks' || view === 'projects' || view === 'people'
 
@@ -204,7 +206,7 @@ export function App() {
           <button className="iconbtn" title="Toggle light / dark (Shift+D)" onClick={toggleTheme}>
             ◐
           </button>
-          <button className={`iconbtn ${view === 'settings' ? 'on' : ''}`} title="Settings" onClick={() => setView('settings')}>
+          <button className={`iconbtn ${view === 'settings' || view === 'aispending' ? 'on' : ''}`} title="Settings" onClick={() => setView('settings')}>
             ⚙
           </button>
         </header>

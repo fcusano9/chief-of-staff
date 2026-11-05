@@ -37,13 +37,13 @@ It tracks tasks, projects, people and a waiting-on list, ranks tasks by a transp
 ## Layout
 
 ```
-src/shared/      Types, priority engine, and the main/renderer API contract (api.ts)
+src/shared/      Types, priority engine, Claude prices (pricing.ts), and the main/renderer API contract (api.ts)
 src/main/        Electron main process
   index.ts       Window, IPC handler table, startup, timers (recompute, daily backup)
   db.ts          openDatabase, migrations (PRAGMA user_version), transaction()
   services/      tasks, directory (projects/people/briefs), sources (import), suggestions
                  (review queue), briefings (daily briefing), settings (JSON), backup, secrets (KeyStore),
-                 ollama-setup (find, install, start Ollama; download and delete models)
+                 ollama-setup (find, install, start Ollama; download and delete models), usage (AI spending)
   ai/            provider.ts (interface), claude.ts, ollama.ts, demo.ts, context.ts (prompt), schema.ts (Zod + validation),
                  brief.ts (person and project briefs), briefing.ts (daily briefing prompt and checks)
   mail/          outlook.ps1 (reads classic Outlook over COM), outlook.ts (runs it), plan.ts (skips, conversations, AI text)
@@ -132,6 +132,11 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   - Each extraction run is stored in `extraction_runs`, and each request in `ai_calls` (`services/ai-log.ts`). That covers the exact request, the raw response, timing, tokens, everything proposed, what reached Review, and what was dropped and why (`validateSuggestions`' `dropped` list).
   - The last 5 runs per import are kept, and they're deleted with the import. Everything stays in the local database.
   - The prompts themselves live in `ai/context.ts` (`buildSystemPrompt`, `buildUserPrompt`) and `ai/schema.ts` (the answer form).
+- **AI spending** (Settings → AI providers → Claude → "AI spending", `screens/AiSpendingScreen.tsx`, `services/usage.ts`):
+  - Every successful Claude request (imports, daily briefings, person and project briefs) adds a row to `ai_usage`: time, purpose, the model that answered (`r.model`, reported as `paidModel` on the `AiCallRecord`), and tokens. It is never pruned, unlike the AI logs. Basic and Ollama are free and never recorded.
+  - Costs are estimates from the list prices in `src/shared/pricing.ts` (`CLAUDE_PRICES`, with Haiku 5.5's higher price above 100K-token prompts). The screen lists the prices used, says they may have changed, and links to Anthropic's pricing page. The Anthropic Console is the real figure.
+  - **When Anthropic changes prices or a model is added**, update `CLAUDE_PRICES`, `PRICES_CHECKED` and `PRICES_CHECKED_LABEL` after checking the pricing page. The model picker's price text comes from the same table. A model with no price is counted but shown as "price not known".
+  - The Import and briefing AI logs show each request's model and estimated cost, and the run or briefing total.
 
 ## Environment notes (Frank's Windows PC)
 

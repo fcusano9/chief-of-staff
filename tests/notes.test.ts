@@ -28,7 +28,8 @@ describe('updates: what the AI is sent', () => {
 describe('migration: task updates', () => {
   it('moves status updates and standing instructions into Updates, and In progress becomes Open', () => {
     const db = new DatabaseSync(':memory:')
-    migrate(db, { migrations: MIGRATIONS.slice(0, -1) })
+    // The schema just before the task-updates migration (v11), whatever migrations come after it.
+    migrate(db, { migrations: MIGRATIONS.slice(0, 10) })
     const now = '2026-11-01T12:00:00.000Z'
     const task = (title: string, status: string) =>
       Number(db.prepare(`INSERT INTO work_items (title, status, created_at, last_activity_at) VALUES (?, ?, ?, ?)`).run(title, status, now, now).lastInsertRowid)

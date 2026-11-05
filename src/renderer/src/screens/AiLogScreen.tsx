@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AiCall, AiRun, SourceItem, SuggestionKind } from '@shared/types'
-import { SUGGESTION_LABELS } from '@shared/types'
+import { describePrice, estimateCost, formatCost, PRICES_CHECKED_LABEL } from '@shared/pricing'
+import { CLAUDE_MODELS, SUGGESTION_LABELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp, type View } from '../context'
 
@@ -9,6 +10,14 @@ const when = (iso: string) => new Date(iso).toLocaleString(undefined, { month: '
 const seconds = (ms: number) => (ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`)
 const num = (n: number) => n.toLocaleString()
 const kindLabel = (k: string) => SUGGESTION_LABELS[k as SuggestionKind] ?? k
+const modelName = (id: string) => CLAUDE_MODELS.find((m) => m.id === id)?.label ?? id
+/** Estimated cost of one paid request, or null (free, failed, or a model with no known price). */
+export const callCost = (c: AiCall): number | null => (c.paidModel && c.inputTokens != null ? estimateCost(c.paidModel, c.inputTokens, c.outputTokens ?? 0) : null)
+/** Total estimated cost of some requests, or null when none of them has one. */
+export const callsCost = (calls: AiCall[]): number | null => {
+  const costs = calls.map(callCost).filter((c): c is number => c != null)
+  return costs.length ? costs.reduce((a, b) => a + b, 0) : null
+}
 
 type Json = Record<string, unknown>
 const parse = (s: string | null): unknown => {
@@ -45,26 +54,39 @@ export function CallCard({ call }: { call: AiCall }) {
   const [tab, setTab] = useState(0)
   const current = tabs[Math.min(tab, tabs.length - 1)]!
   const tokens = call.inputTokens != null ? ` · ${num(call.inputTokens)} in · ${num(call.outputTokens ?? 0)} out` : ''
+  const cost = callCost(call)
   return (
     <div className="card" style={{ padding: 0, marginBottom: 12 }} data-call={call.id}>
-      <div className="row" style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-        <b style={{ fontWeight: 500 }}>{call.purpose}</b>
-        {call.error && <span className="chip" style={{ background: 'color-mix(in srgb, var(--danger) 15%, transparent)', color: 'var(--danger)' }}>Failed</span>}
-        <span className="muted ttl" style={{ fontSize: 'var(--fs-sm)', flex: 1 }} title={call.endpoint}>
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+        <div className="row">
+          <b style={{ fontWeight: 500 }}>{call.purpose}</b>
+          {call.error && <span className="chip" style={{ background: 'color-mix(in srgb, var(--danger) 15%, transparent)', color: 'var(--danger)' }}>Failed</span>}
+          <div className="spacer" />
+          {call.paidModel && call.inputTokens != null && (
+            <span
+              className="cost-chip"
+              data-cost
+              title={`${modelName(call.paidModel)}${describePrice(call.paidModel) ? `, estimated at ${describePrice(call.paidModel)}` : ''}. List price as of ${PRICES_CHECKED_LABEL}; prices may have changed.`}
+            >
+              {modelName(call.paidModel)} · {cost != null ? `est. ${formatCost(cost)}` : 'price not known'}
+            </span>
+          )}
+          <button
+            className="btn ghost"
+            onClick={() =>
+              void navigator.clipboard
+                .writeText(current.body)
+                .then(() => toast(`${current.label} copied`))
+                .catch((err) => toast(errorMessage(err), true))
+            }
+          >
+            Copy
+          </button>
+        </div>
+        <div className="muted" style={{ fontSize: 'var(--fs-sm)', overflowWrap: 'anywhere' }}>
           {call.endpoint} · {seconds(call.durationMs)}
           {tokens}
-        </span>
-        <button
-          className="btn ghost"
-          onClick={() =>
-            void navigator.clipboard
-              .writeText(current.body)
-              .then(() => toast(`${current.label} copied`))
-              .catch((err) => toast(errorMessage(err), true))
-          }
-        >
-          Copy
-        </button>
+        </div>
       </div>
       <div className="row" style={{ gap: 0, padding: '0 8px', borderBottom: '1px solid var(--border)' }}>
         {tabs.map((t, i) => (
@@ -102,6 +124,7 @@ export function AiLogScreen() {
   const totalMs = run ? run.calls.reduce((t, c) => t + c.durationMs, 0) : 0
   const inTokens = run ? run.calls.reduce((t, c) => t + (c.inputTokens ?? 0), 0) : 0
   const outTokens = run ? run.calls.reduce((t, c) => t + (c.outputTokens ?? 0), 0) : 0
+  const runCost = run ? callsCost(run.calls) : null
 
   return (
     <div className="page">
@@ -151,6 +174,11 @@ export function AiLogScreen() {
                     <b style={{ fontWeight: 500 }}>
                       {num(inTokens)} in · {num(outTokens)} out
                     </b>
+                  </span>
+                )}
+                {runCost != null && (
+                  <span data-run-cost title="Estimated at Anthropic's list price. Prices may have changed; the AI spending screen in Settings lists the prices used.">
+                    <span className="muted">Est. cost</span> <b style={{ fontWeight: 500 }}>{formatCost(runCost)}</b>
                   </span>
                 )}
                 <span>

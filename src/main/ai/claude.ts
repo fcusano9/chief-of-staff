@@ -7,6 +7,8 @@ import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type Source
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawSuggestion } from './schema'
 
+const ENDPOINT = 'Anthropic Messages API (POST /v1/messages; the beta flag is sent as a header)'
+
 /** Models that accept the server-side refusal fallback in its "default" form. */
 const FALLBACK_MODELS = new Set(['claude-opus-5-5', 'claude-sonnet-5-5'])
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01'
@@ -93,7 +95,7 @@ export class ClaudeProvider implements AiProvider {
         (r) => {
           // parsed_output is added by the SDK; drop it so this is the API's response as received.
           const { parsed_output: _parsed, ...raw } = r
-          return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens }
+          return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens, paidModel: r.model }
         },
         (err) => (err instanceof Anthropic.APIError ? (err.error ?? null) : null),
       )
@@ -110,9 +112,9 @@ export class ClaudeProvider implements AiProvider {
     }
   }
 
-  async writePersonBrief(input: PersonBriefInput): Promise<string> {
+  async writePersonBrief(input: PersonBriefInput, log?: AiCallLog): Promise<string> {
     try {
-      const response = await this.client.beta.messages.parse(buildBriefRequest(this.model, input))
+      const response = await this.send(log, 'Write a person brief', buildBriefRequest(this.model, input))
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this brief. Nothing was changed.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The brief was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
@@ -122,9 +124,9 @@ export class ClaudeProvider implements AiProvider {
     }
   }
 
-  async writeProjectBrief(input: ProjectBriefInput): Promise<string> {
+  async writeProjectBrief(input: ProjectBriefInput, log?: AiCallLog): Promise<string> {
     try {
-      const response = await this.client.beta.messages.parse(buildProjectBriefRequest(this.model, input))
+      const response = await this.send(log, 'Write a project brief', buildProjectBriefRequest(this.model, input))
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this brief. Nothing was changed.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The brief was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
@@ -143,7 +145,7 @@ export class ClaudeProvider implements AiProvider {
         () => this.client.beta.messages.parse(request),
         (r) => {
           const { parsed_output: _parsed, ...raw } = r
-          return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens }
+          return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens, paidModel: r.model }
         },
         (err) => (err instanceof Anthropic.APIError ? (err.error ?? null) : null),
       )
@@ -154,6 +156,20 @@ export class ClaudeProvider implements AiProvider {
     } catch (err) {
       throw toAiError(err)
     }
+  }
+
+  /** Sends a structured-output request, recording it (with tokens and the model that answered) in `log`. */
+  private send<R extends Parameters<Anthropic['beta']['messages']['parse']>[0]>(log: AiCallLog | undefined, purpose: string, request: R) {
+    return logged(
+      log,
+      { purpose, endpoint: ENDPOINT, request: asSent(request) },
+      () => this.client.beta.messages.parse(request),
+      (r) => {
+        const { parsed_output: _parsed, ...raw } = r
+        return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens, paidModel: r.model }
+      },
+      (err) => (err instanceof Anthropic.APIError ? (err.error ?? null) : null),
+    )
   }
 
   async test(): Promise<string> {
