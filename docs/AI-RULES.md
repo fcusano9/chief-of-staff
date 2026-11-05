@@ -97,3 +97,26 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ When | Only when Frank clicks Regenerate. |
 | ✅ Output | A suggestion he keeps or discards. Person: one or two sentences (**600 characters** at most). Project: status, then "Next:" and "Open:" lines. |
 | ✅ Project overview | Written by Frank only; the AI never writes it. |
+
+## How the AI has done in tests
+
+Dated hand-run checks, newest first. Add a row whenever a model is tried on a feature. The extraction benchmark (`npm run bench:ai`, see `bench/README.md`) is separate and measures imports only.
+
+### 2026-11-05 · Next actions and priority changes, made-up demo data
+
+One daily briefing (19 open tasks) and one made-up email from Dana with three clear signals: the roadmap slides are now top priority with a draft due Monday; the competitor teardown deck is no longer needed; Alex is blocked until the pilot dealers are picked. Each model started from the same state. Run on the MacBook Pro.
+
+| | Opus 5.5 | Sonnet 5.5 | Haiku 5.5 | gpt-oss:20b (Ollama) |
+|---|---|---|---|---|
+| Time, briefing / import | 9 s / 18 s | 7 s / 7 s | 4 s / 14 s | 56 s / 44 s |
+| Estimated cost, both | $0.09 | $0.04 | under $0.01 | free |
+| Roadmap slides | +15 | +15 | +12 | no change |
+| Pick pilot dealers | +12 | +12 | +10 | no change |
+| Competitor deck | proposed mark done | proposed mark done | −15, and an update saying it was dropped | missed |
+| Changes from the briefing | course outline +5, wireframes −8 (blocked) | course outline +8 | Munich price list +5 (weak reason) | none |
+| Next actions, briefing | 5, specific | 5, specific | 5, specific | 5, mostly restate the title; some reasons made up |
+| Next actions, import | 2, specific | 2, specific | 2, specific | none |
+| "Monday" resolved right | yes | yes | yes | no (Nov 6, not Nov 9) |
+
+**Takeaway:** all three Claude models use both features well; Sonnet matched Opus at under half the cost. gpt-oss:20b ignored both features on imports and wrote weak next actions; its import suggestions were also poorer (duplicate tasks, a wrong date). Tuning the local prompts, for example a separate short pass for next actions and priority changes, is untried.
+
