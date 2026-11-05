@@ -110,6 +110,8 @@ describe('local AI through Ollama', () => {
     await expect(p.extract(ctx, source('x'))).rejects.toThrow(/Couldn't reach Ollama at http:\/\/127.0.0.1:11434/)
     fakeOllama(() => ({ status: 404, body: { error: 'model not found' } }))
     await expect(p.extract(ctx, source('x'))).rejects.toThrow(/qwen3:8b isn't downloaded/)
+    fakeOllama(() => ({ status: 501, body: { error: 'structured output is unavailable' } }))
+    await expect(p.extract(ctx, source('x'))).rejects.toThrow(/can't give the fixed-format answers/)
     fakeOllama(() => ({ body: { message: { content: 'not json' }, done_reason: 'stop' } }))
     await expect(p.extract(ctx, source('x'))).rejects.toThrow(/couldn't be read/)
     fakeOllama(() => ({ body: { message: { content: '{}' }, prompt_eval_count: 8192 } }))

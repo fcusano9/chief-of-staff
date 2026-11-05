@@ -241,6 +241,12 @@ export const BASIC_LABEL = 'Basic'
 /** Local models tested with this app. Only these are offered for download. */
 export const TESTED_LOCAL_MODELS: { name: string; size: string; note: string }[] = [
   { name: 'gpt-oss:20b', size: '14 GB', note: 'Uses about 13 GB of memory while it runs.' },
+  // The q4_K_M tag on purpose: on a Mac the plain qwen3.8:27b tag is an MLX build, and Ollama's MLX engine can't give the fixed-format answers the app needs.
+  {
+    name: 'qwen3.8:27b-q4_K_M',
+    size: '17 GB',
+    note: 'More accurate than gpt-oss:20b, but slow: about 2½ minutes per item on a 32 GB MacBook Pro. Best on a more powerful computer. Uses about 16 GB of memory.',
+  },
 ]
 export const isTestedLocalModel = (name: string) => TESTED_LOCAL_MODELS.some((m) => m.name === name)
 export const localModelLabel = (name: string) => `Ollama ${name}`

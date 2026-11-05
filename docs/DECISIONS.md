@@ -2,6 +2,18 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-05 · Qwen 3.8 27B added to the tested local models (Frank)
+Benchmarked on the M5 MacBook Pro (32 GB), 15 cases, standard (GGUF, `-q4_K_M`) builds:
+
+| Model | Found | Dates right | Rule breaks | Failed | Median per item |
+|---|---|---|---|---|---|
+| gpt-oss:20b | 64% | 50% | 0 | 0 | 29 s |
+| qwen3.8:27b-q4_K_M | 75% | 83% | 1 | 2 | 149 s |
+| qwen3.6:27b-q4_K_M | 42% | 50% | 0 | 6 | 178 s |
+| qwen3.6:35b-a3b-q4_K_M | 44% | 67% | 1 | 3 | 26 s |
+
+**Decided:** Qwen 3.8 27B is offered for download because it's the most accurate local model tested, and it may be practical on a more powerful computer. gpt-oss:20b stays the default because it's about five times faster here. Qwen 3.8's two failures and Qwen 3.6's ran past 5 minutes and were reported as "Couldn't reach Ollama", so they look like a time limit, not a crash; not yet looked into. Qwen 3.6 35B-A3B was fast but proposed many extra projects and ran away on 3 items. **Why the `-q4_K_M` tag:** on a Mac, the plain `qwen3.6:27b`, `qwen3.8:27b` and `qwen3.8:27b-mlx` tags are all MLX builds, and Ollama's MLX engine answers every fixed-format request with error 501 ("structured output is unavailable"). The app now explains that error instead of showing it raw. gpt-oss:20b's found rate varies run to run (64–67% today), and in one of today's runs it followed the vendor-email prompt injection; Review stays the safeguard.
+
 ### 2026-11-04 · AI spending: estimated Claude costs on their own screen (Frank)
 Frank wants to see what Claude costs as usage grows, so he can trim what's sent (mockup `design/ai-spending.html`, approved after three rounds). **Frank's choices:**
 - **Its own screen**, opened from an "AI spending · $X this month" button on the Claude provider in Settings, so Settings stays short. It shows this month, the last 30 days, the average import (with tokens sent per import), and tables by purpose and by model.
