@@ -2,6 +2,9 @@ import type {
   AiRun,
   AiCall,
   AiStatus,
+  AiChoiceGroup,
+  AiProviderId,
+  OllamaSetupStatus,
   Briefing,
   BriefingListItem,
   ImportRequest,
@@ -99,9 +102,23 @@ export interface Api {
   'ai.status': () => AiStatus
   /** Stores (or with null, removes) the Anthropic API key. The key is never returned to the UI. */
   'ai.setKey': (key: string | null) => AiStatus
-  'ai.test': () => string
-  /** Models installed in the local Ollama server; empty if it isn't running. */
-  'ai.listLocalModels': () => string[]
+  /** Checks a provider works (the chosen one when omitted). */
+  'ai.test': (provider?: AiProviderId) => string
+  /** Every model that can be picked now, grouped by provider: Basic, Claude (with a key), and each model in Ollama. */
+  'ai.choices': () => AiChoiceGroup[]
+  /** Whether Ollama is installed and running, its models, and any install or download in progress. */
+  'ollama.status': () => OllamaSetupStatus
+  /** Downloads the official installer from ollama.com, checks its signature and opens it. Returns at once. */
+  'ollama.install': () => OllamaSetupStatus
+  /** Forgets an install the app is waiting on (e.g. the installer was closed). */
+  'ollama.cancelInstall': () => OllamaSetupStatus
+  /** Starts an installed Ollama on this computer. */
+  'ollama.start': () => OllamaSetupStatus
+  /** Starts downloading a tested model in the background. */
+  'ollama.pull': (name: string) => OllamaSetupStatus
+  'ollama.cancelPull': (name: string) => OllamaSetupStatus
+  /** Deletes a downloaded model from Ollama. */
+  'ollama.delete': (name: string) => OllamaSetupStatus
   /** The newest saved briefing, or null if none has been written. */
   'briefing.latest': () => Briefing | null
   /** Every saved briefing, newest first. */
@@ -169,7 +186,14 @@ export const API_CHANNELS: ApiChannel[] = [
   'ai.status',
   'ai.setKey',
   'ai.test',
-  'ai.listLocalModels',
+  'ai.choices',
+  'ollama.status',
+  'ollama.install',
+  'ollama.cancelInstall',
+  'ollama.start',
+  'ollama.pull',
+  'ollama.cancelPull',
+  'ollama.delete',
   'briefing.latest',
   'briefing.list',
   'briefing.get',

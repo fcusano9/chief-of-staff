@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { API_CHANNELS, type Api } from '@shared/api'
-import { CLAUDE_MODELS, type AiStatus, type AppSettings } from '@shared/types'
+import { BASIC_LABEL, CLAUDE_MODELS, isTestedLocalModel, localModelLabel, type AiChoiceGroup, type AiProviderId, type AiStatus, type AppSettings } from '@shared/types'
 import { buildPersonBriefInput, buildProjectBriefInput, cleanBrief, cleanProjectBrief } from './ai/brief'
 import { ClaudeProvider } from './ai/claude'
 import { DemoProvider } from './ai/demo'
@@ -16,6 +16,7 @@ import { FixtureOutlook, PowerShellOutlook } from './mail/outlook'
 import { BriefingService } from './services/briefings'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { MailService } from './services/mail'
+import { nodeHost, OllamaManager } from './services/ollama-setup'
 import { KeyStore } from './services/secrets'
 import { SettingsStore } from './services/settings'
 import { SourceService } from './services/sources'
@@ -108,11 +109,13 @@ const suggestions = new SuggestionService(db, tasks, briefs, projects, people)
 
 /** The AI that reads imports. Claude only when chosen in Settings and a key is stored. */
 function currentProvider(): AiProvider {
-  const { aiProvider, localUrl, localModel } = settings.current
-  if (aiProvider === 'local') return new OllamaProvider(localUrl, localModel)
-  const key = keys.get()
-  if (settings.current.aiProvider === 'claude') {
-    if (!key) throw new AiError('Claude is selected but no API key is set. Add one in Settings, or switch to the demo AI.')
+  return providerFor(settings.current.aiProvider)
+}
+function providerFor(id: AiProviderId, localModel = settings.current.localModel): AiProvider {
+  if (id === 'local') return new OllamaProvider(settings.current.localUrl, localModel)
+  if (id === 'claude') {
+    const key = keys.get()
+    if (!key) throw new AiError('Claude is selected but no API key is set. Add one in Settings → AI providers, or pick another model.')
     return new ClaudeProvider(key, settings.current.aiModel)
   }
   return new DemoProvider()
@@ -126,22 +129,59 @@ const mail = new MailService(
   sources,
   outlookFixture ? new FixtureOutlook(outlookFixture) : process.platform === 'win32' ? new PowerShellOutlook() : null,
   () => settings.current.userName,
-  () => aiStatus().label,
+  () => aiLabel(),
 )
+const ollama = new OllamaManager(() => settings.current.localUrl, nodeHost(app.getPath('temp')))
 
-function aiStatus(): AiStatus {
+/** The chosen model's name, e.g. "Basic", "Claude Opus 5.5" or "Ollama gpt-oss:20b". */
+function aiLabel(): string {
+  const { aiProvider, aiModel, localModel } = settings.current
+  if (aiProvider === 'local') return localModelLabel(localModel)
+  if (aiProvider === 'claude') return CLAUDE_MODELS.find((m) => m.id === aiModel)?.label ?? aiModel
+  return BASIC_LABEL
+}
+
+async function aiStatus(): Promise<AiStatus> {
   const { aiProvider, aiModel, localModel, localUrl } = settings.current
   const hasKey = !!keys.get()
-  const modelLabel = CLAUDE_MODELS.find((m) => m.id === aiModel)?.label ?? aiModel
   const local = aiProvider === 'local'
+  let problem: string | null = null
+  if (aiProvider === 'claude' && !hasKey) problem = `${aiLabel()} needs a Claude API key. Add one below, or pick another model.`
+  if (local) {
+    const o = await ollama.status()
+    if (o.state === 'missing') problem = "Ollama isn't installed. Install it below, or pick another model."
+    else if (o.state === 'stopped') problem = o.remote ? `Ollama at ${o.url} isn't answering. Pick another model, or start it there.` : "Ollama isn't running. Start it below, or pick another model."
+    else if (!o.models.some((m) => m.name === localModel)) problem = `${aiLabel()} isn't downloaded. Download it below, or pick another model.`
+  }
   return {
     provider: aiProvider,
     model: local ? localModel : aiModel,
     hasKey,
     encryptionAvailable: keys.encryptionAvailable,
-    label: aiProvider === 'demo' ? 'Demo AI (on this PC)' : local ? `${localModel} (local)` : hasKey ? modelLabel : 'Claude · no API key',
+    label: aiLabel(),
     sendsDataExternally: aiProvider === 'claude' || (local && !isLoopbackUrl(localUrl)),
+    available: problem == null,
+    problem,
   }
+}
+
+/** Every model that can be picked now: Basic, Claude's models with a key, and whatever is downloaded in Ollama. */
+async function aiChoices(): Promise<AiChoiceGroup[]> {
+  const groups: AiChoiceGroup[] = [{ provider: 'demo', title: 'Built into the app', choices: [{ provider: 'demo', model: '', label: BASIC_LABEL, note: 'Simple rules, no setup' }] }]
+  if (keys.get())
+    groups.push({
+      provider: 'claude',
+      title: 'Claude · sent to Anthropic',
+      choices: CLAUDE_MODELS.map((m) => ({ provider: 'claude', model: m.id, label: m.label, note: m.note, detail: m.price })),
+    })
+  const o = await ollama.status()
+  if (o.models.length)
+    groups.push({
+      provider: 'local',
+      title: o.remote ? `Ollama · on ${new URL(o.url).host}` : 'Ollama · on this computer',
+      choices: o.models.map((m) => ({ provider: 'local', model: m.name, label: localModelLabel(m.name), note: isTestedLocalModel(m.name) ? '' : 'Not tested' })),
+    })
+  return groups
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -262,8 +302,21 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
     keys.set(key)
     return aiStatus()
   },
-  'ai.test': () => currentProvider().test(),
-  'ai.listLocalModels': () => new OllamaProvider(settings.current.localUrl, settings.current.localModel).listModels().catch(() => []),
+  'ai.test': async (provider) => {
+    if (provider !== 'local') return providerFor(provider ?? settings.current.aiProvider).test()
+    // Test the chosen local model if it's downloaded, otherwise the first one that is.
+    const models = (await ollama.status()).models.map((m) => m.name)
+    const model = models.includes(settings.current.localModel) ? settings.current.localModel : (models[0] ?? settings.current.localModel)
+    return providerFor('local', model).test()
+  },
+  'ai.choices': () => aiChoices(),
+  'ollama.status': () => ollama.status(),
+  'ollama.install': () => ollama.startInstall(),
+  'ollama.cancelInstall': () => ollama.cancelInstall(),
+  'ollama.start': () => ollama.start(),
+  'ollama.pull': (name) => ollama.pull(name),
+  'ollama.cancelPull': (name) => ollama.cancelPull(name),
+  'ollama.delete': (name) => ollama.delete(name),
   'briefing.latest': () => briefings.latest(),
   'briefing.list': () => briefings.list(),
   'briefing.get': (id) => briefings.get(id),

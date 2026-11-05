@@ -109,7 +109,7 @@ describe('local AI through Ollama', () => {
     fakeOllama(() => new TypeError('fetch failed'))
     await expect(p.extract(ctx, source('x'))).rejects.toThrow(/Couldn't reach Ollama at http:\/\/127.0.0.1:11434/)
     fakeOllama(() => ({ status: 404, body: { error: 'model not found' } }))
-    await expect(p.extract(ctx, source('x'))).rejects.toThrow(/ollama pull qwen3:8b/)
+    await expect(p.extract(ctx, source('x'))).rejects.toThrow(/qwen3:8b isn't downloaded/)
     fakeOllama(() => ({ body: { message: { content: 'not json' }, done_reason: 'stop' } }))
     await expect(p.extract(ctx, source('x'))).rejects.toThrow(/couldn't be read/)
     fakeOllama(() => ({ body: { message: { content: '{}' }, prompt_eval_count: 8192 } }))
@@ -118,8 +118,8 @@ describe('local AI through Ollama', () => {
 
   it('checks that the chosen model is installed', async () => {
     fakeOllama(() => ({ body: { models: [{ name: 'qwen3:8b' }, { name: 'gpt-oss:20b' }] } }))
-    await expect(new OllamaProvider('http://127.0.0.1:11434', 'gpt-oss:20b').test()).resolves.toMatch(/installed/)
-    await expect(new OllamaProvider('http://127.0.0.1:11434', 'qwen3:30b').test()).rejects.toThrow(/isn't installed.*gpt-oss:20b, qwen3:8b/)
+    await expect(new OllamaProvider('http://127.0.0.1:11434', 'gpt-oss:20b').test()).resolves.toMatch(/downloaded and ready/)
+    await expect(new OllamaProvider('http://127.0.0.1:11434', 'qwen3:30b').test()).rejects.toThrow(/qwen3:30b isn't downloaded/)
   })
 
   it('keeps the local provider in settings and rejects a bad server address', () => {

@@ -190,7 +190,7 @@ export function assembleBriefing(input: BriefingInput, raw: RawBriefing): { summ
   return { summary, priorities: [...overdue, ...others], nudges, newItems }
 }
 
-/** A rule-based briefing for the demo AI: overdue and highest-priority tasks, and long waits. */
+/** A rule-based briefing for Basic (the demo provider): overdue and highest-priority tasks, and long waits. */
 export function demoBriefing(input: BriefingInput): RawBriefing {
   const overdue = input.tasks.filter((t) => t.overdueDays)
   const dueToday = input.tasks.filter((t) => t.due === input.today)

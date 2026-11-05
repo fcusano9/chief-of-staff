@@ -8,7 +8,7 @@ import type { RawSuggestion } from './schema'
  * provider; Microsoft 365 Copilot, OpenAI, or a local model can implement this later.
  */
 export interface AiProvider {
-  /** Shown to the user, e.g. "Claude Opus 5.5" or "Demo AI". */
+  /** Shown to the user, e.g. "Claude Opus 5.5" or "Basic". */
   readonly label: string
   /** True when calling extract() sends content off this computer. */
   readonly sendsDataExternally: boolean
