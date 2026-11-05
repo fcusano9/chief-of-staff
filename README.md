@@ -47,8 +47,6 @@ An AI-assisted work manager for Windows and Mac. It replaces Microsoft To Do: ta
 
 ## Install
 
-The app is built from this repository on your own computer. There's no download yet.
-
 **You need:** [Node.js](https://nodejs.org) (the current LTS) and [Git](https://git-scm.com). Clone the repository once:
 
 ```bash
@@ -75,8 +73,6 @@ Run these from a normal PowerShell or Terminal window, not from inside Claude De
 To make a regular installer instead, run `npm run package:win`. It writes `Chief of Staff Setup <version>.exe` to `release\`. The installer isn't signed, so Windows SmartScreen may warn before it runs.
 
 ### Mac
-
-Not tested yet. These steps follow the build settings in `electron-builder.yml`.
 
 1. Quit Chief of Staff if it's running.
 2. In Terminal, get the latest code and build the disk image:
