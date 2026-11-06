@@ -201,7 +201,7 @@ A third provider runs a model on the computer through Ollama's HTTP API, so noth
 On Opus 5.5 and Sonnet 5.5, extraction requests send `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`). If Claude's safety classifier declines, the API reruns the request on a fallback model instead of failing. This follows Anthropic's guidance. Frank was told; it's easy to remove.
 
 ### 2026-11-02 · Demo AI is the default provider
-A local, rule-based provider ships so the import and review flow works and can be tested without an API key or any data leaving the PC. Claude is used only when the user selects it and stores a key. **Why:** the key and Crestron's data policy were still pending.
+A local, rule-based provider ships so the import and review flow works and can be tested without an API key or any data leaving the PC. Claude is used only when the user selects it and stores a key. **Why:** the key and the employer's data policy were still pending.
 
 ### 2026-11-02 · Claude model default: Opus 5.5
 `claude-opus-5-5` is the default, at medium effort, with Zod structured outputs through `client.beta.messages.parse`. Sonnet 5.5 and Haiku 5.5 can be chosen in Settings. Cost tradeoffs are Frank's decision.

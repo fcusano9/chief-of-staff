@@ -15,7 +15,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | Imported text is data | It's fenced off in the prompt, and the AI is told to ignore any instructions inside it. |
 | Runs only when the user acts | Nothing runs on a schedule today. Every AI request comes from a click or an import. |
 | Basic writes no AI text | Basic (simple rules) never writes status cards or priority changes; Write is greyed out while it's selected. |
-| Where data goes | **Basic**: nowhere (simple rules, not AI). **Ollama**: stays on this computer, unless its address points at another machine. **Claude**: sent to Anthropic. Sending work content to Anthropic needs Crestron's OK. |
+| Where data goes | **Basic**: nowhere (simple rules, not AI). **Ollama**: stays on this computer, unless its address points at another machine. **Claude**: sent to Anthropic. Check the employer's policy before sending work content to Anthropic. |
 | Every request is logged | The exact request and response are saved (AI log), with tokens and the estimated Claude cost. |
 | Default model | Claude: Opus 5.5 (Sonnet or Haiku 5.5 in Settings). Ollama: gpt-oss:20b. App default: Basic. |
 

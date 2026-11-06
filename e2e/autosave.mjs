@@ -18,7 +18,7 @@ const seed = await launch({ appDir, dataDir })
 await seed.eval(`
   await window.cos['projects.save']({ id: 0, name: 'Partner portal', color: '#378ADD', status: 'active' });
   await window.cos['projects.save']({ id: 0, name: 'Pricing refresh', color: '#D85A30', status: 'active' });
-  await window.cos['people.save']({ id: 0, name: 'Dana Lee', role: 'VP, Product', company: 'Crestron', email: null, priorityWeight: 5 });
+  await window.cos['people.save']({ id: 0, name: 'Dana Lee', role: 'VP, Product', company: 'Fabrikam', email: null, priorityWeight: 5 });
   await window.cos['people.save']({ id: 0, name: 'Jordan Kim', role: 'Owner', company: 'Northwind AV', email: null, priorityWeight: 2 });
   return true`)
 await seed.close()
