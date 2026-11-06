@@ -219,15 +219,29 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 
 /* Today: daily briefing */
 .b-summary { font-size: calc(var(--fs) + 1px); line-height: 1.55; margin-top: 2px; }
-.b-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 22px; }
-.b-sec { margin-top: calc(var(--gap) - 4px); min-width: 0; }
-.b-sec > .label { display: flex; gap: 6px; align-items: baseline; margin-bottom: 2px; }
-.b-item { display: block; width: calc(100% + 12px); text-align: left; border: 0; background: none; padding: 3px 6px; margin: 0 -6px; border-radius: 5px; cursor: pointer; line-height: 1.45; }
+.b-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 22px; }
+.b-sec { margin-top: calc(var(--gap) - 2px); min-width: 0; }
+.b-sec-h { display: flex; gap: 6px; align-items: baseline; font-size: var(--fs-sm); color: var(--muted); margin-bottom: 4px; }
+.b-sec-h .n { font: 500 var(--fs-xs) var(--mono); color: var(--faint); }
+.b-sec-h .faint { font-size: var(--fs-xs); }
+/* Do next: one line per task, numbered, the next step first. */
+.b-do { display: grid; grid-template-columns: 20px auto minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; border-top: 1px solid color-mix(in srgb, var(--accent) 16%, transparent); background: none; padding: calc(var(--row-py) - 3px) 6px; cursor: pointer; border-radius: 0; }
+.b-sec-h + .b-do { border-top: 0; }
+.b-do:hover { background: color-mix(in srgb, var(--accent-bg) 70%, transparent); border-radius: 5px; }
+.b-num { font: 600 var(--fs-xs) var(--mono); color: var(--accent); background: var(--accent-bg); border-radius: 5px; height: 20px; display: grid; place-items: center; }
+.b-act { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(560px, 55vw); }
+.b-sub { display: flex; gap: 6px; align-items: center; min-width: 0; font-size: var(--fs-sm); color: var(--muted); }
+.b-ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.b-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+/* Follow up and New: a tag and a name. */
+.b-item { display: flex; gap: 8px; align-items: center; width: calc(100% + 12px); text-align: left; border: 0; background: none; padding: 3px 6px; margin: 0 -6px; border-radius: 5px; cursor: pointer; }
 .b-item:hover { background: color-mix(in srgb, var(--accent-bg) 70%, transparent); }
-.b-item .t { font-weight: 500; }
-.b-item .w { color: var(--muted); }
-.b-item .b-next { display: block; color: var(--accent); font-size: var(--fs-sm); margin-top: 1px; }
-.b-item.over { box-shadow: inset 2px 0 0 var(--danger); border-radius: 0 5px 5px 0; }
+.b-item .t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b-tag { flex: none; font-size: var(--fs-xs); font-weight: 500; border-radius: 4px; padding: 0 6px; white-space: nowrap; line-height: 1.6; }
+.b-tag.over { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.b-tag.due { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.b-tag.wait { color: var(--muted); background: var(--sel); }
+.b-tag.new { color: var(--accent); background: var(--accent-bg); }
 .tag-push { display: inline-block; font-size: var(--fs-xs); font-weight: 500; color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
 .tag-over { display: inline-block; font-size: var(--fs-xs); font-weight: 500; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 4px; padding: 0 6px; margin-right: 6px; white-space: nowrap; }
 .b-none { color: var(--faint); padding: 3px 0; }
