@@ -53,5 +53,3 @@ export function recentNotes(summary: string, max: number): string[] {
   return out
 }
 
-/** How much of each task's, project's and person's updates the AI is sent on imports and briefings. */
-export const UPDATES_FOR_AI = 300
