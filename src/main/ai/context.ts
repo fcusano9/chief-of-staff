@@ -50,7 +50,7 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
     .all() as Record<string, unknown>[]
   const projects = db
     .prepare(
-      `SELECT p.id, p.name, p.overview, p.brief, IFNULL(b.summary, '') AS history, IFNULL(b.standing_instructions, '') AS instructions
+      `SELECT p.id, p.name, p.overview, IFNULL(b.summary, '') AS history, IFNULL(b.standing_instructions, '') AS instructions
        FROM projects p LEFT JOIN context_briefs b ON b.scope = 'project' AND b.owner_id = p.id
        WHERE p.status <> 'archived' ORDER BY p.name`,
     )
@@ -78,12 +78,12 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
       priority: Number(t.priority_score),
       aiChange: t.ai_delta == null ? null : { delta: Number(t.ai_delta), reason: String(t.ai_reason) },
     })),
-    // A project's overview and status brief; without a brief, its latest updates (whole ones only).
+    // A project's overview and its latest updates (whole ones only).
     projects: projects.map((p) => ({
       id: Number(p.id),
       name: String(p.name),
       overview: (p.overview as string) ?? '',
-      brief: (p.brief as string) || recentNotes(String(p.history), 400).join(' | '),
+      brief: recentNotes(String(p.history), 400).join(' | '),
       instructions: String(p.instructions),
     })),
     // A person's one-line brief; without one, their latest updates (whole ones only).
@@ -142,8 +142,12 @@ export const aiChangeText = (c: { delta: number; reason: string } | null) => (c 
 export const priorityChangeRule = (field: string, scope: string) =>
   `Also fill ${field}: each task's priority (0 to 100) comes from its due date, who asked and how long it's been idle. For ${scope} whose priority clearly misses something stated in the item, notes or updates (for example a stakeholder's deadline, a blocker for other work, or a request that's no longer wanted), give change: points to add, from -15 to 15, and reason: one short sentence on what the score misses. Skip tasks whose priority is about right. A task marked "AI change" already has one: give a new change to replace it, 0 to remove it, or skip it to keep it.`
 
+/** How "Where this stands" is written, shared by imports, the daily briefing and the Write button. */
+export const statusRule = (name: string, field = 'status') =>
+  `${field} is where it stands now, as 2 or 3 short bullets (under 20 words each, no bullet marks) that ${name} could paste into an email or chat to a manager or stakeholder: what's done, what's open or blocked and on whom, and the next date. Write it for them, not to ${name}: plain and factual, no "you", and only facts given in the notes, updates, dates or item. Never guess a date, owner or decision.`
+
 const nextActionRule = (name: string) => `
-Also fill next_actions: for each existing open task this item is about (one you propose a status_update, waiting_on or brief_update for, or that the item clearly moves forward), the single concrete step ${name} should take next. action is one sentence starting with a verb (for example "Send Dana the two budget options"); why is one short sentence on why, from the item and the task's updates. Use only task_id values from the open-task list, at most one per task. Skip tasks you propose to mark done, and leave next_actions empty if the item moves no existing task forward.
+Also fill next_actions: for each existing open task this item is about (one you propose a status_update, waiting_on or brief_update for, or that the item clearly moves forward), where it stands after this item and the single concrete step ${name} should take next. ${statusRule(name)} action is one sentence starting with a verb (for example "Send Dana the two budget options"). Use only task_id values from the open-task list, at most one per task. Skip tasks you propose to mark done, and leave next_actions empty if the item moves no existing task forward.
 
 ${priorityChangeRule('priority_changes', 'open tasks this item is about')} Use only task_id values from the open-task list, and skip tasks you propose to mark done.
 `

@@ -25,19 +25,13 @@ export interface Project {
   createdAt: string
   /** One or two sentences on what the project is, written by hand. */
   overview: string | null
-  /** A short status: where it stands, recent decisions, what's next, what's open. Written by the AI on request or by hand. */
-  brief: string | null
-  briefBy: 'ai' | 'user' | null
-  briefAt: string | null
 }
 
-/** What the UI sends to create (id 0) or update a project. The overview and brief are saved separately. */
+/** What the UI sends to create (id 0) or update a project. The overview is saved separately. */
 export type ProjectInput = Pick<Project, 'id' | 'name' | 'color' | 'status'>
 
 export interface ProjectSummary extends Project {
   openCount: number
-  /** Notes added to the project's history since the brief was written. */
-  newNotes: number
 }
 
 export interface Person {
@@ -483,7 +477,8 @@ export interface BriefingItem {
 }
 
 /** Where a suggested next action or priority adjustment came from. */
-export type NextActionOrigin = 'briefing' | 'import'
+/** What wrote a next action or priority change: a daily briefing, an import, or the user clicking Write (cards only). */
+export type NextActionOrigin = 'briefing' | 'import' | 'manual'
 
 /** Who made a change to a task, for its Activity log. */
 export type ChangeBy =
@@ -535,13 +530,15 @@ export interface PriorityAdjustment {
 }
 
 /**
- * A task's suggested next action: one sentence plus why. Written by the AI as part of a daily
- * briefing or an import, shown on the task's card only. It changes nothing.
+ * A task's "Where this stands" and suggested next action, always written together by the AI: on
+ * Write, as part of a daily briefing, or as part of an import. Shown on the task's card only; it
+ * changes nothing. A newer one replaces the whole card.
  */
 export interface NextAction {
   taskId: number
+  /** 2–3 short bullets on where the task stands, written so they can be shared. Empty for cards written before bullets existed. */
+  status: string[]
   action: string
-  why: string
   writtenAt: string
   /** The AI that wrote it, e.g. "Claude Opus 5.5". */
   writtenBy: string
@@ -550,6 +547,18 @@ export interface NextAction {
   originLabel: string | null
   dismissed: boolean
   /** Set when the task got an update dated after this was written, e.g. "Nov 15, 2026". */
+  staleSince: string | null
+}
+
+/** A project's "Where this stands" and one next step for the project as a whole. Written only when the user clicks Write. */
+export interface ProjectCard {
+  projectId: number
+  status: string[]
+  action: string
+  writtenAt: string
+  writtenBy: string
+  dismissed: boolean
+  /** Set when the project got an update dated after this was written. */
   staleSince: string | null
 }
 
@@ -643,7 +652,8 @@ export interface WeekListItem {
 }
 
 /** What a paid AI request was for. */
-export type UsagePurpose = 'import' | 'briefing' | 'weekly' | 'person_brief' | 'project_brief'
+/** project_brief is kept for spending recorded before project briefs were replaced by the status card. */
+export type UsagePurpose = 'import' | 'briefing' | 'weekly' | 'person_brief' | 'project_brief' | 'status'
 
 export const USAGE_PURPOSE_LABELS: Record<UsagePurpose, string> = {
   import: 'Imports',
@@ -651,6 +661,7 @@ export const USAGE_PURPOSE_LABELS: Record<UsagePurpose, string> = {
   weekly: 'Weekly reflections',
   person_brief: 'Person briefs',
   project_brief: 'Project briefs',
+  status: 'Where this stands',
 }
 
 /** Claude requests added up by purpose or by model. */

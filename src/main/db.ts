@@ -341,7 +341,47 @@ export const MIGRATIONS: Migration[] = [
   CREATE TABLE task_events_meta (started_at TEXT NOT NULL);
   INSERT INTO task_events_meta (started_at) VALUES (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
   `,
+  // "Where this stands": 2–3 bullets (a JSON array) written with each task's next action, and a
+  // card per project (written only when the user clicks Write). The why is no longer written; old
+  // rows keep theirs, unused, and start with no bullets.
+  `
+  ALTER TABLE next_actions ADD COLUMN status TEXT NOT NULL DEFAULT '[]';
+  CREATE TABLE project_cards (
+    project_id INTEGER PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    action TEXT NOT NULL,
+    written_at TEXT NOT NULL,
+    written_by TEXT NOT NULL,
+    dismissed INTEGER NOT NULL DEFAULT 0
+  );
+  `,
+  // The project brief is replaced by the project's card: each existing brief is kept as a dated
+  // update, so nothing is lost, and the brief columns are cleared (they stay, unused).
+  (db) => moveProjectBriefsToUpdates(db),
 ]
+
+/** Adds each project's status brief to the end of its Updates, dated when it was written, then clears it. */
+function moveProjectBriefsToUpdates(db: DatabaseSync): void {
+  const now = new Date().toISOString()
+  const rows = db
+    .prepare(
+      `SELECT p.id, p.brief, p.brief_at, b.summary FROM projects p
+       LEFT JOIN context_briefs b ON b.scope = 'project' AND b.owner_id = p.id
+       WHERE TRIM(IFNULL(p.brief, '')) <> ''`,
+    )
+    .all() as { id: number; brief: string; brief_at: string | null; summary: string | null }[]
+  const upsert = db.prepare(
+    `INSERT INTO context_briefs (scope, owner_id, summary, standing_instructions, updated_at) VALUES ('project', ?, ?, '', ?)
+     ON CONFLICT (scope, owner_id) DO UPDATE SET summary = excluded.summary, updated_at = excluded.updated_at`,
+  )
+  for (const r of rows) {
+    const at = r.brief_at ? new Date(r.brief_at) : new Date()
+    const line = `${noteStamp(Number.isNaN(at.getTime()) ? new Date() : at)}: Project brief (kept when briefs were removed): ${r.brief.replace(/\s+/g, ' ').trim()}`
+    const summary = (r.summary ?? '').trim()
+    upsert.run(r.id, summary ? `${summary}\n${line}` : line, now)
+  }
+  db.exec('UPDATE projects SET brief = NULL, brief_by = NULL, brief_at = NULL, brief_context = NULL')
+}
 
 /** Moves status updates and task standing instructions into each task's Updates (see the migration above). */
 function mergeTaskUpdates(db: DatabaseSync): void {

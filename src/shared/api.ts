@@ -9,6 +9,7 @@ import type {
   Briefing,
   BriefingListItem,
   NextAction,
+  ProjectCard,
   WeekListItem,
   WeeklyReview,
   ImportRequest,
@@ -57,9 +58,11 @@ export interface Api {
   'tasks.setStatus': (id: number, status: TaskStatus) => Task
   'tasks.delete': (id: number) => void
   'tasks.summary': () => TodaySummary
-  /** The task's suggested next action, or null if none has been written. */
+  /** The task's card (where it stands and the next step), or null if none has been written. */
   'tasks.nextAction': (taskId: number) => NextAction | null
-  /** Hides (true) or shows again (false) a task's suggested next action. */
+  /** Asks the selected AI for a new card for an open task, and saves it. Fails with a readable error for Basic. */
+  'tasks.writeStatus': (taskId: number) => NextAction
+  /** Hides (true) or shows again (false) a task's card. */
   'tasks.dismissNextAction': (taskId: number, dismissed: boolean) => NextAction | null
   /** Takes the AI's priority adjustment off a task. Returns the task with its score as it now is. */
   'tasks.removeAiAdjustment': (taskId: number) => Task
@@ -70,9 +73,12 @@ export interface Api {
   'projects.listArchived': () => ProjectSummary[]
   'projects.save': (project: ProjectInput) => Project
   'projects.saveOverview': (id: number, text: string) => Project
-  /** Asks the AI for a new status brief from the project's history. Changes nothing; the UI saves it with projects.saveBrief if kept. */
-  'projects.suggestBrief': (id: number) => BriefSuggestion
-  'projects.saveBrief': (id: number, text: string, by: 'ai' | 'user') => Project
+  /** The project's card (where it stands and one next step), or null if none has been written. */
+  'projects.card': (id: number) => ProjectCard | null
+  /** Asks the selected AI for a new card for the project, and saves it. Fails with a readable error for Basic. */
+  'projects.writeStatus': (id: number) => ProjectCard
+  /** Hides (true) or shows again (false) a project's card. */
+  'projects.dismissCard': (id: number, dismissed: boolean) => ProjectCard | null
   'projects.delete': (id: number) => void
   'people.list': () => PersonSummary[]
   'people.save': (person: PersonInput) => Person
@@ -171,6 +177,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'tasks.delete',
   'tasks.summary',
   'tasks.nextAction',
+  'tasks.writeStatus',
   'tasks.dismissNextAction',
   'tasks.removeAiAdjustment',
   'tasks.activity',
@@ -178,8 +185,9 @@ export const API_CHANNELS: ApiChannel[] = [
   'projects.listArchived',
   'projects.save',
   'projects.saveOverview',
-  'projects.suggestBrief',
-  'projects.saveBrief',
+  'projects.card',
+  'projects.writeStatus',
+  'projects.dismissCard',
   'projects.delete',
   'people.list',
   'people.save',

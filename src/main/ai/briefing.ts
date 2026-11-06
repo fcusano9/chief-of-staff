@@ -3,8 +3,8 @@ import type { BriefingItem } from '@shared/types'
 import { AiError } from './provider'
 import { cleanNextActions, type NextActionDraft } from '../services/next-actions'
 import { cleanAdjustments, type AdjustmentDraft } from '../services/priority-adjustments'
-import { aiChangeText, priorityChangeRule } from './context'
-import { PriorityChangeSchema } from './schema'
+import { aiChangeText, priorityChangeRule, statusRule } from './context'
+import { PriorityChangeSchema, StatusBulletsSchema } from './schema'
 
 /** An open task the briefing may pick as a top priority. */
 export interface BriefingTask {
@@ -78,7 +78,7 @@ const Pick = z.object({
 
 const PriorityPick = Pick.extend({
   next_action: z.string().describe('The one concrete next step: a short command starting with a verb, under 10 words'),
-  next_why: z.string().describe('Why that step, in one short sentence, from the facts given'),
+  next_status: StatusBulletsSchema,
 })
 
 export const BriefingSchema = z.object({
@@ -102,7 +102,7 @@ export function buildBriefingPrompt(input: BriefingInput): { system: string; use
 
 Fill in:
 - summary: one sentence, under 20 words, on what matters most today.
-- priorities: the 3 to 5 tasks from <open_tasks> that most deserve attention today, most important first. Always include every task marked OVERDUE. Each note is a short phrase, under 10 words, on why it matters today or what's left. Also give each one next_action: the single concrete step ${first} should take next, a short command starting with a verb, under 10 words (for example "Send Dana the two budget options"), and next_why: one short sentence on why that step, from the task's notes, updates and dates. Don't repeat the note.
+- priorities: the 3 to 5 tasks from <open_tasks> that most deserve attention today, most important first. Always include every task marked OVERDUE. Each note is a short phrase, under 10 words, on why it matters today or what's left. Also give each one next_status and next_action. ${statusRule(first, 'next_status')} next_action is the single concrete step ${first} should take next, a short command starting with a verb, under 10 words (for example "Send Dana the two budget options"). Don't repeat the note.
 - nudges: up to 3 items from <waiting_on> where a follow-up today is worth it, for example a long wait, a close deadline, or several follow-ups already. Each note says why, in a short phrase under 10 words. Leave it empty if nothing needs a nudge.
 - new_items: a short phrase, under 10 words, for each item in <new_since_last_briefing>, on what it is or why it matters.
 
@@ -186,7 +186,7 @@ export function assembleBriefing(
   const tasks = new Map(input.tasks.map((t) => [t.id, t]))
   const picked = new Map<number, string>()
   for (const p of raw.priorities) if (tasks.has(p.task_id) && !picked.has(p.task_id)) picked.set(p.task_id, tidy(p.note))
-  const next = new Map(cleanNextActions(raw.priorities.map((p) => ({ task_id: p.task_id, action: p.next_action, why: p.next_why })), new Set(tasks.keys())).map((n) => [n.taskId, n]))
+  const next = new Map(cleanNextActions(raw.priorities.map((p) => ({ task_id: p.task_id, action: p.next_action, status: p.next_status })), new Set(tasks.keys())).map((n) => [n.taskId, n]))
   const item = (t: BriefingTask, note: string): BriefingItem => ({
     taskId: t.id, title: t.title, who: null, note, overdueDays: t.overdueDays, kind: 'task',
     nextAction: next.get(t.id)?.action ?? null, due: t.due, projectColor: t.projectColor ?? null,
@@ -252,7 +252,7 @@ export function demoBriefing(input: BriefingInput): RawBriefing {
   return {
     summary,
     // Basic follows simple rules and can't judge a next step, so it suggests none.
-    priorities: top.map((t) => ({ task_id: t.id, note: t.overdueDays ? `Was due ${dueLabel(t.due!)}.` : (t.reason ?? ''), next_action: '', next_why: '' })),
+    priorities: top.map((t) => ({ task_id: t.id, note: t.overdueDays ? `Was due ${dueLabel(t.due!)}.` : (t.reason ?? ''), next_action: '', next_status: [] })),
     nudges: longWaits.map((w) => ({ task_id: w.id, note: `Waiting ${w.days} days${w.followUps ? `, followed up ${w.followUps} time${w.followUps === 1 ? '' : 's'}` : ''}.` })),
     new_items: [],
     priority_changes: [],

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BriefSuggestion, ProjectStatus, ProjectSummary, Task } from '@shared/types'
+import type { ProjectStatus, ProjectSummary, Task } from '@shared/types'
 import { PROJECT_COLORS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { ConfirmButton, SearchBox, TaskRow } from '../components/bits'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from '../components/UpdatesWindow'
 import { SplitView } from '../components/SplitView'
+import { StatusCard } from '../components/StatusCard'
 import { useAutosave } from '../components/useAutosave'
 import { useShortcutHints } from '../components/hints'
 import { useListKeys } from '../components/listKeys'
@@ -25,7 +26,6 @@ interface Draft {
   standingInstructions: string
 }
 
-const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
 export function ProjectsScreen() {
   const { projects, openTask, refresh, toast, version } = useApp()
@@ -136,7 +136,6 @@ export function ProjectsScreen() {
   useListKeys(shown.map((p) => p.id), selected, select)
   useShortcutHints([['↑ ↓', 'move'], ['↵', 'edit name'], ['/', 'search'], ['N', 'new task']])
 
-  const noteCount = history.split('\n').filter((l) => l.trim()).length
 
   const left = (
     <>
@@ -221,8 +220,7 @@ export function ProjectsScreen() {
         </div>
         {project && (
           <>
-            <div className="label" style={{ marginBottom: 4 }}>Project brief</div>
-            <ProjectBrief key={project.id} project={project} hasHistory={noteCount > 0} />
+            <StatusCard scope="project" id={project.id} />
             <div className="row" style={{ margin: '12px 0 4px' }}>
               <span className="label">Updates</span>
               <div className="spacer" />
@@ -281,8 +279,8 @@ export function ProjectsScreen() {
             </>
           }
           updates={history}
-          newCount={project.brief ? project.newNotes : 0}
-          hint="One update per line. The AI reads these when it writes the brief."
+          newCount={0}
+          hint="One update per line. The AI reads these when it writes where this project stands."
           empty={'No updates yet. Accepted "Project context" suggestions from imports land here, newest first.'}
           placeholder="Add an update, e.g. Launch moved to April"
           onChange={setHistory}
@@ -362,132 +360,3 @@ function ProjectOverview({ project }: { project: ProjectSummary }) {
   )
 }
 
-/**
- * The project's status brief. Regenerate asks the AI for a new one from the history, shown as a
- * suggestion to keep or discard; Edit rewrites it by hand. Either saves on its own, apart from
- * the project's Save button.
- */
-function ProjectBrief({ project, hasHistory }: { project: ProjectSummary; hasHistory: boolean }) {
-  const { refresh, toast } = useApp()
-  const [editing, setEditing] = useState<string | null>(null)
-  useShortcutHints(editing !== null ? [['Ctrl ↵', 'save'], ['Esc', 'cancel']] : null, 1)
-  const [suggestion, setSuggestion] = useState<BriefSuggestion | null>(null)
-  const [writing, setWriting] = useState(false)
-
-  const write = async () => {
-    setWriting(true)
-    setSuggestion(null)
-    setEditing(null)
-    try {
-      setSuggestion(await cos['projects.suggestBrief'](project.id))
-    } catch (err) {
-      toast(errorMessage(err), true)
-    } finally {
-      setWriting(false)
-    }
-  }
-  const keep = async (text: string, by: 'ai' | 'user') => {
-    try {
-      await cos['projects.saveBrief'](project.id, text, by)
-      setEditing(null)
-      setSuggestion(null)
-      toast('Brief updated')
-      refresh()
-    } catch (err) {
-      toast(errorMessage(err), true)
-    }
-  }
-  const byline = project.brief && project.briefAt ? `${project.briefBy === 'ai' ? 'Written by AI' : 'Edited by you'} on ${dayLabel(project.briefAt)}` : null
-
-  return (
-    <div style={{ marginBottom: 14 }}>
-      {editing !== null ? (
-        <>
-          <textarea
-            className="inp"
-            aria-label="Project brief"
-            autoFocus
-            rows={6}
-            style={{ fontSize: 'var(--fs)', minHeight: 130 }}
-            value={editing}
-            placeholder="Where the project stands, recent decisions, what's next, what's open"
-            onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)}
-            onChange={(e) => setEditing(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault()
-                void keep(editing, 'user')
-              } else if (e.key === 'Escape') {
-                setEditing(null)
-              }
-            }}
-          />
-          <div className="row" style={{ marginTop: 6 }}>
-            <button className="btn primary" onClick={() => void keep(editing, 'user')}>
-              Save
-            </button>
-            <button className="btn ghost" onClick={() => setEditing(null)}>
-              Cancel
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div data-brief className="brief-box">
-            {project.brief ?? (
-              <span className="faint">
-                No brief yet.{' '}
-                {hasHistory ? 'Click Write brief, or Edit to write one yourself.' : 'Imports add updates as you accept them in Review. You can also Edit to write one yourself.'}
-              </span>
-            )}
-          </div>
-          <div className="row" style={{ marginTop: 4, flexWrap: 'wrap' }}>
-            {byline && <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{byline}</span>}
-            {project.brief && project.newNotes > 0 && (
-              <span className="note">
-                {project.newNotes} new update{project.newNotes === 1 ? '' : 's'} since this brief
-              </span>
-            )}
-            <div className="spacer" />
-            <button
-              className="btn ghost sm"
-              onClick={() => {
-                setSuggestion(null)
-                setEditing(project.brief ?? '')
-              }}
-            >
-              Edit
-            </button>
-            {hasHistory && (
-              <button className="btn sm" disabled={writing} onClick={() => void write()}>
-                {writing ? 'Writing…' : project.brief ? '✦ Regenerate' : '✦ Write brief'}
-              </button>
-            )}
-          </div>
-        </>
-      )}
-      {suggestion && (
-        <div className="ai" style={{ marginTop: 8 }}>
-          <div className="row" style={{ marginBottom: 4 }}>
-            <span className="label">Suggested brief</span>
-            <div className="spacer" />
-            <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{suggestion.writtenBy}</span>
-          </div>
-          <div style={{ fontSize: 'var(--fs)', whiteSpace: 'pre-wrap' }}>{suggestion.text}</div>
-          <div className="row" style={{ marginTop: 8 }}>
-            <button className="btn primary" onClick={() => void keep(suggestion.text, 'ai')}>
-              Keep
-            </button>
-            <button className="btn ghost" onClick={() => setSuggestion(null)}>
-              Discard
-            </button>
-            <div className="spacer" />
-            <button className="btn ghost" disabled={writing} onClick={() => void write()}>
-              Try again
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}

@@ -36,8 +36,8 @@ class Fake implements AiProvider {
   async writePersonBrief() {
     return ''
   }
-  async writeProjectBrief() {
-    return ''
+  async writeStatus() {
+    return { status: ['Done.'], action: 'Do it.' }
   }
   async writeBriefing() {
     return this.o.briefing ?? { summary: 'S', priorities: [], nudges: [], new_items: [], priority_changes: [] }

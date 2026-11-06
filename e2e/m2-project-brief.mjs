@@ -1,6 +1,6 @@
-// Projects: the hand-written overview (pencil, Esc, Ctrl+Enter), the AI status brief (Write brief
-// with Basic, Keep, the "new notes" hint, Edit) and the Updates window (newest first, new
-// notes marked, Add, Edit, Esc).
+// Projects: the hand-written overview (pencil, Esc, Ctrl+Enter), the "Where this stands" card
+// (no brief any more; Write is off with Basic, with a Settings link) and the Updates window
+// (newest first, new notes marked, Add, Edit, Esc).
 import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -30,7 +30,7 @@ try {
   await app.waitFor('.pane.right .title-inp')
   await app.click('.pane.right .title-inp')
   await app.type('Q1 roadmap')
-  check('a new project has no overview, brief or updates yet', !(await app.eval(`return !!document.querySelector('[data-overview], [data-brief]')`)))
+  check('a new project has no overview, card or updates yet', !(await app.eval(`return !!document.querySelector('[data-overview], [data-testid="status-card"]')`)))
   await app.clickText('Save', '.pane.right button')
   await app.waitFor('.pane.left .r')
   await app.sleep(300)
@@ -47,7 +47,7 @@ try {
 
   // Overview: pencil opens the editor; Esc cancels; Ctrl+Enter saves
   await app.click('.pane.right .title-inp')
-  await app.type(' 2027') // unsaved name edit that must survive saving the overview and brief
+  await app.type(' 2027') // unsaved name edit that must survive saving the overview
   await app.click('button[aria-label="Edit overview"]')
   await app.waitFor('textarea[aria-label="Overview"]')
   check('pencil opens a focused editor', await app.eval(`return document.activeElement === document.querySelector('textarea[aria-label="Overview"]')`))
@@ -64,21 +64,14 @@ try {
   const listSub = await app.eval(`return [...document.querySelectorAll('.pane.left .r')].find(r => r.textContent.startsWith('Spring')).querySelector('.ttl .faint')?.textContent`)
   check('overview shown under the name in the list', listSub === 'Moving dealers to a four-tier pricing model for the spring launch.', listSub)
 
-  // Brief: write with Basic, keep it
-  check('no brief yet', (await text(app, '[data-brief]')).startsWith('No brief yet'))
+  // The card replaces the brief. With Basic, Write is off and the note links to Settings.
+  check('no project brief any more', !(await text(app, '.pane.right')).includes('Project brief') && !(await app.eval(`return !!document.querySelector('[data-brief]')`)))
+  const card = await text(app, '.pane.right [data-testid="status-card"]')
+  check('card says to pick an AI model, with a Settings link', card.includes('Where this stands and next step') && card.includes('Select an AI model in Settings to use this feature.'), card)
+  check('Write is off with Basic', await app.eval(`return [...document.querySelectorAll('.pane.right [data-testid="status-card"] button')].find(b => b.textContent.includes('Write')).disabled`))
   check('Updates button shows the count', (await app.eval(`return [...document.querySelectorAll('.pane.right button')].find(b => b.textContent.startsWith('Updates')).textContent.replace(/\\s+/g, ' ')`)) === 'Updates 2')
   check('Latest card shows the newest update', !!(await app.eval(`return document.querySelector('.pane.right [data-latest]')`)))
-  await app.clickText('Write brief', '.pane.right button')
-  await app.waitFor('.pane.right .ai')
-  const suggested = await text(app, '.pane.right .ai')
-  check('suggested brief shown with its writer', suggested.includes('Northwind AV pilots the tiers from Dec 1.') && suggested.includes('Next: Send pricing deck.') && suggested.includes('Basic'), suggested)
-  check('nothing saved before Keep', (await project(app)).brief === null)
-  await app.screenshot(join(shots, 'm2-project-brief-01-suggested.png'))
-  await app.clickText('Keep', '.pane.right .ai button')
-  await app.sleep(400)
-  const kept = await text(app, '[data-brief]')
-  check('kept brief shown on separate lines', kept.includes('Next: Send pricing deck.') && (await app.eval(`return document.querySelector('[data-brief]').innerText.split('\\n').length`)) === 3, kept)
-  check('byline says written by AI', (await text(app, '.pane.right')).includes('Written by AI on'))
+  await app.screenshot(join(shots, 'm2-project-brief-01-card.png'))
   check('unsaved name edit survives', (await app.eval(`return document.querySelector('.pane.right .title-inp').value`)) === 'Spring pricing launch 2027')
 
   // Updates window: newest first, add a note, new-note marks and hint
@@ -112,7 +105,6 @@ try {
   await app.key('Escape')
   await app.sleep(200)
   check('Esc closes the window', !(await app.eval(`return !!document.querySelector('.dialog')`)))
-  check('new notes hint', (await text(app, '.pane.right')).includes('2 new updates since this brief'))
 
   // Save keeps the history and saves the name and instructions
   await app.clickText('Save', '.pane.right button')
@@ -120,22 +112,10 @@ try {
   const saved = await app.eval(`const p = (await window.cos['projects.list']()).find(p => p.name === 'Spring pricing launch 2027'); return { p, b: await window.cos['briefs.get']('project', p.id) }`)
   check('Save keeps the history added in the window', saved.b.summary.split('\n').length === 4 && saved.b.standingInstructions === 'Always cc Priya.', JSON.stringify(saved.b))
 
-  // Edit the brief by hand
-  await app.clickText('Edit', '.pane.right button')
-  await app.waitFor('textarea[aria-label="Project brief"]')
-  await app.eval(`const t = document.querySelector('textarea[aria-label="Project brief"]'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); return true`)
-  await app.type(' EMEA matches in euros.')
-  await app.key('Enter', { ctrl: true })
+  // The card's Settings link (shown with Basic) opens Settings.
+  await app.clickText('Settings', '.pane.right [data-testid="status-card"] button')
   await app.sleep(400)
-  const right = await text(app, '.pane.right')
-  check('hand edit saved, hint cleared', right.includes('EMEA matches in euros.') && right.includes('Edited by you on') && !right.includes('since this brief'))
-  await app.screenshot(join(shots, 'm2-project-brief-03-edited.png'))
-
-  // A project with no history can't ask the AI
-  await app.clickText('Q1 roadmap', '.pane.left .r')
-  await app.waitFor('[data-brief]')
-  await app.sleep(300)
-  check('no history, no Write brief', !(await text(app, '.pane.right')).includes('Write brief'))
+  check('the Settings link opens Settings', !!(await app.eval(`return document.getElementById('ai-providers')`)))
   check('no renderer errors', app.errors.length === 0, app.errors.join(' | '))
 } catch (e) {
   results.push(`ERROR  ${e.stack}`)

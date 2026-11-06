@@ -146,7 +146,6 @@ body.resizing { cursor: col-resize; user-select: none; }
 .ov-text { cursor: text; }
 .pencil { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 3px 4px; border-radius: 4px; line-height: 0; flex: none; }
 .pencil:hover { color: var(--text); background: var(--hover); }
-.brief-box { white-space: pre-wrap; font-size: var(--fs); line-height: 1.55; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--bg); }
 .check { display: flex; gap: 8px; align-items: center; padding: calc(var(--field-py) - 1px) 0; }
 .check input[type='text'] { border: 0; background: none; outline: 0; flex: 1; padding: 2px 0; }
 .box { width: 15px; height: 15px; border: 1.5px solid var(--border-strong); border-radius: 4px; display: grid; place-items: center; font-size: 10px; background: none; cursor: pointer; padding: 0; color: #fff; flex: none; }
@@ -287,15 +286,22 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .latest:hover { background: var(--hover); }
 /* About 6 lines at every density. textarea.inp sets a smaller min-height, so this needs the same weight. */
 textarea.notes-inp { min-height: calc(var(--fs) * 1.5 * 6 + var(--inp-py) * 2 + 2px); }
-/* The task's suggested next action (NextActionCard). */
+/* "Where this stands" and the next step, on tasks and projects (StatusCard). */
 .next-action { margin-bottom: 12px; }
 .next-action.empty-next { border: 1px solid var(--border); border-radius: 8px; padding: calc(var(--card-py) - 2px) calc(var(--card-px) - 2px); }
 .next-head { font-size: var(--fs-sm); color: var(--accent); gap: 6px; }
-.next-head .btn.sm { padding: 0 6px; color: var(--muted); }
-.next-text { margin: 2px 0; }
-.next-why { color: var(--muted); font-size: var(--fs-sm); }
+.empty-next .next-head { color: var(--muted); }
+.next-head .btn.ghost.sm, .next-sh .btn.ghost.sm { padding: 0 6px; color: var(--muted); font-weight: 400; }
+.next-head .next-write { padding: 1px 9px; font-size: var(--fs-sm); }
+.next-hint { color: var(--muted); font-size: var(--fs-sm); margin-top: 4px; }
+.next-sec { margin-top: 8px; }
+.next-sec + .next-sec { border-top: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); padding-top: 8px; }
+.next-sh { gap: 4px; font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.next-bullets { margin: 3px 0 0; padding-left: 18px; }
+.next-bullets li { margin: 1px 0; }
+.next-text { margin: 3px 0 1px; }
 .next-meta { color: var(--faint); font-size: var(--fs-xs); margin-top: 4px; }
-.next-meta .stale { color: var(--warn); }
+.next-meta.stale { color: var(--warn); }
 .ai-adj { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-strong); font-size: var(--fs-sm); }
 .ai-adj.off { opacity: 0.55; }
 .ai-adj-h { color: var(--accent); }

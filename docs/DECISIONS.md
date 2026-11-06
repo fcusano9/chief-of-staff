@@ -2,6 +2,16 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-06 · "Where this stands" joins the next action; the project brief goes (Frank)
+Frank's choices, asked up front (mockup `design/status-and-next.html`, approved after several rounds):
+- **One card, two parts:** "Where this stands" (2–3 short bullets, written for others, ready to paste to a manager) and the suggested next action. Instead of AI status updates going to Review, the roadmap item became this card: shown where you clicked, copy from it, nothing saved.
+- **Always written together**, whatever writes them: the new Write button, a daily briefing, or an import. Frank changed this from "button only" after the first mockup.
+- **Tasks and projects.** Projects get one step for the project as a whole, and are written only on Write for now (Frank: "leave the project manual only").
+- **Removed from the card at Frank's request:** Edit and Save as update; the "why" under the next action (the bullets cover it); the date, model and source line. Only an amber out-of-date note remains.
+- **Basic:** Write is greyed out with "Select an AI model in Settings to use this feature", Settings as a link.
+- **The project brief is removed.** Frank chose to drop it rather than keep both. Each existing brief is saved as a dated update when the app upgrades, so nothing is lost.
+- **Decided while building:** Write isn't offered on done tasks; it refuses when there's nothing to go on; with Basic selected, an existing card still shows, with Refresh greyed out; old next actions keep their step with no bullets. Limits sent on Write (Notes 1,000, updates 1,500, Activity 20 lines, 40 open project tasks) were proposed in the mockup and not changed.
+
 ### 2026-11-05 · Task Activity log, and pushed-back dates in weekly Slipping (Frank)
 Frank's choices, asked up front (mockup `design/task-activity.html`, approved):
 - **Recorded:** created; status (Open, Waiting on whom, Done, Reopened); due date set, moved or removed; project; asked by; title; priority set or cleared by hand; follow-ups; AI priority changes added, replaced or removed. Not recorded: notes, subtasks, updates (they have their own window) and the score's daily recalculation.

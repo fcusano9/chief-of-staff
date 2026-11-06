@@ -1,9 +1,10 @@
 import { BASIC_LABEL } from '@shared/types'
-import type { PersonBriefInput, ProjectBriefInput } from './brief'
+import type { PersonBriefInput } from './brief'
+import type { RawStatus, StatusInput } from './status'
 import { demoBriefing, type BriefingInput, type RawBriefing } from './briefing'
 import { demoReflection, type RawReflection, type WeeklyInput } from './weekly'
 import type { ExtractionContext, SourceForExtraction } from './context'
-import type { AiCallLog, AiProvider } from './provider'
+import { AiError, type AiCallLog, type AiProvider } from './provider'
 import type { RawExtraction, RawSuggestion } from './schema'
 
 const STOP = new Set(['the', 'and', 'for', 'with', 'from', 'into', 'that', 'this', 'about', 'review', 'send', 'draft', 'update', 'new'])
@@ -139,13 +140,9 @@ export class DemoProvider implements AiProvider {
     return `${input.name}${who ? `, ${who}` : ''}.${fact ? ` ${fact[0]!.toUpperCase()}${fact.slice(1)}.` : ''}`
   }
 
-  /** The two newest history notes, then the first open tasks as next steps. */
-  async writeProjectBrief(input: ProjectBriefInput): Promise<string> {
-    const notes = input.history.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('(older notes'))
-    // Notes from Review look like 'Nov 2, 2026: text (from “Title”)'.
-    const facts = notes.slice(-2).map((l) => l.replace(/\s*\(from “[^”]*”\)$/, '').replace(/[.!]*$/, '.'))
-    const next = input.tasks.slice(0, 2).map((t) => t.replace(/ \([^)]*\)$/, ''))
-    return [facts.join(' '), `Next: ${next.length ? next.join('; ') : 'nothing recorded'}.`, 'Open: nothing recorded.'].join('\n')
+  /** Basic can't summarize, so the Write button is off while it's selected. */
+  async writeStatus(_input: StatusInput): Promise<RawStatus> {
+    throw new AiError('Select an AI model in Settings to use this feature.')
   }
 
   /** Overdue and highest-priority tasks, and waits of 5 days or more, by fixed rules. */

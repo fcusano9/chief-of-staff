@@ -35,8 +35,8 @@ class LoggingFake implements AiProvider {
   async writePersonBrief() {
     return ''
   }
-  async writeProjectBrief() {
-    return ''
+  async writeStatus() {
+    return { status: ['Done.'], action: 'Do it.' }
   }
   async writeBriefing() {
     return { summary: '', priorities: [], nudges: [], new_items: [], priority_changes: [] }

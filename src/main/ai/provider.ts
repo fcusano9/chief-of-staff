@@ -1,4 +1,5 @@
-import type { PersonBriefInput, ProjectBriefInput } from './brief'
+import type { PersonBriefInput } from './brief'
+import type { RawStatus, StatusInput } from './status'
 import type { BriefingInput, RawBriefing } from './briefing'
 import type { RawReflection, WeeklyInput } from './weekly'
 import type { ExtractionContext, SourceForExtraction } from './context'
@@ -20,8 +21,8 @@ export interface AiProvider {
   extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawExtraction>
   /** One or two sentences on who a person is and what they do. Proposed only; the caller saves it if kept. */
   writePersonBrief(input: PersonBriefInput, log?: AiCallLog): Promise<string>
-  /** A short status brief for a project, from its history and open tasks. Proposed only; the caller saves it if kept. */
-  writeProjectBrief(input: ProjectBriefInput, log?: AiCallLog): Promise<string>
+  /** A task's or project's card: "Where this stands" bullets and the next step. The caller tidies and saves it (cleanStatusCard). */
+  writeStatus(input: StatusInput, log?: AiCallLog): Promise<RawStatus>
   /** The daily briefing's summary and picks from the tasks given. The caller checks the ids (assembleBriefing). */
   writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing>
   /** The weekly review's reflection: a summary and short points. Text only; the caller tidies it (assembleReflection). */
