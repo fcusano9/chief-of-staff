@@ -131,7 +131,7 @@ export class DemoProvider implements AiProvider {
     return out
   }
 
-  /** "Alex Rivera, Training manager at Fabrikam. Owns the Q2 certification courses." from role, company and the newest note. */
+  /** "Alex Rivera, Training manager at Stark Industries. Owns the Q2 certification courses." from role, company and the newest note. */
   async writePersonBrief(input: PersonBriefInput): Promise<string> {
     const who = [input.role, input.company ? `${input.role ? 'at ' : ''}${input.company}` : null].filter(Boolean).join(' ')
     const newest = input.history.split('\n').map((l) => l.trim()).filter(Boolean).pop() ?? ''

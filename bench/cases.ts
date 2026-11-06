@@ -188,10 +188,10 @@ Alex`,
     name: 'Newsletter with nothing to do',
     source: {
       kind: 'email',
-      title: 'Fabrikam Insider, November',
+      title: 'Stark Industries Insider, November',
       fromName: 'Internal Comms',
       occurredAt: at,
-      content: `Fabrikam Insider, November edition
+      content: `Stark Industries Insider, November edition
 
 This month we're celebrating another year of innovation. Join the webinar series on hospitality solutions, read the spotlight on our campus garden, and see photos from the Halloween costume contest. Congratulations to the support team for record customer satisfaction scores in Q3.`,
     },
@@ -415,7 +415,7 @@ IT Director, Lakeside Hotels`,
       content: `Voice control partner call
 Attendees: Frank Cusano, Mei Chen (Partner engineer, Acme Voice), Kenji Mori
 
-Mei Chen: We'd like to start the voice control integration with you: Acme Voice commands controlling Fabrikam rooms, targeting a beta next summer.
+Mei Chen: We'd like to start the voice control integration with you: Acme Voice commands controlling Stark Industries rooms, targeting a beta next summer.
 Frank Cusano: Great. I'll write the requirements doc for the voice control integration by November 13.
 Mei Chen: I'll get you SDK access by the end of this week.
 Kenji Mori: Firmware can support it once we see the SDK.
