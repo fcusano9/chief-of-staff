@@ -468,6 +468,12 @@ export interface BriefingItem {
   kind: 'task' | 'waiting' | 'review'
   /** Top priorities only: the next action the AI suggested for the task (also saved on its card). */
   nextAction?: string | null
+  /** The task's due date ('YYYY-MM-DD') when the briefing was written, for its tag. Missing on older briefings. */
+  due?: string | null
+  /** Waiting-on items: days waited when the briefing was written. */
+  waitingDays?: number | null
+  /** The task's project color when the briefing was written; null for no project. Missing on older briefings. */
+  projectColor?: string | null
 }
 
 /** Where a suggested next action or priority adjustment came from. */

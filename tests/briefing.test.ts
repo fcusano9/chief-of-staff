@@ -85,8 +85,8 @@ describe('briefing: checking what the AI picked', () => {
     // The AI left out the overdue task; it's added, first, with a factual note.
     expect(b.priorities.map((p) => p.taskId)).toEqual([2, 1])
     expect(b.priorities[0]).toMatchObject({ overdueDays: 1, note: 'Was due Tue, Nov 3.' })
-    expect(b.priorities[1]).toMatchObject({ overdueDays: null, note: 'Due today.' })
-    expect(b.nudges).toEqual([{ taskId: 10, title: 'Signed pilot agreement', who: 'Northwind AV', note: '8 days with no reply.', overdueDays: null, kind: 'waiting' }])
+    expect(b.priorities[1]).toMatchObject({ overdueDays: null, note: 'Due today.', due: '2026-11-04' })
+    expect(b.nudges).toEqual([{ taskId: 10, title: 'Signed pilot agreement', who: 'Northwind AV', note: '8 days with no reply.', overdueDays: null, kind: 'waiting', waitingDays: 8, projectColor: null }])
   })
 
   it("keeps the AI's note on an overdue task it did pick", () => {
@@ -97,9 +97,29 @@ describe('briefing: checking what the AI picked', () => {
   it('lists everything new, with a plain note when the AI wrote none, and a Review line', () => {
     const b = assembleBriefing(input({ newReviewCount: 3 }), { summary: 'S', priorities: [], nudges: [], new_items: [{ task_id: 42, note: 'Not new.' }], priority_changes: [] })
     expect(b.newItems).toEqual([
-      { taskId: 3, title: 'Pick a training platform', who: null, note: 'Added Nov 4, 8:00 AM.', overdueDays: null, kind: 'task' },
+      { taskId: 3, title: 'Pick a training platform', who: null, note: 'Added Nov 4, 8:00 AM.', overdueDays: null, kind: 'task', projectColor: null },
       { taskId: null, title: '3 suggestions in Review', who: null, note: 'Waiting for you to accept or reject.', overdueDays: null, kind: 'review' },
     ])
+  })
+
+  it('keeps each item\'s project color, due date and days waited for its tag', () => {
+    const tasks = input().tasks.map((t) => (t.id === 1 ? { ...t, projectColor: '#378ADD' } : t))
+    const waiting = input().waiting.map((w) => ({ ...w, projectColor: '#D85A30' }))
+    const newTasks = input().newTasks.map((n) => ({ ...n, projectColor: '#1D9E75' }))
+    const b = assembleBriefing(input({ tasks, waiting, newTasks }), {
+      summary: 'S', priorities: [{ task_id: 1, note: 'a', next_action: 'Send the deck', next_status: ['b'] }],
+      nudges: [{ task_id: 10, note: 'c' }], new_items: [], priority_changes: [],
+    })
+    expect(b.priorities.find((p) => p.taskId === 1)).toMatchObject({ projectColor: '#378ADD', due: '2026-11-04', nextAction: 'Send the deck' })
+    expect(b.priorities.find((p) => p.taskId === 2)).toMatchObject({ projectColor: null, due: '2026-11-03' })
+    expect(b.nudges[0]).toMatchObject({ projectColor: '#D85A30', waitingDays: 8 })
+    expect(b.newItems[0]).toMatchObject({ projectColor: '#1D9E75' })
+  })
+
+  it('asks for short wording', () => {
+    const { system } = buildBriefingPrompt(input())
+    expect(system).toContain('under 20 words')
+    expect(system).toContain('a short command starting with a verb, under 10 words')
   })
 
   it('caps the new list', () => {
@@ -196,7 +216,7 @@ describe('briefing: saving and history', () => {
 
     const b = await briefings.write()
     expect(b.newItems).toEqual([
-      { taskId: before.id, title: 'Pilot agreement', who: 'Northwind AV', note: 'Now waiting on Northwind AV.', overdueDays: null, kind: 'waiting' },
+      { taskId: before.id, title: 'Pilot agreement', who: 'Northwind AV', note: 'Now waiting on Northwind AV.', overdueDays: null, kind: 'waiting', projectColor: null },
       { taskId: null, title: '2 suggestions in Review', who: null, note: 'Waiting for you to accept or reject.', overdueDays: null, kind: 'review' },
     ])
   })

@@ -52,7 +52,7 @@ Status: ✅ built · 🟡 approved, not built yet
 |---|---|
 | ✅ When | Only when the user clicks Write briefing or Refresh, or uses Ctrl+K. No schedule yet. |
 | ✅ Sent | The top **25 open tasks** by priority (every overdue task, even past 25), **20 waiting-on items**, and what's new since the last briefing. |
-| ✅ Output | A one-line summary; **3 to 5** top priorities (every overdue task, first, even if the AI skipped it); up to **3** waiting-on nudges; up to **8** new items, plus a Review line. |
+| ✅ Output | Short wording: a summary under **20 words**, notes and next steps under **10**. A one-line summary; **3 to 5** top priorities (every overdue task, first, even if the AI skipped it); up to **3** waiting-on nudges; up to **8** new items, plus a Review line. |
 | ✅ Status cards | Where it stands and the next step for each top priority (the next step is also shown under the item), saved on the task's card. |
 | ✅ Priority adjustment | For any of the tasks it was sent, listed or not. See Priority adjustment below. |
 | ✅ Kept | Every briefing; the AI log for the newest **5**. |
