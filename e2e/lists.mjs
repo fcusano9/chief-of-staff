@@ -24,7 +24,7 @@ try {
     const p = await window.cos['projects.save']({ id: 0, name: 'Pricing refresh', color: '#D85A30', status: 'active' });
     await window.cos['projects.save']({ id: 0, name: 'Partner portal', color: '#378ADD', status: 'active' });
     await window.cos['projects.save']({ id: 0, name: 'CES 2026 booth', color: '#639922', status: 'archived' });
-    await window.cos['people.save']({ id: 0, name: 'Dana Lee', role: 'VP, Product', company: 'Crestron', email: null, priorityWeight: 5 });
+    await window.cos['people.save']({ id: 0, name: 'Dana Lee', role: 'VP, Product', company: 'Stark Industries', email: null, priorityWeight: 5 });
     await window.cos['people.save']({ id: 0, name: 'Jordan Kim', role: 'Owner', company: 'Northwind AV', email: null, priorityWeight: 2 });
     const t = (o) => window.cos['tasks.save']({ id: 0, title: 'Task', notes: null, status: 'open', dueDate: null, projectId: null, requesterId: null, priorityOverride: null, followUpCount: 0, waitingOn: null, subtasks: [], ...o });
     await t({ title: 'Send price list to Munich', projectId: p.id });

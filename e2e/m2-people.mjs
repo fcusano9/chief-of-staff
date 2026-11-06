@@ -21,7 +21,7 @@ let app = await launch({ appDir, dataDir })
 try {
   await app.eval(`
     const save = (name, role, company, w) => window.cos['people.save']({id:0,name,role,company,email:null,priorityWeight:w});
-    const dana = await save('Dana Lee', 'VP, Product', 'Crestron', 5);
+    const dana = await save('Dana Lee', 'VP, Product', 'Stark Industries', 5);
     await save('Jordan Kim', 'Account manager', 'Northwind AV', 3);
     await window.cos['briefs.save']({scope:'person',ownerId:dana.id,summary:'Nov 2, 2026: Approved the four-tier pricing model. (from “Pricing sync”)',standingInstructions:'',updatedAt:null});
     const t = (o) => window.cos['tasks.save']({id:0,title:'Task',notes:null,status:'open',dueDate:null,projectId:null,requesterId:null,priorityOverride:null,followUpCount:0,waitingOn:null,subtasks:[],...o});
@@ -41,7 +41,7 @@ try {
   check('three people listed', (await rows(app)).length === 3, JSON.stringify(await rows(app)))
 
   const sub = await app.eval(`return document.querySelector('.pane.left .r .ttl .faint').textContent`)
-  check('list shows role and company', sub === 'VP, Product · Crestron', sub)
+  check('list shows role and company', sub === 'VP, Product · Stark Industries', sub)
 
   // Filters
   await app.eval(setSelect('.pane.left select', 'Northwind AV'))
@@ -72,12 +72,12 @@ try {
   await app.clickText('Write brief', '.pane.right button')
   await app.waitFor('.pane.right .ai')
   const suggested = await app.eval(`return document.querySelector('.pane.right .ai').textContent`)
-  check('suggested brief shown with its writer', suggested.includes('Dana Lee, VP, Product at Crestron. Approved the four-tier pricing model.') && suggested.includes('Basic'), suggested)
+  check('suggested brief shown with its writer', suggested.includes('Dana Lee, VP, Product at Stark Industries. Approved the four-tier pricing model.') && suggested.includes('Basic'), suggested)
   check('nothing saved before Keep', (await app.eval(`return (await window.cos['people.list']()).find(p => p.name === 'Dana Lee').brief`)) === null)
   await app.screenshot(join(shots, 'm2-people-02-suggested.png'))
   await app.clickText('Keep', '.pane.right .ai button')
   await app.sleep(400)
-  check('kept brief shown', (await briefText(app)) === 'Dana Lee, VP, Product at Crestron. Approved the four-tier pricing model.', await briefText(app))
+  check('kept brief shown', (await briefText(app)) === 'Dana Lee, VP, Product at Stark Industries. Approved the four-tier pricing model.', await briefText(app))
   check('byline says written by AI', (await rightText(app)).includes('Written by AI on'))
   check('unsaved edits survive keeping a brief', (await app.eval(`return document.querySelector('.pane.right input[placeholder="e.g. VP, Product"]').value`)) === 'VP, Product and Design')
 
@@ -106,7 +106,7 @@ try {
   check('edit box focused', await app.eval(`return document.activeElement === document.querySelector('textarea[aria-label="Brief"]')`))
   await app.type(' Typo')
   await app.key('Escape')
-  check('Esc cancels the edit', (await briefText(app)) === 'Dana Lee, VP, Product at Crestron. Approved the four-tier pricing model.')
+  check('Esc cancels the edit', (await briefText(app)) === 'Dana Lee, VP, Product at Stark Industries. Approved the four-tier pricing model.')
   await app.clickText('Edit', '.pane.right button')
   await app.waitFor('textarea[aria-label="Brief"]')
   await app.type(' Wants Finance to review pricing first.')
