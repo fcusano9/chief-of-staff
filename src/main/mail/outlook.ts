@@ -35,12 +35,23 @@ export interface OutlookMailbox {
   messages: OutlookMessage[]
 }
 
+/** Who a reply would go to: names and addresses as Outlook shows them, separated by semicolons. */
+export interface ReplyRecipients {
+  subject: string
+  reply: { to: string; cc: string }
+  replyAll: { to: string; cc: string }
+}
+
 /** Where mail comes from: classic Outlook, or a fixture file in tests. */
 export interface OutlookReader {
   /** Received mail (Inbox and subfolders) and sent mail since `since`. */
   list(since: Date): Promise<OutlookMailbox>
   /** Shows one message in Outlook. */
   open(entryId: string, storeId: string): Promise<void>
+  /** Who Reply and Reply all would go to. Nothing is saved. */
+  recipients(entryId: string, storeId: string): Promise<ReplyRecipients>
+  /** Saves a reply (text above the quoted thread) to Outlook Drafts. Never sends. Returns the draft's ids. */
+  saveReply(entryId: string, storeId: string, replyAll: boolean, body: string): Promise<{ entryId: string; storeId: string }>
 }
 
 /** Errors with a message that is safe to show as-is, like "Outlook isn't running". */
@@ -58,6 +69,23 @@ export class PowerShellOutlook implements OutlookReader {
 
   async open(entryId: string, storeId: string): Promise<void> {
     await this.run(['-Action', 'open', '-EntryId', entryId, '-StoreId', storeId])
+  }
+
+  async recipients(entryId: string, storeId: string): Promise<ReplyRecipients> {
+    const r = (await this.run(['-Action', 'recipients', '-EntryId', entryId, '-StoreId', storeId])) as Partial<ReplyRecipients>
+    const pair = (p?: { to?: string; cc?: string }) => ({ to: String(p?.to ?? ''), cc: String(p?.cc ?? '') })
+    return { subject: String(r.subject ?? ''), reply: pair(r.reply), replyAll: pair(r.replyAll) }
+  }
+
+  async saveReply(entryId: string, storeId: string, replyAll: boolean, body: string): Promise<{ entryId: string; storeId: string }> {
+    const bodyPath = join(tmpdir(), `cos-outlook-${randomUUID()}.txt`)
+    writeFileSync(bodyPath, body.replace(/\r?\n/g, '\r\n'), 'utf8')
+    try {
+      const r = await this.run(['-Action', 'reply', '-EntryId', entryId, '-StoreId', storeId, '-BodyFile', bodyPath, ...(replyAll ? ['-ReplyAll'] : [])])
+      return { entryId: String(r.entryId ?? ''), storeId: String(r.storeId ?? '') }
+    } finally {
+      rmSync(bodyPath, { force: true })
+    }
   }
 
   private async run(args: string[]): Promise<Record<string, unknown>> {
@@ -90,16 +118,46 @@ export class PowerShellOutlook implements OutlookReader {
   }
 }
 
-/** Test data instead of Outlook (COS_OUTLOOK_FIXTURE, only for test data folders). Opening does nothing. */
+/**
+ * Test data instead of Outlook (COS_OUTLOOK_FIXTURE, only for test data folders). Opening does
+ * nothing; recipients come from the fixture message; saved replies are kept in `saved` (and, in
+ * the app, written next to the fixture as <fixture>.drafts.json so e2e can check them).
+ */
 export class FixtureOutlook implements OutlookReader {
-  constructor(private readonly path: string) {}
+  readonly saved: { entryId: string; storeId: string; replyAll: boolean; body: string; draftId: string }[] = []
+
+  constructor(
+    private readonly path: string,
+    private readonly draftsPath: string | null = null,
+  ) {}
 
   async list(since: Date): Promise<OutlookMailbox> {
-    const box = JSON.parse(readFileSync(this.path, 'utf8')) as OutlookMailbox
+    const box = this.box()
     return { me: box.me, messages: box.messages.filter((m) => Date.parse(m.time) >= since.getTime()) }
   }
 
   async open(): Promise<void> {}
+
+  async recipients(entryId: string, _storeId?: string): Promise<ReplyRecipients> {
+    const box = this.box()
+    const m = box.messages.find((x) => x.entryId === entryId)
+    if (!m) throw new OutlookError('That email is not in Outlook.')
+    const mine = new Set(box.me.addresses.map((a) => a.toLowerCase()))
+    const others = (list: string) => list.split(';').map((s) => s.trim()).filter((s) => s && !mine.has(s.toLowerCase()) && s !== box.me.name)
+    const subject = /^re:/i.test(m.subject) ? m.subject : `RE: ${m.subject}`
+    return { subject, reply: { to: m.from, cc: '' }, replyAll: { to: [m.from, ...others(m.to)].join('; '), cc: others(m.cc).join('; ') } }
+  }
+
+  async saveReply(entryId: string, storeId: string, replyAll: boolean, body: string): Promise<{ entryId: string; storeId: string }> {
+    const draftId = `draft-${this.saved.length + 1}`
+    this.saved.push({ entryId, storeId, replyAll, body, draftId })
+    if (this.draftsPath) writeFileSync(this.draftsPath, JSON.stringify(this.saved, null, 2), 'utf8')
+    return { entryId: draftId, storeId: 'fixture-store' }
+  }
+
+  private box(): OutlookMailbox {
+    return JSON.parse(readFileSync(this.path, 'utf8')) as OutlookMailbox
+  }
 }
 
 /** PowerShell 5.1 turns a one-item array into a lone object, and an empty one into null. */

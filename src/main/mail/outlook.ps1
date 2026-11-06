@@ -1,14 +1,19 @@
 # Reads mail from classic Outlook over COM for Chief of Staff (see outlook.ts).
-# Read-only except -Action open, which displays one message. Never sends, moves, flags or deletes.
+# Read-only except -Action open (displays one message) and -Action reply (saves a reply to Drafts).
+# Never sends, moves, flags or deletes.
 #   -Action list -Since <ISO time> -OutFile <path>   writes received (Inbox and subfolders) and sent mail as JSON
 #   -Action open -EntryId <id> -StoreId <id> -OutFile <path>   shows the message in Outlook
+#   -Action recipients -EntryId <id> -StoreId <id> -OutFile <path>   who Reply and Reply all would go to (nothing is saved)
+#   -Action reply -EntryId <id> -StoreId <id> -BodyFile <path> [-ReplyAll] -OutFile <path>   saves a reply to Drafts, never sends
 # The result is always JSON in -OutFile: { ok: true, ... } or { ok: false, error, code }.
 param(
-  [Parameter(Mandatory = $true)][ValidateSet('list', 'open')][string]$Action,
+  [Parameter(Mandatory = $true)][ValidateSet('list', 'open', 'recipients', 'reply')][string]$Action,
   [Parameter(Mandatory = $true)][string]$OutFile,
   [string]$Since,
   [string]$EntryId,
   [string]$StoreId,
+  [string]$BodyFile,
+  [switch]$ReplyAll,
   [int]$MaxBody = 30000
 )
 $ErrorActionPreference = 'Stop'
@@ -95,6 +100,41 @@ try {
     $item = $ns.GetItemFromID($EntryId, $StoreId)
     $item.Display()
     Write-Result ([ordered]@{ ok = $true })
+    exit 0
+  }
+
+  if ($Action -eq 'recipients') {
+    $item = $ns.GetItemFromID($EntryId, $StoreId)
+    $one = $item.Reply(); $all = $item.ReplyAll()
+    $result = [ordered]@{
+      ok       = $true
+      subject  = [string]$one.Subject
+      reply    = [ordered]@{ to = [string]$one.To; cc = [string]$one.CC }
+      replyAll = [ordered]@{ to = [string]$all.To; cc = [string]$all.CC }
+    }
+    # Never saved: Close(1) is olDiscard.
+    $one.Close(1); $all.Close(1)
+    Write-Result $result
+    exit 0
+  }
+
+  if ($Action -eq 'reply') {
+    $item = $ns.GetItemFromID($EntryId, $StoreId)
+    $draft = if ($ReplyAll) { $item.ReplyAll() } else { $item.Reply() }
+    $text = [System.IO.File]::ReadAllText($BodyFile, $utf8)
+    if ($draft.BodyFormat -eq 2) {
+      # HTML (olFormatHTML): put the text first, above the quoted thread Outlook added.
+      $html = ([System.Net.WebUtility]::HtmlEncode($text) -replace "`r?`n", '<br>')
+      $body = [string]$draft.HTMLBody
+      $m = [regex]::Match($body, '<body[^>]*>', 'IgnoreCase')
+      $block = "<div>$html</div><br>"
+      $draft.HTMLBody = if ($m.Success) { $body.Insert($m.Index + $m.Length, $block) } else { $block + $body }
+    } else {
+      $draft.Body = $text + "`r`n`r`n" + [string]$draft.Body
+    }
+    # Save puts it in Drafts. It is never sent.
+    $draft.Save()
+    Write-Result ([ordered]@{ ok = $true; entryId = [string]$draft.EntryID; storeId = [string]$draft.Parent.StoreID })
     exit 0
   }
 

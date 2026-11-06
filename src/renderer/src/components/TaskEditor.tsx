@@ -5,6 +5,7 @@ import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
 import { ConfirmButton, scoreClass } from './bits'
 import { ActivityLog } from './ActivityLog'
+import { ReplyCard } from './ReplyCard'
 import { StatusCard } from './StatusCard'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from './UpdatesWindow'
 
@@ -64,6 +65,7 @@ interface Props {
  */
 export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = false, onClose, onSaved, onDone, onDeleted }: Props) {
   const { projects, people, toast, refresh } = useApp()
+  const [activityKey, setActivityKey] = useState(0)
   const [task, setTask] = useState<Task | null>(null)
   const [form, setForm] = useState<Form | null>(taskId === 'new' ? { input: emptyInput(defaultProjectId, defaultWaiting) } : null)
   const [snapshot, setSnapshot] = useState(() => (form ? JSON.stringify(form) : ''))
@@ -196,6 +198,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
         <div className="dgrid">
           <div>
             <StatusCard scope="task" id={isNew ? null : form.input.id} done={form.input.status === 'done'} />
+            <ReplyCard taskId={isNew ? null : form.input.id} onSaved={() => setActivityKey((k) => k + 1)} />
 
             <div className="label" style={{ marginBottom: 4 }}>Subtasks</div>
             {form.input.subtasks.map((s, i) => (
@@ -248,7 +251,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             )}
 
             <div className="label" style={{ margin: '14px 0 4px' }}>Activity</div>
-            <ActivityLog task={task} />
+            <ActivityLog task={task} reloadKey={activityKey} />
           </div>
 
           <div className="meta">

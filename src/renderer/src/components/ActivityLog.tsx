@@ -21,7 +21,7 @@ const longDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { y
  * A task's Activity: every recorded change, newest first, each saying who made it, plus the
  * imports linked to it. Tasks older than the log say what wasn't recorded. Read-only.
  */
-export function ActivityLog({ task }: { task: Task | null }) {
+export function ActivityLog({ task, reloadKey = 0 }: { task: Task | null; reloadKey?: number }) {
   const [activity, setActivity] = useState<TaskActivity | null>(null)
   const [all, setAll] = useState(false)
 
@@ -32,7 +32,7 @@ export function ActivityLog({ task }: { task: Task | null }) {
     return () => {
       cancelled = true
     }
-  }, [task])
+  }, [task, reloadKey])
 
   if (!task) return <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>Not saved yet</div>
 

@@ -181,6 +181,12 @@ class FakeOutlook implements OutlookReader {
   async open(entryId: string) {
     this.opened.push(entryId)
   }
+  async recipients() {
+    return { subject: 'RE: x', reply: { to: '', cc: '' }, replyAll: { to: '', cc: '' } }
+  }
+  async saveReply() {
+    return { entryId: 'd', storeId: 's' }
+  }
 }
 
 describe('mail import end to end (demo AI, fake Outlook)', () => {

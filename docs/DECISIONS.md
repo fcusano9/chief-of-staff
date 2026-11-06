@@ -2,6 +2,16 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-06 · Draft replies: on the task, preview first, saved to Drafts only (Frank)
+Frank's choices, asked up front (mockup `design/draft-reply.html`, approved after three rounds):
+- **On the task only**, for tasks linked to an Outlook email (not in Review or on the import).
+- **Preview, then save:** nothing reaches Outlook until Save to Outlook Drafts. It is never sent; Open in Outlook shows the draft so Frank sends it himself. The task stays open; Activity notes it.
+- **The AI picks Reply or Reply all**, marked "AI pick" (Frank asked for less text than a reason), and he can switch.
+- **The first draft is the AI's alone.** Frank removed the note box from the first draft; Try again takes the optional note instead.
+- **Style:** one "Writing style for draft replies" note in Settings → AI (not learning from sent mail, which would send more of his mail to the AI).
+- **Mac:** the card says "Draft replies only work with Classic Outlook on Windows" (Frank's wording). Mac options were checked: Outlook MCP servers need Graph and IT approval like milestone 6; Apple Mail's Exchange link depends on EWS, which is being retired.
+- **Decided while building:** it answers the newest message from someone else in the linked conversation; recipients come from Outlook itself (a reply object read and discarded), not the AI; missing facts become [placeholders]; drafts aren't stored in the app.
+
 ### 2026-11-06 · All AI wording in one file, prompts.ts (Frank)
 Every string sent to an AI moved into `src/main/ai/prompts.ts`, with a comment on each entry saying what it's for, so prompts can be tuned in one place. Frank first asked for a key-value resource file; Markdown and TOML were considered, and a TypeScript file won because typos in names or placeholders become typecheck errors, limits come straight from the constants the code enforces, and comments show on hover. Every AI limit, including how much is sent and the local model's memory, moved into `src/main/ai/limits.ts` alongside it (Frank). Entries are whole blocks with placeholders rather than one key per phrase, so each instruction is read in context. A snapshot test (`tests/prompts.test.ts`) proved the move changed no request, and shows every later wording change in the PR diff.
 

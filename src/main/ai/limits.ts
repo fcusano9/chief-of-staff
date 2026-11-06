@@ -41,6 +41,7 @@ export const CLAUDE_MAX_TOKENS = {
   import: 16000,
   personBrief: 4000,
   statusCard: 6000,
+  reply: 8000,
   briefing: 8000,
   weekly: 8000,
 }
@@ -85,6 +86,20 @@ export const STATUS_ACTIVITY_LINES = 20
 
 /** "Where this stands" on Write: characters of a task's Notes sent. */
 export const STATUS_NOTES_CHARS = 1000
+
+/** Draft replies: characters of the email thread sent (the newest part; the mail import already caps each conversation). */
+export const REPLY_THREAD_CHARS = 40_000
+
+/** Draft replies: characters of the task's Updates (whole updates only, newest first) and Notes sent, and of the user's Try again note and the draft it replaces. */
+export const REPLY_CHARS = {
+  updates: 1500,
+  notes: 1000,
+  note: 1000,
+  previous: 8000,
+}
+
+/** Draft replies: the longest draft kept from the AI, in characters. */
+export const REPLY_BODY_CHARS = 8000
 
 /** Outlook mail: characters sent per message, of earlier messages quoted in the newest one, and per conversation in all. */
 export const MAIL_CHARS = {

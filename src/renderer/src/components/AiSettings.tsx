@@ -26,6 +26,7 @@ export function AiSettings() {
 function ModelCard() {
   const { settings, saveSettings, ai } = useApp()
   const [name, setName] = useState(settings.userName)
+  const [style, setStyle] = useState(settings.replyStyle)
   const [menuFor, setMenuFor] = useState<HTMLElement | null>(null)
 
   const note = !ai.available ? (
@@ -70,6 +71,19 @@ function ModelCard() {
           </p>
         </div>
       </div>
+      <label style={{ display: 'block', marginTop: 14 }}>
+        <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>Writing style for draft replies</span>
+        <textarea
+          className="inp"
+          aria-label="Writing style for draft replies"
+          style={{ marginTop: 4, minHeight: 56 }}
+          value={style}
+          placeholder={'e.g. Short and direct. Sign off as ' + (settings.userName.split(/\s+/)[0] || 'me') + '.'}
+          onChange={(e) => setStyle(e.target.value)}
+          onBlur={() => style !== settings.replyStyle && void saveSettings({ replyStyle: style })}
+        />
+        <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>Sent with every draft reply. Leave it empty for plain, professional replies.</span>
+      </label>
       {menuFor && <ModelMenu anchor={menuFor} placement="below" onClose={() => setMenuFor(null)} />}
     </div>
   )

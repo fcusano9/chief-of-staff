@@ -31,6 +31,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | Person (imports) | One-line brief; without one, their latest updates | **300 characters** |
 | Status card, task (Write) | Status, due date, project, who asked, subtasks, Notes, latest updates, newest Activity lines | Notes **1,000**, updates **1,500 characters** (whole ones), Activity **20 lines** |
 | Status card, project (Write) | Status, overview, latest updates, open tasks (title, waiting on, due date) | Updates **1,500 characters** (whole ones), **40** open tasks |
+| Draft reply (task card) | The email thread, the task's title, Notes and latest updates, the style note; on Try again, the user's note and the draft being replaced | Thread **40,000**, Notes **1,000**, updates **1,500 characters** (whole ones) |
 | Email conversations | Each message, plus the older messages quoted in the email (for context) | **8,000** per message, **4,000** of quoted older messages, **40,000** per conversation |
 | Every prompt | A three-week calendar, so "Friday" resolves correctly | 21 days |
 
@@ -99,6 +100,18 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ Replaced | A later briefing or import can give a new change, or 0 to remove it. One that skips the task keeps it. Reason: **200 characters** at most. |
 | ✅ Remove | Takes it off at once. A later briefing or import can suggest a new one. |
 | ✅ Override | A score the user sets by hand always wins; the AI's change stays on the card, greyed, marked "Not used". |
+
+## Draft replies (task card)
+
+| Rule | Detail |
+|---|---|
+| ✅ When | Only when the user clicks Draft reply, or Try again then Rewrite, on a task linked to an Outlook email. Never on its own, and Basic writes none. Classic Outlook on Windows only. |
+| ✅ First draft | Written by the AI alone, with no note from the user. Try again takes an optional note on what should change, and sends the draft it replaces. |
+| ✅ Rules in the prompt | Writes as the user, in the first person. Only facts from the thread, task, notes, updates and the user's note; never an invented date, figure, decision, commitment or name. A missing fact becomes a placeholder in square brackets, like [date]. Usually 2 to 6 sentences, with a greeting and a sign-off. No subject, quoted email or signature block. Follows the style note. |
+| ✅ Recipients | The AI picks Reply all (when the others need the answer) or Reply; the card marks it "AI pick" and the user can switch. Who each goes to comes from Outlook, not the AI. |
+| ✅ Never sent | Nothing reaches Outlook until the user clicks Save to Outlook Drafts, and then it's only saved as a draft. The user sends it from Outlook. The task isn't changed; Activity notes the saved draft. |
+| ✅ Kept | Drafts aren't kept in the app. Each request is counted in AI spending as "Draft replies". |
+| ✅ Claude settings | Low effort, refusal fallback on (Opus and Sonnet). Draft text: **8,000 characters** at most. |
 
 ## People briefs
 

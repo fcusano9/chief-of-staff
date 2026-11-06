@@ -10,6 +10,8 @@ import type {
   BriefingListItem,
   NextAction,
   ProjectCard,
+  ReplyDraft,
+  ReplyTarget,
   WeekListItem,
   WeeklyReview,
   ImportRequest,
@@ -114,6 +116,14 @@ export interface Api {
   'mail.imports': () => MailImportRun[]
   /** Shows an imported conversation's newest message in Outlook. */
   'mail.open': (sourceId: number) => void
+  /** The Outlook email a task's Reply card answers, or null when the task isn't linked to one. */
+  'replies.target': (taskId: number) => ReplyTarget | null
+  /** Asks the selected AI for a draft reply (with a revision: rewrites the previous draft following the user's note). Saves nothing. */
+  'replies.draft': (taskId: number, revision: { note: string; previous: string } | null) => ReplyDraft
+  /** Saves the reply to Outlook Drafts (never sends) and notes it in the task's Activity. Returns the draft's Outlook ids. */
+  'replies.save': (taskId: number, reply: { replyAll: boolean; body: string }) => { entryId: string; storeId: string }
+  /** Shows a saved draft in Outlook. */
+  'replies.openDraft': (entryId: string, storeId: string) => void
   'suggestions.listPending': () => Suggestion[]
   'suggestions.count': () => number
   'suggestions.accept': (id: number, edits?: Partial<SuggestionPayload>) => number | null
@@ -216,6 +226,10 @@ export const API_CHANNELS: ApiChannel[] = [
   'mail.stop',
   'mail.imports',
   'mail.open',
+  'replies.target',
+  'replies.draft',
+  'replies.save',
+  'replies.openDraft',
   'suggestions.listPending',
   'suggestions.count',
   'suggestions.accept',
