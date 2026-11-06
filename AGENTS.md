@@ -72,7 +72,7 @@ npm run bench:ai     # score demo, local and Claude models on sample imports (se
 npm run install:win  # package to %LOCALAPPDATA%\Programs\Chief of Staff (build) (Start-menu shortcut points here)
 ```
 
-Before telling Frank something is done, run `npm test` and `npm run typecheck`. Ask Frank before running `npm run e2e`, because it takes a long time. When asking, say which suites cover the change. Never run `npm run bench:ai` without Frank's approval, not even for local models only: it ties up the computer for a long time and can spend money on Claude. After changing the extraction prompt or a provider, ask him whether to run it and say which models. If the packaged app is running, close it before `install:win`.
+Before telling Frank something is done, run `npm test` and `npm run typecheck`. CI runs the same two on Windows and Linux for every PR (`.github/workflows/ci.yml`); a red check needs fixing before merge. Ask Frank before running `npm run e2e`, because it takes a long time. When asking, say which suites cover the change. Never run `npm run bench:ai` without Frank's approval, not even for local models only: it ties up the computer for a long time and can spend money on Claude. After changing the extraction prompt or a provider, ask him whether to run it and say which models. If the packaged app is running, close it before `install:win`.
 
 ## How to do common changes
 
