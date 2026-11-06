@@ -1,4 +1,5 @@
 import type { PersonBriefInput } from './brief'
+import type { RawReply, ReplyInput } from './reply'
 import type { RawStatus, StatusInput } from './status'
 import type { BriefingInput, RawBriefing } from './briefing'
 import type { RawReflection, WeeklyInput } from './weekly'
@@ -23,6 +24,8 @@ export interface AiProvider {
   writePersonBrief(input: PersonBriefInput, log?: AiCallLog): Promise<string>
   /** A task's or project's card: "Where this stands" bullets and the next step. The caller tidies and saves it (cleanStatusCard). */
   writeStatus(input: StatusInput, log?: AiCallLog): Promise<RawStatus>
+  /** A draft reply to an email, and whether it should go to everyone. The caller tidies it (cleanReply); the user saves it to Outlook Drafts. */
+  writeReply(input: ReplyInput, log?: AiCallLog): Promise<RawReply>
   /** The daily briefing's summary and picks from the tasks given. The caller checks the ids (assembleBriefing). */
   writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing>
   /** The weekly review's reflection: a summary and short points. Text only; the caller tidies it (assembleReflection). */

@@ -380,6 +380,8 @@ export interface AppSettings {
   /** People list filters, remembered between visits. */
   peopleFilter: PeopleFilter
   dailyBriefingTime: string
+  /** How the user writes, sent with every draft reply (Settings → AI). Empty means plain, professional replies. */
+  replyStyle: string
   /** Null means the default OneDrive backup folder. */
   backupFolder: string | null
   backupsToKeep: number
@@ -398,6 +400,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   splitPercent: 50,
   peopleFilter: { company: '', openOnly: false },
   dailyBriefingTime: '07:30',
+  replyStyle: '',
   backupFolder: null,
   backupsToKeep: 30,
   lastBackupAt: null,
@@ -488,7 +491,7 @@ export type ChangeBy =
   /** The AI itself (priority changes); label says where, e.g. "daily briefing" or 'import “Team sync”'. */
   | { by: 'ai'; label: string }
 
-export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority'
+export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority' | 'reply_draft'
 
 /** One recorded change to a task. Values are as they were then (names, not ids). */
 export interface TaskEvent {
@@ -548,6 +551,29 @@ export interface NextAction {
   dismissed: boolean
   /** Set when the task got an update dated after this was written, e.g. "Nov 15, 2026". */
   staleSince: string | null
+}
+
+/** The email a task's Reply card answers: the newest message from someone else in its linked Outlook conversation. */
+export interface ReplyTarget {
+  sourceId: number
+  subject: string
+  /** Who sent the message being answered. */
+  from: string
+  /** ISO time it arrived. */
+  at: string
+  /** False when this computer can't reach classic Outlook (a Mac, or Windows without it). */
+  supported: boolean
+}
+
+/** A draft reply shown in the app before it's saved to Outlook Drafts. */
+export interface ReplyDraft {
+  replyAll: boolean
+  body: string
+  subject: string
+  /** Who each choice would go to, as Outlook shows them. */
+  reply: { to: string; cc: string }
+  replyAllTo: { to: string; cc: string }
+  writtenBy: string
 }
 
 /** A project's "Where this stands" and one next step for the project as a whole. Written only when the user clicks Write. */
@@ -653,7 +679,7 @@ export interface WeekListItem {
 
 /** What a paid AI request was for. */
 /** project_brief is kept for spending recorded before project briefs were replaced by the status card. */
-export type UsagePurpose = 'import' | 'briefing' | 'weekly' | 'person_brief' | 'project_brief' | 'status'
+export type UsagePurpose = 'import' | 'briefing' | 'weekly' | 'person_brief' | 'project_brief' | 'status' | 'reply'
 
 export const USAGE_PURPOSE_LABELS: Record<UsagePurpose, string> = {
   import: 'Imports',
@@ -662,6 +688,7 @@ export const USAGE_PURPOSE_LABELS: Record<UsagePurpose, string> = {
   person_brief: 'Person briefs',
   project_brief: 'Project briefs',
   status: 'Where this stands',
+  reply: 'Draft replies',
 }
 
 /** Claude requests added up by purpose or by model. */

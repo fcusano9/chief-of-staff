@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { localModelLabel, type SuggestionKind } from '@shared/types'
 import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
+import { buildReplyPrompt, ReplySchema, type RawReply, type ReplyInput } from './reply'
 import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } from './status'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
@@ -155,6 +156,14 @@ export function buildOllamaStatusRequest(model: string, input: StatusInput, reas
   return chatRequest(model, system, user, format, reasoning)
 }
 
+/** The request for a draft reply to an email. */
+export function buildOllamaReplyRequest(model: string, input: ReplyInput, reasoning: Reasoning = 'low') {
+  const { system, user } = buildReplyPrompt(input)
+  const format = z.toJSONSchema(ReplySchema) as Record<string, unknown>
+  delete format.$schema
+  return chatRequest(model, system, user, format, reasoning)
+}
+
 /** The request for the daily briefing. */
 export function buildOllamaBriefingRequest(model: string, input: BriefingInput, reasoning: Reasoning = 'low') {
   const { system, user } = buildBriefingPrompt(input)
@@ -247,6 +256,13 @@ export class OllamaProvider implements AiProvider {
   async writeStatus(input: StatusInput, log?: AiCallLog): Promise<RawStatus> {
     const body = await this.chat(buildOllamaStatusRequest(this.model, input, this.options.reasoning), `Write where this ${input.scope} stands`, log)
     const parsed = StatusSchema.safeParse(this.parseJson(body))
+    if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
+    return parsed.data
+  }
+
+  async writeReply(input: ReplyInput, log?: AiCallLog): Promise<RawReply> {
+    const body = await this.chat(buildOllamaReplyRequest(this.model, input, this.options.reasoning), 'Draft a reply', log)
+    const parsed = ReplySchema.safeParse(this.parseJson(body))
     if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
     return parsed.data
   }

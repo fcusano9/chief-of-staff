@@ -52,6 +52,9 @@ class FakeBriefer implements AiProvider {
   async writeStatus() {
     return { status: ['Done.'], action: 'Do it.' }
   }
+  async writeReply() {
+    return { reply_all: false, body: 'Hi.' }
+  }
   async writeBriefing(_input: BriefingInput, log?: AiCallLog) {
     this.calls++
     return logged(log, { purpose: 'Write the briefing', endpoint: 'fake', request: { system: 'rules' } }, async () => {

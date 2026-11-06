@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { CLAUDE_MODELS } from '@shared/types'
 import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
+import { buildReplyPrompt, ReplySchema, type RawReply, type ReplyInput } from './reply'
 import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } from './status'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
@@ -54,6 +55,20 @@ export function buildStatusRequest(model: string, input: StatusInput) {
     max_tokens: 6000,
     // Low effort: condensing notes into a few lines needs little reasoning.
     output_config: { effort: 'low' as const, format: betaZodOutputFormat(StatusSchema) },
+    system,
+    messages: [{ role: 'user' as const, content: user }],
+    ...fallbackFor(model),
+  }
+}
+
+/** The request for a draft reply to an email. */
+export function buildReplyRequest(model: string, input: ReplyInput) {
+  const { system, user } = buildReplyPrompt(input)
+  return {
+    model,
+    max_tokens: 8000,
+    // Low effort: a short reply from a thread and a few notes needs little reasoning.
+    output_config: { effort: 'low' as const, format: betaZodOutputFormat(ReplySchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -145,6 +160,18 @@ export class ClaudeProvider implements AiProvider {
       const response = await this.send(log, `Write where this ${input.scope} stands`, buildStatusRequest(this.model, input))
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this. Nothing was changed.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The answer was cut off. Try again.')
+      if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
+      return response.parsed_output
+    } catch (err) {
+      throw toAiError(err)
+    }
+  }
+
+  async writeReply(input: ReplyInput, log?: AiCallLog): Promise<RawReply> {
+    try {
+      const response = await this.send(log, 'Draft a reply', buildReplyRequest(this.model, input))
+      if (response.stop_reason === 'refusal') throw new AiError('Claude declined to draft this reply. Nothing was changed.')
+      if (response.stop_reason === 'max_tokens') throw new AiError('The draft was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
       return response.parsed_output
     } catch (err) {

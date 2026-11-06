@@ -58,6 +58,8 @@ export function eventWhat(e: Pick<TaskEvent, 'kind' | 'from' | 'to' | 'note'>, n
       return e.from == null ? `Priority set by hand: ${e.to}` : `Priority set by hand: ${e.from} → ${e.to}`
     case 'followups':
       return `Follow-ups: ${e.from ?? 0} → ${e.to ?? 0}`
+    case 'reply_draft':
+      return 'Draft reply saved to Outlook Drafts'
     case 'ai_priority':
       if (e.to == null) return `AI priority change removed (was ${signed(e.from)})`
       return `AI priority change ${signed(e.to)}${e.note ? `: ${e.note}` : ''}`

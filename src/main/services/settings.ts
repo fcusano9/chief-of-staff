@@ -38,6 +38,7 @@ export class SettingsStore {
       peopleFilter: { company: String(settings.peopleFilter?.company ?? ''), openOnly: !!settings.peopleFilter?.openOnly },
       backupsToKeep: Math.max(1, Math.round(settings.backupsToKeep)),
       backupFolder: settings.backupFolder?.trim() || null,
+      replyStyle: String(settings.replyStyle ?? '').slice(0, 1000),
     }
     mkdirSync(dirname(this.path), { recursive: true })
     const tmp = `${this.path}.tmp`

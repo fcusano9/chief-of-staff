@@ -44,6 +44,9 @@ class FakeProvider implements AiProvider {
   async writeStatus() {
     return { status: ['Done.'], action: 'Do it.' }
   }
+  async writeReply() {
+    return { reply_all: false, body: 'Hi.' }
+  }
   async writeBriefing() {
     return { summary: '', priorities: [], nudges: [], new_items: [], priority_changes: [] }
   }

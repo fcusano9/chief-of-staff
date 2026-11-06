@@ -19,6 +19,7 @@ import { WeeklyService } from './services/weekly'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { MailService } from './services/mail'
 import { NextActionService, ProjectCardService } from './services/next-actions'
+import { ReplyService } from './services/replies'
 import { PriorityAdjustmentService } from './services/priority-adjustments'
 import { nodeHost, OllamaManager } from './services/ollama-setup'
 import { KeyStore } from './services/secrets'
@@ -134,13 +135,9 @@ const weekly = new WeeklyService(db, tasks, currentProvider, () => settings.curr
 const usage = new UsageService(db)
 // Test data folders can read mail from a fixture file instead of Outlook (see e2e/README.md).
 const outlookFixture = isSeparateData ? process.env.COS_OUTLOOK_FIXTURE : undefined
-const mail = new MailService(
-  db,
-  sources,
-  outlookFixture ? new FixtureOutlook(outlookFixture) : process.platform === 'win32' ? new PowerShellOutlook() : null,
-  () => settings.current.userName,
-  () => aiLabel(),
-)
+const outlook = outlookFixture ? new FixtureOutlook(outlookFixture, `${outlookFixture}.drafts.json`) : process.platform === 'win32' ? new PowerShellOutlook() : null
+const mail = new MailService(db, sources, outlook, () => settings.current.userName, () => aiLabel())
+const replies = new ReplyService(db, outlook, currentProvider, () => settings.current, () => usage.logFor('reply'))
 const ollama = new OllamaManager(() => settings.current.localUrl, nodeHost(app.getPath('temp')))
 
 /** The chosen model's name, e.g. "Basic", "Claude Opus 5.5" or "Ollama gpt-oss:20b". */
@@ -323,6 +320,10 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'mail.stop': () => mail.stop(),
   'mail.imports': () => mail.imports(),
   'mail.open': (sourceId) => mail.open(sourceId),
+  'replies.target': (taskId) => replies.target(taskId),
+  'replies.draft': (taskId, revision) => replies.draft(taskId, revision),
+  'replies.save': (taskId, reply) => replies.save(taskId, reply),
+  'replies.openDraft': (entryId, storeId) => replies.openDraft(entryId, storeId),
   'suggestions.listPending': () => suggestions.listPending(),
   'suggestions.count': () => suggestions.pendingCount(),
   'suggestions.accept': (id, edits) => suggestions.accept(id, edits),

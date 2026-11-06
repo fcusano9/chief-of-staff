@@ -38,6 +38,9 @@ class Fake implements AiProvider {
   writeStatus(_i: unknown, log?: AiCallLog) {
     return this.one(log, { status: ['Done.'], action: 'Do it.' })
   }
+  writeReply(_i: unknown, log?: AiCallLog) {
+    return this.one(log, { reply_all: false, body: 'Hi.' })
+  }
   writeBriefing(_i: unknown, log?: AiCallLog) {
     return this.one(log, { summary: 'A quiet day.', priorities: [], nudges: [], new_items: [], priority_changes: [] })
   }

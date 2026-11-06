@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Draft reply</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 8px 16px; min-height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex-wrap: wrap; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+.btn.ghost:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+.btn.sm { padding: 2px 9px; font-size: 12.5px; }
+.link { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: inherit; }
+.page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+.editor { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.stripe { height: 3px; background: #1D9E75; }
+.inner { padding: 18px 22px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.score { font: 600 16px var(--mono); color: var(--danger); min-width: 26px; }
+.title-inp { flex: 1; font-size: 17px; font-weight: 600; border: 0; background: none; outline: 0; min-width: 0; }
+.iconbtn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; margin-top: 14px; }
+.label { color: var(--muted); font-size: 12.5px; margin: 16px 0 5px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 7px 9px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { resize: vertical; display: block; }
+.field { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; padding: 4px 0; }
+.field > span { color: var(--muted); }
+.field .inp { padding: 5px 8px; }
+.card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 12.5px; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 18px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.new { outline: 2px dashed var(--ok); outline-offset: 4px; border-radius: 8px; }
+.nx { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 55%, transparent); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.nx .h { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--accent); }
+.nx .sh { font-size: 12.5px; font-weight: 600; margin-top: 8px; }
+.nx ul { margin: 3px 0 0; padding-left: 18px; }
+/* Reply card */
+.rp { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.rp .h { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.rp .h b { font-weight: 600; }
+.rp .mail { color: var(--muted); font-size: 12.5px; }
+.rp .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.rp .sec { margin-top: 10px; }
+.rp .k { color: var(--muted); font-size: 12px; min-width: 52px; }
+.rp .who { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; padding: 2px 0; }
+.rp .why { color: var(--faint); font-size: 11.5px; }
+.seg2 { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+.seg2 { flex: none; }
+.seg2 button { white-space: nowrap; border: 0; background: var(--surface); padding: 1px 10px; cursor: pointer; color: var(--muted); font-size: 12px; }
+.seg2 button + button { border-left: 1px solid var(--border); }
+.seg2 button.on { background: var(--sel); color: var(--text); }
+.ok { color: var(--ok); font-size: 12.5px; }
+.spin { display: inline-block; width: 11px; height: 11px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; animation: s .8s linear infinite; vertical-align: -1px; }
+@keyframes s { to { transform: rotate(360deg); } }
+.act { font-size: 12.5px; line-height: 1.6; }
+.act .d { font-family: var(--mono); color: var(--faint); font-size: 11.5px; display: inline-block; min-width: 52px; }
+.set { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; max-width: 640px; }
+@media (max-width: 760px) { .dgrid { grid-template-columns: minmax(0, 1fr); } .top .logo span { display: none; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Draft reply</span></div>
+  <div class="seg">
+    <button data-v="task" class="on">Task with email</button>
+    <button data-v="basic">Basic selected</button>
+    <button data-v="nooutlook">No Outlook (Mac)</button>
+    <button data-v="settings">Settings: style note</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+<div class="page">
+  <div id="stage"></div>
+  <div class="notes" id="notes"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id)
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1800) }
+let view = 'task'
+let st = {}
+const reset = () => { st = { phase: 'idle', note: '', mode: 'all', saved: false, body: DRAFT } }
+
+const DRAFT = `Hi Dana,
+
+Yes, the four-tier pricing works for Q1. Priya is finishing the margin model this week, so I'll send the final numbers by Friday, Nov 13.
+
+One question: should the EMEA tiers be priced in euros from the start, or converted after launch?
+
+Thanks,
+Frank`
+
+const statusCard = `<div class="nx">
+  <div class="h"><span>✦ Where this stands and next step</span><span class="spacer"></span><button class="btn ghost sm">Dismiss</button><button class="btn sm">✦ Refresh</button></div>
+  <div class="sh">Where this stands</div>
+  <ul><li>Dana asked on Nov 5 whether four tiers work for Q1.</li><li>Margin model from Priya due this week.</li></ul>
+  <div class="sh">Suggested next action</div>
+  <div>Reply to Dana: yes, with numbers by Friday.</div>
+</div>`
+
+function replyCard({ basic = false, noOutlook = false } = {}) {
+  const head = `<div class="h"><b>✉ Reply</b><span class="mail">to the email “Q1 pricing” from Dana Lee · Nov 5</span><span class="spacer"></span>
+    <button class="btn ghost sm">Open email</button></div>`
+  if (noOutlook) return `<div class="rp new">${head}<div class="hint">Draft replies only work with Classic Outlook on Windows.</div></div>`
+  if (basic) return `<div class="rp new">${head}
+    <div class="row" style="margin-top:8px"><span class="hint" style="margin:0">Select an AI model in <button class="link" id="settings">Settings</button> to use this feature.</span><span class="spacer"></span><button class="btn sm" disabled>✦ Draft reply</button></div></div>`
+  if (st.phase === 'idle' || st.phase === 'writing') {
+    const busy = st.phase === 'writing'
+    return `<div class="rp new">${head}
+      <div class="row" style="margin-top:8px">
+        <span class="hint" style="margin:0">Click Draft reply for a reply written from the email and this task.</span><span class="spacer"></span>
+        <button class="btn sm" id="write" ${busy ? 'disabled' : ''}>${busy ? '<span class="spin"></span> Writing…' : '✦ Draft reply'}</button>
+      </div></div>`
+  }
+  const to = st.mode === 'all' ? 'Dana Lee' : 'Dana Lee'
+  const cc = st.mode === 'all' ? 'Priya Shah, Marcus Webb' : ''
+  return `<div class="rp new">${head}
+    <div class="sec">
+      <div class="who"><span class="k">Send to</span>
+        <span class="seg2"><button data-m="all" class="${st.mode === 'all' ? 'on' : ''}">Reply all</button><button data-m="one" class="${st.mode === 'one' ? 'on' : ''}">Reply</button></span>
+        <span class="why">${st.mode === 'all' ? 'AI pick' : ''}</span></div>
+      <div class="who"><span class="k">To</span><span>${to}</span></div>
+      ${cc ? `<div class="who"><span class="k">Cc</span><span>${cc}</span></div>` : ''}
+      <div class="who"><span class="k">Subject</span><span>RE: Q1 pricing</span></div>
+    </div>
+    <textarea class="inp" id="body" style="margin-top:8px;min-height:190px" ${st.saved ? 'disabled' : ''}>${st.body}</textarea>
+    <div class="row" style="margin-top:8px">
+      ${st.saved
+        ? `<span class="ok">Saved to Outlook Drafts</span><span class="spacer"></span><button class="btn ghost sm" id="again2">Write another</button><button class="btn sm" id="openol">Open in Outlook</button>`
+        : st.retry
+          ? `<input class="inp" id="note" placeholder="What should change? (optional) e.g. Say yes, but push to Friday" value="${st.note.replace(/"/g, '&quot;')}"><button class="btn ghost sm" id="cancelretry">Cancel</button><button class="btn sm" id="rewrite">✦ Rewrite</button>`
+          : `<button class="btn ghost sm" id="discard">Discard</button><button class="btn ghost sm" id="again">✦ Try again</button><span class="spacer"></span><button class="btn primary sm" id="save">Save to Outlook Drafts</button>`}
+    </div>
+  </div>`
+}
+
+const editor = (box) => `
+<div class="editor"><div class="stripe"></div><div class="inner">
+  <div class="row"><span class="score">81</span><input class="title-inp" value="Reply to Dana: Q1 pricing"><button class="iconbtn">✕</button></div>
+  <div class="dgrid"><div>
+    ${statusCard}
+    ${box}
+    <div class="label">Notes</div><textarea class="inp" style="min-height:90px"></textarea>
+    <div class="label">Activity</div>
+    <div class="act">
+      ${st.saved ? '<div class="new" style="outline-offset:2px"><span class="d">Nov 6</span>Draft reply saved to Outlook Drafts <span class="faint">by you</span></div>' : ''}
+      <div><span class="d">Nov 5</span>Created <span class="faint">from “Q1 pricing”, accepted in Review</span></div>
+    </div>
+  </div><div>
+    <label class="field"><span>Status</span><select class="inp"><option>Open</option></select></label>
+    <label class="field"><span>Due</span><input class="inp" type="date" value=""></label>
+    <label class="field"><span>Asked by</span><input class="inp" value="Dana Lee"></label>
+    <div class="card"><div class="label" style="margin:0 0 2px">Priority 81</div>Needs reply, Dana ★★★</div>
+  </div></div>
+</div></div>`
+
+const settings = `<div class="set">
+  <div style="font-weight:600;margin-bottom:8px">AI</div>
+  <div class="label" style="margin-top:0">Model</div>
+  <div class="inp" style="width:auto;display:inline-block">Claude Sonnet 5.5 ▾</div>
+  <div class="new" style="margin-top:14px">
+    <div class="label" style="margin-top:0">Writing style for draft replies</div>
+    <textarea class="inp" style="min-height:64px">Short and direct. No "I hope this finds you well". Sign off as Frank.</textarea>
+    <div class="faint" style="font-size:12px;margin-top:4px">Sent with every draft reply. Leave it empty for plain, professional replies.</div>
+  </div>
+</div>`
+
+const NOTES = {
+  task: ['Task with an email', [
+    '<b>Where it shows:</b> a Reply card on tasks linked to an Outlook email (for example the “Reply to …” tasks mail import creates), under Where this stands. It replies to the newest email in that conversation from someone else.',
+    '<b>The first draft is the AI’s alone</b>, from the email thread, the task, its Notes and Updates.',
+    '<b>Preview first:</b> the AI picks Reply all or Reply (marked “AI pick”); you can switch. The body is yours to edit. <b>Try again</b> opens an optional note (“What should change?”) and Rewrite writes a new draft with it. Discard throws it away.',
+    '<b>Save to Outlook Drafts</b> creates the reply in Outlook (with the earlier thread quoted below, as Outlook does) and saves it to Drafts. It is never sent. Then Open in Outlook shows it so you can check and send it yourself.',
+    '<b>Nothing else changes:</b> the task stays open; Activity notes “Draft reply saved to Outlook Drafts”. Each request is in the AI log and AI spending.',
+    '<b>Sent to the AI:</b> the email thread (same limits as mail import), the task, its Notes and latest updates, your style note, and on Try again your note and the draft being replaced. With Claude, that goes to Anthropic, like reading mail does.',
+  ]],
+  basic: ['Basic selected', ['The box and button are greyed out, with the same Settings link as the status card.']],
+  nooutlook: ['No classic Outlook', ['On a Mac, or a Windows PC without classic Outlook, the card says so and offers nothing else. Tasks only get an email link from Outlook mail import, so this is rare.']],
+  settings: ['Settings → AI', ['One new field: your writing style, sent with every draft. Your Outlook signature is not written by the AI.']],
+}
+
+function wire() {
+  const n = $('note'); if (n) n.oninput = () => (st.note = n.value)
+  const w = $('write'); if (w) w.onclick = () => { st.phase = 'writing'; render(); setTimeout(() => { st.phase = 'draft'; render() }, 900) }
+  document.querySelectorAll('[data-m]').forEach((b) => (b.onclick = () => { st.mode = b.dataset.m; render() }))
+  const b = $('body'); if (b) b.oninput = () => (st.body = b.value)
+  const a = $('again'); if (a) a.onclick = () => { st.retry = true; render(); $('note')?.focus() }
+  const cr = $('cancelretry'); if (cr) cr.onclick = () => { st.retry = false; render() }
+  const rw = $('rewrite'); if (rw) rw.onclick = () => { st.retry = false; st.phase = 'writing'; render(); setTimeout(() => { st.phase = 'draft'; st.mode = 'all'; st.note = ''; render(); toast('Rewritten') }, 900) }
+  const a2 = $('again2'); if (a2) a2.onclick = () => { st.phase = 'idle'; st.saved = false; st.body = DRAFT; render() }
+  const d = $('discard'); if (d) d.onclick = () => { st.phase = 'idle'; st.body = DRAFT; render() }
+  const s = $('save'); if (s) s.onclick = () => { st.saved = true; render(); toast('Saved to Outlook Drafts') }
+  const o = $('openol'); if (o) o.onclick = () => toast('Opens the draft in Outlook')
+  const g = $('settings'); if (g) g.onclick = () => toast('Opens Settings → AI')
+}
+function render() {
+  document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.v === view))
+  if (view === 'settings') $('stage').innerHTML = settings
+  else $('stage').innerHTML = editor(replyCard({ basic: view === 'basic', noOutlook: view === 'nooutlook' }))
+  const [h, l] = NOTES[view]
+  $('notes').innerHTML = `<h3>${h}</h3><ul>${l.map((x) => `<li>${x}</li>`).join('')}</ul>`
+  wire()
+}
+document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { view = b.dataset.v; reset(); render() }))
+$('theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+reset(); render()
+</script>
+</body>
+</html>

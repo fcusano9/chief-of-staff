@@ -314,6 +314,19 @@ textarea.notes-inp { min-height: calc(var(--fs) * 1.5 * 6 + var(--inp-py) * 2 + 
 .act-who { color: var(--faint); }
 .act-more, .act-old { padding: 4px 0 0 60px; }
 .act-old { color: var(--faint); font-style: italic; }
+.rp { border: 1px solid var(--border); border-radius: 8px; padding: calc(var(--card-py) - 2px) calc(var(--card-px) - 2px); margin-bottom: 12px; }
+.rp-head { gap: 8px; font-size: var(--fs-sm); }
+.rp-head b { font-weight: 600; white-space: nowrap; flex: none; }
+.rp-head .btn.ghost.sm { padding: 0 6px; color: var(--muted); }
+.rp-mail { color: var(--muted); font-size: var(--fs-sm); margin-top: 2px; }
+.rp-sec { margin-top: 10px; }
+.rp-who { display: flex; gap: 8px; align-items: baseline; font-size: var(--fs-sm); padding: 2px 0; }
+.rp-k { color: var(--muted); min-width: 56px; }
+.rp-seg button { padding: 1px 10px; white-space: nowrap; }
+.rp-pick { font-size: var(--fs-xs); }
+/* textarea.inp sets a smaller min-height, so this needs the same weight (like textarea.notes-inp). */
+textarea.rp-body { margin-top: 8px; min-height: calc(var(--fs) * 1.5 * 9 + var(--inp-py) * 2 + 2px); }
+.rp-ok { color: var(--ok); font-size: var(--fs-sm); white-space: nowrap; }
 .next-dismissed { margin-bottom: 12px; font-size: var(--fs-sm); color: var(--faint); gap: 8px; }
 .link-btn { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; font-size: var(--fs-sm); }
 .link-btn:hover { text-decoration: underline; }

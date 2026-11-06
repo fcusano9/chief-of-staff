@@ -1,5 +1,6 @@
 import { BASIC_LABEL } from '@shared/types'
 import type { PersonBriefInput } from './brief'
+import type { RawReply, ReplyInput } from './reply'
 import type { RawStatus, StatusInput } from './status'
 import { demoBriefing, type BriefingInput, type RawBriefing } from './briefing'
 import { demoReflection, type RawReflection, type WeeklyInput } from './weekly'
@@ -142,6 +143,11 @@ export class DemoProvider implements AiProvider {
 
   /** Basic can't summarize, so the Write button is off while it's selected. */
   async writeStatus(_input: StatusInput): Promise<RawStatus> {
+    throw new AiError('Select an AI model in Settings to use this feature.')
+  }
+
+  /** Basic can't write replies either, so Draft reply is off while it's selected. */
+  async writeReply(_input: ReplyInput): Promise<RawReply> {
     throw new AiError('Select an AI model in Settings to use this feature.')
   }
 
