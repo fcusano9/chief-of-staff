@@ -2,13 +2,12 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { ReplyDraft, ReplyTarget } from '@shared/types'
 import { recentNotes } from '@shared/notes'
 import { OutlookError, type OutlookReader } from '../mail/outlook'
+import { REPLY_CHARS } from '../ai/limits'
 import { cleanReply, type ReplyInput } from '../ai/reply'
 import type { AiCallLog, AiProvider } from '../ai/provider'
 import { AiError } from '../ai/provider'
 import { TaskEventService } from './task-events'
 
-/** How much of the task's Updates goes with a draft request: whole updates, newest first. */
-const UPDATES_CHARS = 1500
 
 interface Target extends ReplyTarget {
   entryId: string
@@ -59,9 +58,9 @@ export class ReplyService {
       subject: t.subject,
       from: t.from,
       thread: t.thread,
-      task: { title: task.title, notes: task.notes?.trim() ? task.notes.trim().slice(0, 1000) : null, updates: recentNotes(updates, UPDATES_CHARS) },
+      task: { title: task.title, notes: task.notes?.trim() ? task.notes.trim().slice(0, REPLY_CHARS.notes) : null, updates: recentNotes(updates, REPLY_CHARS.updates) },
       recipients: { reply: recipients.reply, replyAll: recipients.replyAll },
-      revision: revision ? { note: revision.note.slice(0, 1000), previous: revision.previous.slice(0, 8000) } : null,
+      revision: revision ? { note: revision.note.slice(0, REPLY_CHARS.note), previous: revision.previous.slice(0, REPLY_CHARS.previous) } : null,
     }
     const provider = this.provider()
     const { replyAll, body } = cleanReply(await provider.writeReply(input, this.log()))

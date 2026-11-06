@@ -1,4 +1,5 @@
 import type { OutlookMailbox, OutlookMessage } from './outlook'
+import { MAIL_CHARS } from '../ai/limits'
 
 /**
  * Turning raw Outlook messages into conversations for the AI: which to skip, which were read
@@ -155,10 +156,6 @@ function tidy(text: string): string {
     .trim()
 }
 
-const MAX_MESSAGE = 8000
-const MAX_QUOTED = 4000
-const MAX_TOTAL = 40000
-
 const cap = (s: string, max: number) => (s.length > max ? `${s.slice(0, max).trimEnd()}\n[…cut, ${(s.length - max).toLocaleString('en-US')} more characters]` : s)
 const when = (iso: string) =>
   new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -187,10 +184,10 @@ export function conversationContent(c: PlannedConversation, userName: string): s
       m.cc ? `Cc: ${m.cc}` : null,
       `Subject: ${m.subject}`,
       '',
-      cap(text || '(no text)', MAX_MESSAGE),
+      cap(text || '(no text)', MAIL_CHARS.message),
     ]
-    if (i === 0 && quoted) lines.push('', '(Earlier messages quoted in this email, for context:)', cap(quoted, MAX_QUOTED))
+    if (i === 0 && quoted) lines.push('', '(Earlier messages quoted in this email, for context:)', cap(quoted, MAIL_CHARS.quoted))
     return lines.filter((l) => l != null).join('\n')
   })
-  return cap(`${header}\n\n${parts.join('\n\n')}`, MAX_TOTAL)
+  return cap(`${header}\n\n${parts.join('\n\n')}`, MAIL_CHARS.total)
 }

@@ -12,6 +12,9 @@ Frank's choices, asked up front (mockup `design/draft-reply.html`, approved afte
 - **Mac:** the card says "Draft replies only work with Classic Outlook on Windows" (Frank's wording). Mac options were checked: Outlook MCP servers need Graph and IT approval like milestone 6; Apple Mail's Exchange link depends on EWS, which is being retired.
 - **Decided while building:** it answers the newest message from someone else in the linked conversation; recipients come from Outlook itself (a reply object read and discarded), not the AI; missing facts become [placeholders]; drafts aren't stored in the app.
 
+### 2026-11-06 · All AI wording in one file, prompts.ts (Frank)
+Every string sent to an AI moved into `src/main/ai/prompts.ts`, with a comment on each entry saying what it's for, so prompts can be tuned in one place. Frank first asked for a key-value resource file; Markdown and TOML were considered, and a TypeScript file won because typos in names or placeholders become typecheck errors, limits come straight from the constants the code enforces, and comments show on hover. Every AI limit, including how much is sent and the local model's memory, moved into `src/main/ai/limits.ts` alongside it (Frank). Entries are whole blocks with placeholders rather than one key per phrase, so each instruction is read in context. A snapshot test (`tests/prompts.test.ts`) proved the move changed no request, and shows every later wording change in the PR diff.
+
 ### 2026-11-06 · "Where this stands" joins the next action; the project brief goes (Frank)
 Frank's choices, asked up front (mockup `design/status-and-next.html`, approved after several rounds):
 - **One card, two parts:** "Where this stands" (2–3 short bullets, written for others, ready to paste to a manager) and the suggested next action. Instead of AI status updates going to Review, the roadmap item became this card: shown where you clicked, copy from it, nothing saved.

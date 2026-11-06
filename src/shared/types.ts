@@ -514,8 +514,6 @@ export interface TaskActivity {
   loggedSince: string
 }
 
-/** The most the AI may move a task's score, up or down. */
-export const MAX_AI_ADJUSTMENT = 15
 
 /**
  * The AI's adjustment to a task's priority score: written as part of a daily briefing or an

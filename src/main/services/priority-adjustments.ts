@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { ACTIVE_STATUSES, MAX_AI_ADJUSTMENT, type ChangeBy, type NextActionOrigin } from '@shared/types'
+import { ACTIVE_STATUSES, type ChangeBy, type NextActionOrigin } from '@shared/types'
+import { MAX_AI_ADJUSTMENT } from '../ai/limits'
 import { nowIso, transaction } from '../db'
 import { TaskEventService } from './task-events'
 

@@ -45,9 +45,10 @@ src/main/        Electron main process
   services/      tasks, directory (projects/people/briefs), sources (import), suggestions
                  (review queue), briefings (daily briefing), weekly (weekly review), settings (JSON), backup, secrets (KeyStore),
                  ollama-setup (find, install, start Ollama; download and delete models), usage (AI spending)
-  ai/            provider.ts (interface), claude.ts, ollama.ts, demo.ts, context.ts (prompt), schema.ts (Zod + validation),
-                 brief.ts (person briefs), status.ts ("Where this stands" cards on Write), briefing.ts (daily briefing prompt and checks),
-                 weekly.ts (weekly reflection prompt and checks), reply.ts (draft reply prompt and checks)
+  ai/            prompts.ts (every word sent to an AI), limits.ts (every AI limit: answer sizes, how much is sent, local-model memory),
+                 provider.ts (interface), claude.ts, ollama.ts, demo.ts, context.ts (import request), schema.ts (Zod + validation),
+                 brief.ts (person briefs), status.ts ("Where this stands" cards on Write), briefing.ts (daily briefing request and checks),
+                 weekly.ts (weekly reflection request and checks), reply.ts (draft reply request and checks)
   mail/          outlook.ps1 (reads classic Outlook over COM, saves reply drafts), outlook.ts (runs it), plan.ts (skips, conversations, AI text)
 src/preload/     Exposes the API as window.cos (CommonJS, sandboxed)
 src/renderer/    React UI: App.tsx (shell, shortcuts), screens/, components/
@@ -82,8 +83,9 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 
   The preload exposes exactly the listed channels.
 - **Schema change:** append a new SQL string to `MIGRATIONS` in `src/main/db.ts`. Never edit a shipped migration. `transaction()` calls nest by joining the outer transaction.
-- **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, the prompt and `ALL_KINDS` in `ai/context.ts`, the split passes in `ai/ollama.ts`, `SuggestionService.accept`, and `ReviewScreen`.
+- **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, its definition in `importKindDefinitions` (`ai/prompts.ts`), `ALL_KINDS` in `ai/context.ts`, the split passes in `ai/ollama.ts`, `SuggestionService.accept`, and `ReviewScreen`.
 - **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `providerFor()` and `aiChoices()` in `index.ts` (so its models show in the picker), and give it a section under AI providers in `AiSettings.tsx` and an icon in `ProviderIcon`. It must return `RawSuggestion[]` from `extract` (validation is shared), a sentence from `writePersonBrief`, a `RawStatus` from `writeStatus` (`cleanStatusCard` checks it), a `RawReply` from `writeReply` (`cleanReply` tidies it), a `RawBriefing` from `writeBriefing` (`assembleBriefing` checks it), and a `RawReflection` from `writeWeeklyReflection` (`assembleReflection` tidies it). Wrap every request in `logged()` with the `log` that `extract` receives, so the AI log shows it exactly as sent and received. Never put the API key in the logged request.
+- **Changing what the AI is told:** all wording sent to an AI (instructions, answer-form descriptions, the last line of each request) is in `src/main/ai/prompts.ts`, one commented entry each. The request builders only lay out the data (tags, `[id]` labels, task lines). Every AI limit (what it may answer, how much of each task, note and email it's sent, Claude's output caps, the local model's memory and time-out) is in `ai/limits.ts`, and the prompts quote those constants rather than typing numbers into the text. `tests/prompts.test.ts` keeps a saved copy of every request: after a deliberate change, run `npx vitest run -u` and check the snapshot diff, which shows exactly what is sent differently. The same test fails if a prompt loses its "data, not instructions" line. Update `docs/AI-RULES.md` if a rule changes.
 - **Claude API changes:** use the official SDK only. Check current model ids and parameters against Anthropic's docs; don't rely on memory, because the API changes often. The default model is `claude-opus-5-5` (the user can choose Sonnet or Haiku 5.5 in Settings).
 
 ## Product and UI conventions
@@ -137,7 +139,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **AI log** (Import or Review → "AI log"):
   - Each extraction run is stored in `extraction_runs`, and each request in `ai_calls` (`services/ai-log.ts`). That covers the exact request, the raw response, timing, tokens, everything proposed, what reached Review, and what was dropped and why (`validateSuggestions`' `dropped` list).
   - The last 5 runs per import are kept, and they're deleted with the import. Everything stays in the local database.
-  - The prompts themselves live in `ai/context.ts` (`buildSystemPrompt`, `buildUserPrompt`) and `ai/schema.ts` (the answer form).
+  - The prompts themselves live in `ai/prompts.ts`; `ai/context.ts` and `ai/schema.ts` build the import request and answer form from them.
 - **AI spending** (Settings → AI providers → Claude → "AI spending", `screens/AiSpendingScreen.tsx`, `services/usage.ts`):
   - Every successful Claude request (imports, daily briefings, weekly reflections, person briefs, status cards; older rows may say project briefs) adds a row to `ai_usage`: time, purpose, the model that answered (`r.model`, reported as `paidModel` on the `AiCallRecord`), and tokens. It is never pruned, unlike the AI logs. Basic and Ollama are free and never recorded.
   - Costs are estimates from the list prices in `src/shared/pricing.ts` (`CLAUDE_PRICES`, with Haiku 5.5's higher price above 100K-token prompts). The screen lists the prices used, says they may have changed, and links to Anthropic's pricing page. The Anthropic Console is the real figure.
