@@ -42,12 +42,30 @@ export interface ReplyRecipients {
   replyAll: { to: string; cc: string }
 }
 
+/** The newest sent or received email in a conversation, as Outlook threads it. */
+export interface LatestMessage {
+  entryId: string
+  storeId: string
+  /** The user sent it (a follow-up, when they're waiting on someone). */
+  fromMe: boolean
+  from: string
+  to: string
+  cc: string
+  subject: string
+  /** ISO time it was sent. */
+  time: string
+  /** The whole body, quoted history included. */
+  body: string
+}
+
 /** Where mail comes from: classic Outlook, or a fixture file in tests. */
 export interface OutlookReader {
   /** Received mail (Inbox and subfolders) and sent mail since `since`. */
   list(since: Date): Promise<OutlookMailbox>
   /** Shows one message in Outlook. */
   open(entryId: string, storeId: string): Promise<void>
+  /** The newest email, sent or received, in the conversation this message belongs to. Drafts don't count. */
+  latest(entryId: string, storeId: string): Promise<LatestMessage>
   /** Who Reply and Reply all would go to. Nothing is saved. */
   recipients(entryId: string, storeId: string): Promise<ReplyRecipients>
   /** Saves a reply (text above the quoted thread) to Outlook Drafts. Never sends. Returns the draft's ids. */
@@ -69,6 +87,12 @@ export class PowerShellOutlook implements OutlookReader {
 
   async open(entryId: string, storeId: string): Promise<void> {
     await this.run(['-Action', 'open', '-EntryId', entryId, '-StoreId', storeId])
+  }
+
+  async latest(entryId: string, storeId: string): Promise<LatestMessage> {
+    const r = await this.run(['-Action', 'latest', '-EntryId', entryId, '-StoreId', storeId])
+    const str = (k: string) => String(r[k] ?? '')
+    return { entryId: str('entryId'), storeId: str('storeId'), fromMe: r.fromMe === true, from: str('from'), to: str('to'), cc: str('cc'), subject: str('subject'), time: str('time'), body: str('body') }
   }
 
   async recipients(entryId: string, storeId: string): Promise<ReplyRecipients> {
@@ -120,7 +144,8 @@ export class PowerShellOutlook implements OutlookReader {
 
 /**
  * Test data instead of Outlook (COS_OUTLOOK_FIXTURE, only for test data folders). Opening does
- * nothing; recipients come from the fixture message; saved replies are kept in `saved` (and, in
+ * nothing; latest() is the newest message with the same conversationId; recipients come from the
+ * fixture message (for the user's own message, its To and Cc); saved replies are kept in `saved` (and, in
  * the app, written next to the fixture as <fixture>.drafts.json so e2e can check them).
  */
 export class FixtureOutlook implements OutlookReader {
@@ -138,6 +163,16 @@ export class FixtureOutlook implements OutlookReader {
 
   async open(): Promise<void> {}
 
+  async latest(entryId: string, _storeId?: string): Promise<LatestMessage> {
+    const box = this.box()
+    const m = box.messages.find((x) => x.entryId === entryId)
+    if (!m) throw new OutlookError('That email is not in Outlook.')
+    const mine = new Set(box.me.addresses.map((a) => a.toLowerCase()))
+    const newest = box.messages.filter((x) => x.isMail && x.conversationId === m.conversationId).sort((a, b) => a.time.localeCompare(b.time)).at(-1) ?? m
+    const { entryId: id, storeId, from, to, cc, subject, time, body } = newest
+    return { entryId: id, storeId, fromMe: newest.direction === 'sent' || mine.has(newest.fromEmail.toLowerCase()), from, to, cc, subject, time, body }
+  }
+
   async recipients(entryId: string, _storeId?: string): Promise<ReplyRecipients> {
     const box = this.box()
     const m = box.messages.find((x) => x.entryId === entryId)
@@ -145,6 +180,9 @@ export class FixtureOutlook implements OutlookReader {
     const mine = new Set(box.me.addresses.map((a) => a.toLowerCase()))
     const others = (list: string) => list.split(';').map((s) => s.trim()).filter((s) => s && !mine.has(s.toLowerCase()) && s !== box.me.name)
     const subject = /^re:/i.test(m.subject) ? m.subject : `RE: ${m.subject}`
+    if (m.direction === 'sent' || mine.has(m.fromEmail.toLowerCase())) {
+      return { subject, reply: { to: others(m.to).join('; '), cc: '' }, replyAll: { to: others(m.to).join('; '), cc: others(m.cc).join('; ') } }
+    }
     return { subject, reply: { to: m.from, cc: '' }, replyAll: { to: [m.from, ...others(m.to)].join('; '), cc: others(m.cc).join('; ') } }
   }
 

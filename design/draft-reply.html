@@ -101,6 +101,7 @@ textarea.inp { resize: vertical; display: block; }
   <div class="logo"><b>CS</b><span>Draft reply</span></div>
   <div class="seg">
     <button data-v="task" class="on">Task with email</button>
+    <button data-v="followup">Waiting: follow-up</button>
     <button data-v="basic">Basic selected</button>
     <button data-v="nooutlook">No Outlook (Mac)</button>
     <button data-v="settings">Settings: style note</button>
@@ -118,13 +119,21 @@ const $ = (id) => document.getElementById(id)
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1800) }
 let view = 'task'
 let st = {}
-const reset = () => { st = { phase: 'idle', note: '', mode: 'all', saved: false, body: DRAFT } }
+const reset = () => { st = { phase: 'idle', note: '', mode: 'all', saved: false, body: view === 'followup' ? NUDGE : DRAFT, before: false } }
+const fu = () => view === 'followup' && !st.before
 
 const DRAFT = `Hi Dana,
 
 Yes, the four-tier pricing works for Q1. Priya is finishing the margin model this week, so I'll send the final numbers by Friday, Nov 13.
 
 One question: should the EMEA tiers be priced in euros from the start, or converted after launch?
+
+Thanks,
+Frank`
+
+const NUDGE = `Hi Dana,
+
+Following up on the Q1 tier 2 discount. Could you confirm it this week so I can lock the pricing sheet?
 
 Thanks,
 Frank`
@@ -138,8 +147,9 @@ const statusCard = `<div class="nx">
 </div>`
 
 function replyCard({ basic = false, noOutlook = false } = {}) {
-  const head = `<div class="h"><b>✉ Reply</b><span class="mail">to the email “Q1 pricing” from Dana Lee · Nov 5</span><span class="spacer"></span>
-    <button class="btn ghost sm">Open email</button></div>`
+  const line = fu() ? 'Follow-up to your email “Q1 pricing” to Dana Lee · Nov 10' : 'To the email “Q1 pricing” from Dana Lee · Nov 5'
+  const head = `<div class="h"><b>✉ Reply</b><span class="spacer"></span><button class="btn ghost sm">Open email</button></div>
+    <div class="mail${fu() ? ' new' : ''}" style="margin-top:2px">${line}</div>`
   if (noOutlook) return `<div class="rp new">${head}<div class="hint">Draft replies only work with Classic Outlook on Windows.</div></div>`
   if (basic) return `<div class="rp new">${head}
     <div class="row" style="margin-top:8px"><span class="hint" style="margin:0">Select an AI model in <button class="link" id="settings">Settings</button> to use this feature.</span><span class="spacer"></span><button class="btn sm" disabled>✦ Draft reply</button></div></div>`
@@ -147,7 +157,7 @@ function replyCard({ basic = false, noOutlook = false } = {}) {
     const busy = st.phase === 'writing'
     return `<div class="rp new">${head}
       <div class="row" style="margin-top:8px">
-        <span class="hint" style="margin:0">Click Draft reply for a reply written from the email and this task.</span><span class="spacer"></span>
+        <span class="hint" style="margin:0">${fu() ? 'Click Draft reply for a follow-up written from the email and this task.' : 'Click Draft reply for a reply written from the email and this task.'}</span><span class="spacer"></span>
         <button class="btn sm" id="write" ${busy ? 'disabled' : ''}>${busy ? '<span class="spin"></span> Writing…' : '✦ Draft reply'}</button>
       </div></div>`
   }
@@ -175,7 +185,8 @@ function replyCard({ basic = false, noOutlook = false } = {}) {
 
 const editor = (box) => `
 <div class="editor"><div class="stripe"></div><div class="inner">
-  <div class="row"><span class="score">81</span><input class="title-inp" value="Reply to Dana: Q1 pricing"><button class="iconbtn">✕</button></div>
+  ${view === 'followup' ? `<div class="seg" style="margin-bottom:10px"><button data-b="1" class="${st.before ? 'on' : ''}">Before</button><button data-b="0" class="${st.before ? '' : 'on'}">After</button></div>` : ''}
+  <div class="row"><span class="score">81</span><input class="title-inp" value="${view === 'followup' ? 'Waiting on Dana: tier 2 discount' : 'Reply to Dana: Q1 pricing'}"><button class="iconbtn">✕</button></div>
   <div class="dgrid"><div>
     ${statusCard}
     ${box}
@@ -186,7 +197,7 @@ const editor = (box) => `
       <div><span class="d">Nov 5</span>Created <span class="faint">from “Q1 pricing”, accepted in Review</span></div>
     </div>
   </div><div>
-    <label class="field"><span>Status</span><select class="inp"><option>Open</option></select></label>
+    <label class="field"><span>Status</span><select class="inp"><option>${view === 'followup' ? 'Waiting on' : 'Open'}</option></select></label>
     <label class="field"><span>Due</span><input class="inp" type="date" value=""></label>
     <label class="field"><span>Asked by</span><input class="inp" value="Dana Lee"></label>
     <div class="card"><div class="label" style="margin:0 0 2px">Priority 81</div>Needs reply, Dana ★★★</div>
@@ -206,12 +217,18 @@ const settings = `<div class="set">
 
 const NOTES = {
   task: ['Task with an email', [
-    '<b>Where it shows:</b> a Reply card on tasks linked to an Outlook email (for example the “Reply to …” tasks mail import creates), under Where this stands. It replies to the newest email in that conversation from someone else.',
+    '<b>Where it shows:</b> a Reply card on tasks linked to an Outlook email (for example the “Reply to …” tasks mail import creates), under Where this stands. It replies to the newest email in that conversation.',
     '<b>The first draft is the AI’s alone</b>, from the email thread, the task, its Notes and Updates.',
     '<b>Preview first:</b> the AI picks Reply all or Reply (marked “AI pick”); you can switch. The body is yours to edit. <b>Try again</b> opens an optional note (“What should change?”) and Rewrite writes a new draft with it. Discard throws it away.',
     '<b>Save to Outlook Drafts</b> creates the reply in Outlook (with the earlier thread quoted below, as Outlook does) and saves it to Drafts. It is never sent. Then Open in Outlook shows it so you can check and send it yourself.',
     '<b>Nothing else changes:</b> the task stays open; Activity notes “Draft reply saved to Outlook Drafts”. Each request is in the AI log and AI spending.',
     '<b>Sent to the AI:</b> the email thread (same limits as mail import), the task, its Notes and latest updates, your style note, and on Try again your note and the draft being replaced. With Claude, that goes to Anthropic, like reading mail does.',
+  ]],
+  followup: ['Waiting on, after your follow-up', [
+    '<b>The problem (Before):</b> the draft replied to Dana’s Nov 5 email, so your Nov 10 follow-up dropped out of the chain, and the AI answered her question again.',
+    '<b>After:</b> on every task, the draft is created as a reply to the <b>newest email in the conversation</b>, yours or theirs, so every follow-up stays in the chain. The app asks Outlook for it when you click Draft reply, so a follow-up you sent since the last Check Outlook counts too.',
+    '<b>When the newest email is yours</b>, the line under Reply says “Follow-up to your email … to Dana Lee”, and the AI writes a short follow-up nudge (1–3 sentences) instead of an answer.',
+    '<b>Recipients</b> still come from Outlook’s own Reply and Reply all on that email, so check To and Cc in the preview.',
   ]],
   basic: ['Basic selected', ['The box and button are greyed out, with the same Settings link as the status card.']],
   nooutlook: ['No classic Outlook', ['On a Mac, or a Windows PC without classic Outlook, the card says so and offers nothing else. Tasks only get an email link from Outlook mail import, so this is rare.']],
@@ -226,21 +243,22 @@ function wire() {
   const a = $('again'); if (a) a.onclick = () => { st.retry = true; render(); $('note')?.focus() }
   const cr = $('cancelretry'); if (cr) cr.onclick = () => { st.retry = false; render() }
   const rw = $('rewrite'); if (rw) rw.onclick = () => { st.retry = false; st.phase = 'writing'; render(); setTimeout(() => { st.phase = 'draft'; st.mode = 'all'; st.note = ''; render(); toast('Rewritten') }, 900) }
-  const a2 = $('again2'); if (a2) a2.onclick = () => { st.phase = 'idle'; st.saved = false; st.body = DRAFT; render() }
+  const a2 = $('again2'); if (a2) a2.onclick = () => { st.phase = 'idle'; st.saved = false; st.body = fu() ? NUDGE : DRAFT; render() }
   const d = $('discard'); if (d) d.onclick = () => { st.phase = 'idle'; st.body = DRAFT; render() }
   const s = $('save'); if (s) s.onclick = () => { st.saved = true; render(); toast('Saved to Outlook Drafts') }
   const o = $('openol'); if (o) o.onclick = () => toast('Opens the draft in Outlook')
+  document.querySelectorAll('[data-b]').forEach((x) => (x.onclick = () => { st.before = x.dataset.b === '1'; st.body = st.before ? DRAFT : NUDGE; render() }))
   const g = $('settings'); if (g) g.onclick = () => toast('Opens Settings → AI')
 }
 function render() {
-  document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.v === view))
+  document.querySelectorAll('.top .seg button').forEach((b) => b.classList.toggle('on', b.dataset.v === view))
   if (view === 'settings') $('stage').innerHTML = settings
   else $('stage').innerHTML = editor(replyCard({ basic: view === 'basic', noOutlook: view === 'nooutlook' }))
   const [h, l] = NOTES[view]
   $('notes').innerHTML = `<h3>${h}</h3><ul>${l.map((x) => `<li>${x}</li>`).join('')}</ul>`
   wire()
 }
-document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { view = b.dataset.v; reset(); render() }))
+document.querySelectorAll('.top .seg button').forEach((b) => (b.onclick = () => { view = b.dataset.v; reset(); render() }))
 $('theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
 reset(); render()
 </script>

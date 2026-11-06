@@ -551,14 +551,16 @@ export interface NextAction {
   staleSince: string | null
 }
 
-/** The email a task's Reply card answers: the newest message from someone else in its linked Outlook conversation. */
+/** The email a task's Reply card replies to: the newest email, sent or received, in its linked Outlook conversation. */
 export interface ReplyTarget {
   sourceId: number
   subject: string
-  /** Who sent the message being answered. */
+  /** The other person: who sent the newest email, or for a follow-up, who the user's email went to. */
   from: string
-  /** ISO time it arrived. */
+  /** ISO time of the newest email. */
   at: string
+  /** The newest email in the conversation is the user's own, so the draft is a follow-up to it. */
+  followUp: boolean
   /** False when this computer can't reach classic Outlook (a Mac, or Windows without it). */
   supported: boolean
 }
@@ -572,6 +574,8 @@ export interface ReplyDraft {
   reply: { to: string; cc: string }
   replyAllTo: { to: string; cc: string }
   writtenBy: string
+  /** The email the draft replies to, as Outlook found it when drafting (it may be newer than the target's). */
+  email: { from: string; at: string; followUp: boolean }
 }
 
 /** A project's "Where this stands" and one next step for the project as a whole. Written only when the user clicks Write. */

@@ -2,6 +2,7 @@
 // a Settings link; with a model (a fake Ollama here) Draft reply shows To, Cc and the AI's Reply all /
 // Reply pick, the text can be edited, Try again takes a note, and Save to Outlook Drafts hands it to
 // Outlook (a fixture, COS_OUTLOOK_FIXTURE, which writes <fixture>.drafts.json) and notes it in Activity.
+// Then a follow-up the user sent (not yet read by the app) becomes the email the next draft replies to.
 import { createServer } from 'node:http'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -128,6 +129,24 @@ try {
   check('Activity notes the draft', (await text(app, '.pane.right')).includes('Draft reply saved to Outlook Drafts'))
   check('the task stays open', (await app.eval(`return (await window.cos['tasks.listActive']({})).some(t => t.title.startsWith('Reply to Dana'))`)))
   await app.screenshot(join(shots, 'draft-reply-02-saved.png'))
+
+  // The user sends a follow-up from Outlook (the app hasn't read it): the next draft threads on it.
+  const box = JSON.parse(readFileSync(fixture, 'utf8'))
+  box.messages.push({
+    ...box.messages[0], entryId: 'E2', messageId: '<e2e-2@example.com>', direction: 'sent', folder: 'Sent Items', from: 'Frank Cusano', fromEmail: 'frank@example.com',
+    to: 'Dana Lee', cc: '', time: new Date().toISOString(), body: 'Hi Dana,\nAny update on tier 2?',
+  })
+  writeFileSync(fixture, JSON.stringify(box))
+  await app.clickText('Write another', '[data-testid="reply-card"] button')
+  await app.clickText('Draft reply', '[data-testid="reply-card"] button')
+  await app.waitFor('textarea[aria-label="Draft reply"]', 10000)
+  check('a follow-up the user sent is what the draft replies to', (await text(app, '[data-testid="reply-card"]')).includes('Follow-up to your email “Q1 dealer pricing” to Dana Lee'))
+  const nudge = JSON.stringify(chats.at(-1)?.messages ?? [])
+  check('the AI is asked for a follow-up and sees it', nudge.includes('You draft a follow-up email') && nudge.includes('Any update on tier 2?'))
+  await app.clickText('Save to Outlook Drafts', '[data-testid="reply-card"] button')
+  await app.sleep(500)
+  const saved2 = JSON.parse(readFileSync(drafts, 'utf8'))
+  check('saved as a reply to the follow-up, so it stays in the chain', saved2.at(-1)?.entryId === 'E2', JSON.stringify(saved2.at(-1)))
   check('no renderer errors', app.errors.length === 0, app.errors.join(' | '))
 } catch (e) {
   results.push(`ERROR  ${e.stack}`)

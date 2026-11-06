@@ -55,6 +55,8 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
     window.setTimeout(() => document.getElementById('ai-providers')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
 
+  // After drafting, the line shows the email Outlook found (it may be newer than the app knew).
+  const email = phase.kind === 'draft' ? phase.draft.email : target
   const head = (
     <>
       <div className="row rp-head">
@@ -67,7 +69,7 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
         )}
       </div>
       <div className="rp-mail">
-        To the email “{target.subject}” from {target.from} · {day(target.at)}
+        {email.followUp ? `Follow-up to your email “${target.subject}” to ${email.from}` : `To the email “${target.subject}” from ${email.from}`} · {day(email.at)}
       </div>
     </>
   )
@@ -96,7 +98,7 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
             </span>
           ) : (
             <span className="next-hint" style={{ margin: 0 }}>
-              Click Draft reply for a reply written from the email and this task.
+              Click Draft reply for a {target.followUp ? 'follow-up' : 'reply'} written from the email and this task.
             </span>
           )}
           <span className="spacer" />

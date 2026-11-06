@@ -157,7 +157,8 @@ function tidy(text: string): string {
 }
 
 const cap = (s: string, max: number) => (s.length > max ? `${s.slice(0, max).trimEnd()}\n[…cut, ${(s.length - max).toLocaleString('en-US')} more characters]` : s)
-const when = (iso: string) =>
+/** "Thu, Nov 5, 2026, 2:00 PM": how message times are written in the text the AI reads. */
+export const when = (iso: string) =>
   new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 
 /**
