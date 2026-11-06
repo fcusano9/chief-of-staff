@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { MailCheck, MailInfo, MailJobStatus } from '@shared/types'
 import { cos, errorMessage } from '../api'
+import { CostNote } from './bits'
 import { useApp } from '../context'
 
 type Since = 'last' | '7' | '30' | 'custom'
@@ -205,7 +206,12 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
         {stage === 'done' && job && (
           <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
             {job.state === 'stopped' ? (
-              <span>Stopped. What was read so far is in Review; the rest will be offered next time.</span>
+              <span>
+                Stopped. What was read so far is in Review; the rest will be offered next time.
+                <span className="muted">
+                  <CostNote cost={job.estimatedCost} what="the conversations read" />
+                </span>
+              </span>
             ) : (
               <span>
                 <b style={{ fontWeight: 500 }}>
@@ -215,6 +221,7 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
                   {' '}
                   · {job.suggestions} suggestion{job.suggestions === 1 ? '' : 's'} to review
                   {job.failed ? ` · ${job.failed} failed (use Run again below)` : ''}
+                  <CostNote cost={job.estimatedCost} what="the conversations read" />
                 </span>
               </span>
             )}

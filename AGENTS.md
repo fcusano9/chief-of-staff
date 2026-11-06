@@ -142,6 +142,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   - Costs are estimates from the list prices in `src/shared/pricing.ts` (`CLAUDE_PRICES`, with Haiku 5.5's higher price above 100K-token prompts). The screen lists the prices used, says they may have changed, and links to Anthropic's pricing page. The Anthropic Console is the real figure.
   - **When Anthropic changes prices or a model is added**, update `CLAUDE_PRICES`, `PRICES_CHECKED` and `PRICES_CHECKED_LABEL` after checking the pricing page. The model picker's price text comes from the same table. A model with no price is counted but shown as "price not known".
   - The Import and briefing AI logs show each request's model and estimated cost, and the run or briefing total.
+  - Recent imports on the Import screen show each import's estimated cost (its latest run, the one its AI log opens on; `SourceItem.estimatedCost`), and each Outlook mail import's total across its conversations. The Outlook card shows the total when a Read finishes or is stopped (`MailJobStatus.estimatedCost`). Nothing shows for free models.
 
 ## Environment notes (Frank's Windows PC)
 

@@ -32,11 +32,21 @@ try {
   const ago = (min) => new Date(Date.now() - min * 60_000).toISOString()
   const oldDate = new Date(Date.now() - 40 * 86_400_000).toISOString()
   const req = (m) => JSON.stringify({ model: m, system: 'rules', messages: [{ role: 'user', content: 'Notes' }] }, null, 2)
-  db.exec(`INSERT INTO source_items (id, kind, title, occurred_at, content, content_hash, imported_at, extracted_at) VALUES (1, 'note', 'Pricing call notes', '${ago(30)}', 'x', 'e2e-h1', '${ago(30)}', '${ago(30)}')`)
+  db.exec(`INSERT INTO source_items (id, kind, title, occurred_at, content, content_hash, imported_at, extracted_at, extracted_by) VALUES (1, 'note', 'Pricing call notes', '${ago(30)}', 'x', 'e2e-h1', '${ago(30)}', '${ago(30)}', 'Claude Opus 5.5')`)
   db.exec(`INSERT INTO extraction_runs (id, source_id, provider, started_at, finished_at, raw_output, kept_output) VALUES (1, 1, 'Claude Opus 5.5', '${ago(30)}', '${ago(29)}', '[]', '[]')`)
   db.prepare(`INSERT INTO ai_calls (run_id, purpose, endpoint, request, response, error, started_at, duration_ms, input_tokens, output_tokens) VALUES (1, 'Find suggestions', 'Anthropic Messages API (POST /v1/messages)', ?, ?, NULL, ?, 14200, 9000, 1200)`).run(req('claude-opus-5-5'), JSON.stringify({ model: 'claude-opus-5-5', content: [] }), ago(30))
   db.prepare(`INSERT INTO briefings (id, created_at, started_by, written_by, since, content) VALUES (1, ?, 'manual', 'Claude Opus 5.5', ?, ?)`).run(ago(20), ago(1440), JSON.stringify({ summary: 'A short day.', priorities: [], nudges: [], newItems: [] }))
   db.prepare(`INSERT INTO briefing_ai_calls (briefing_id, purpose, endpoint, request, response, error, started_at, duration_ms, input_tokens, output_tokens) VALUES (1, 'Write the briefing', 'Anthropic Messages API (POST /v1/messages)', ?, ?, NULL, ?, 6800, 6000, 900)`).run(req('claude-opus-5-5'), JSON.stringify({ model: 'claude-opus-5-5', content: [] }), ago(20))
+  // An Outlook mail import of two conversations; the first was run twice, and only its latest run counts.
+  db.exec(`INSERT INTO mail_imports (id, since, checked_at, started_at, finished_at, complete, provider) VALUES (1, '${ago(2880)}', '${ago(60)}', '${ago(60)}', '${ago(55)}', 1, 'Claude Opus 5.5')`)
+  const conv = db.prepare(`INSERT INTO source_items (id, kind, title, occurred_at, content, content_hash, imported_at, extracted_at, extracted_by, mail_import_id, mail_meta) VALUES (?, 'email', ?, ?, 'x', ?, ?, ?, 'Claude Opus 5.5', 1, '{}')`)
+  conv.run(2, 'Q1 pricing', ago(70), 'e2e-h2', ago(60), ago(59))
+  conv.run(3, 'Spec review', ago(80), 'e2e-h3', ago(60), ago(58))
+  const run = db.prepare(`INSERT INTO extraction_runs (id, source_id, provider, started_at, finished_at, raw_output, kept_output) VALUES (?, ?, 'Claude', ?, ?, '[]', '[]')`)
+  const callFor = db.prepare(`INSERT INTO ai_calls (run_id, purpose, endpoint, request, response, error, started_at, duration_ms, input_tokens, output_tokens) VALUES (?, 'Find suggestions', 'Anthropic Messages API (POST /v1/messages)', ?, ?, NULL, ?, 9000, ?, ?)`)
+  run.run(2, 2, ago(60), ago(59)); callFor.run(2, req('claude-opus-5-5'), JSON.stringify({ model: 'claude-opus-5-5' }), ago(60), 90000, 12000) // older run, not counted
+  run.run(3, 2, ago(50), ago(49)); callFor.run(3, req('claude-opus-5-5'), JSON.stringify({ model: 'claude-opus-5-5' }), ago(50), 9000, 1200) // $0.060
+  run.run(4, 3, ago(58), ago(57)); callFor.run(4, req('claude-sonnet-5-5'), JSON.stringify({ model: 'claude-sonnet-5-5' }), ago(58), 12000, 1500) // $0.039
   const use = db.prepare('INSERT INTO ai_usage (at, purpose, model, input_tokens, output_tokens, briefing_id) VALUES (?, ?, ?, ?, ?, ?)')
   use.run(ago(30), 'import', 'claude-opus-5-5', 9000, 1200, null) // $0.060
   use.run(ago(25), 'import', 'claude-sonnet-5-5', 12000, 1500, null) // $0.039
@@ -79,6 +89,18 @@ try {
 
   // Import AI log.
   await app.clickText('Import', '.tab')
+  await app.waitFor('[data-import-cost]')
+  const rowCost = (title) => app.eval(`return [...document.querySelectorAll('main .r')].find(r => r.querySelector('.ttl')?.textContent.startsWith(${JSON.stringify(title)}))?.querySelector('[data-import-cost]')?.textContent ?? null`)
+  check('Recent imports: a pasted import shows its estimate', (await rowCost('Pricing call notes')) === ' · est. $0.060', await rowCost('Pricing call notes'))
+  check('Recent imports: an Outlook mail import shows the total of its conversations’ latest runs', (await rowCost('Outlook mail')) === ' · est. $0.099', await rowCost('Outlook mail'))
+  const costTip = await app.eval(`return document.querySelector('[data-import-cost]')?.title`)
+  check('Recent imports: hover says it’s an estimate that may have changed', costTip?.includes('Estimated cost') && costTip?.includes('may have changed'), costTip)
+  await app.clickText('Conversations', 'main button')
+  await app.waitFor('main .r [data-import-cost]')
+  const each = [await rowCost('Q1 pricing'), await rowCost('Spec review')]
+  check('Recent imports: each conversation shows its own estimate', JSON.stringify(each) === JSON.stringify([' · est. $0.060', ' · est. $0.039']), JSON.stringify(each))
+  await app.screenshot(join(shots, 'ai-spending-03a-recent-imports.png'))
+  await app.clickText('Hide conversations', 'main button')
   await app.clickText('AI log', 'main button')
   await app.waitFor('[data-call]')
   check('Import AI log: run estimate', (await text(app, '[data-run-cost]')) === 'Est. cost $0.060', await text(app, '[data-run-cost]'))

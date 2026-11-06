@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DemoProvider } from '../src/main/ai/demo'
 import { validateSuggestions } from '../src/main/ai/schema'
 import { buildExtractionContext } from '../src/main/ai/context'
+import { logged, type AiCallLog } from '../src/main/ai/provider'
+import type { ExtractionContext, SourceForExtraction } from '../src/main/ai/context'
 import { openDatabase } from '../src/main/db'
 import type { OutlookMailbox, OutlookMessage, OutlookReader } from '../src/main/mail/outlook'
 import { conversationContent, planMailbox, SKIP, skipReason, splitQuoted } from '../src/main/mail/plan'
@@ -227,7 +229,7 @@ describe('mail import end to end (demo AI, fake Outlook)', () => {
 
     mail.read(check.id, ['A', 'B'])
     const status = await finished()
-    expect(status).toMatchObject({ state: 'done', done: 2, total: 2, failed: 0 })
+    expect(status).toMatchObject({ state: 'done', done: 2, total: 2, failed: 0, estimatedCost: null }) // Basic is free
 
     const pending = suggestions.listPending()
     const reply = pending.find((s) => s.kind === 'needs_reply')!
@@ -258,6 +260,22 @@ describe('mail import end to end (demo AI, fake Outlook)', () => {
 
     await mail.open(run!.conversations[0]!.id)
     expect(outlook.opened).toHaveLength(1)
+  })
+
+  it('adds up what the conversations of a paid import are estimated to cost', async () => {
+    /** Basic's answers, logged as if Claude Opus 5.5 gave them with 10,000 tokens in and 1,000 out ($0.06). */
+    class PaidDemo extends DemoProvider {
+      override extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog) {
+        const meta = { purpose: 'Find suggestions', endpoint: 'Anthropic Messages API', request: { model: 'claude-opus-5-5' } }
+        return logged(log, meta, () => super.extract(ctx, source), () => ({ response: {}, inputTokens: 10_000, outputTokens: 1_000, paidModel: 'claude-opus-5-5' }))
+      }
+    }
+    sources = new SourceService(db, () => new PaidDemo(), () => ME)
+    mail = new MailService(db, sources, outlook, () => ME, () => 'Claude', () => now)
+    outlook.mailbox = box([msg({ conversationId: 'A', body: 'Can you confirm by Friday?' }), msg({ conversationId: 'B', subject: 'Spec', body: 'Can you review the spec?' })])
+    mail.read((await mail.check(since.toISOString())).id, ['A', 'B'])
+    expect((await finished()).estimatedCost).toBeCloseTo(0.12)
+    expect(mail.imports()[0]!.conversations.map((s) => s.estimatedCost)).toEqual([expect.closeTo(0.06), expect.closeTo(0.06)])
   })
 
   it('reads a skipped conversation when chosen with "Read anyway"', async () => {

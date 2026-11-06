@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
+import { estimateCost } from '@shared/pricing'
 import type { AiCall, AiRun } from '@shared/types'
 import type { AiCallLog, AiCallRecord } from '../ai/provider'
 import type { DroppedSuggestion } from '../ai/schema'
@@ -59,6 +60,21 @@ export class AiLogService {
     this.db
       .prepare(`DELETE FROM extraction_runs WHERE source_id = ? AND id NOT IN (SELECT id FROM extraction_runs WHERE source_id = ? ORDER BY id DESC LIMIT ${RUNS_KEPT})`)
       .run(sourceId, sourceId)
+  }
+
+  /**
+   * Estimated cost of an import's latest run (the one its AI log opens on), or null when that run
+   * made no priced request (Basic, Ollama, failed before answering, or a model with no price).
+   */
+  latestRunCost(sourceId: number): number | null {
+    const calls = this.db
+      .prepare('SELECT endpoint, request, response, input_tokens, output_tokens FROM ai_calls WHERE run_id = (SELECT MAX(id) FROM extraction_runs WHERE source_id = ?)')
+      .all(sourceId) as Record<string, unknown>[]
+    const costs = calls
+      .filter((c) => c.input_tokens != null)
+      .map((c) => estimateCost(paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null), Number(c.input_tokens), Number(c.output_tokens ?? 0)))
+      .filter((c): c is number => c != null)
+    return costs.length ? costs.reduce((a, b) => a + b, 0) : null
   }
 
   /** An import's runs, newest first, each with its requests in the order they were sent. */

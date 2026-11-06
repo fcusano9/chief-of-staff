@@ -21,9 +21,13 @@ const call = (o: Partial<AiCallRecord>): AiCallRecord => ({
 class Fake implements AiProvider {
   readonly label = 'Fake'
   readonly sendsDataExternally = false
-  constructor(private readonly paidModel: string | null) {}
+  constructor(
+    private readonly paidModel: string | null,
+    /** 'Anthropic Messages API' makes the AI log read the model back, as it does for real Claude requests. */
+    private readonly endpoint = 'fake',
+  ) {}
   private one<T>(log: AiCallLog | undefined, out: T) {
-    return logged(log, { purpose: 'x', endpoint: 'fake', request: {} }, async () => out, () => ({ response: {}, inputTokens: 10_000, outputTokens: 1_000, paidModel: this.paidModel }))
+    return logged(log, { purpose: 'x', endpoint: this.endpoint, request: { model: this.paidModel } }, async () => out, () => ({ response: {}, inputTokens: 10_000, outputTokens: 1_000, paidModel: this.paidModel }))
   }
   extract(_c: unknown, _s: unknown, log?: AiCallLog) {
     return this.one(log, { suggestions: [], next_actions: [], priority_changes: [] })
@@ -148,6 +152,20 @@ describe('AI spending', () => {
     expect(sources.aiRuns(source.id)[0]!.calls[0]!.paidModel).toBeNull() // the fake's endpoint isn't Anthropic
     sources.delete(source.id)
     expect(new UsageService(db).spending().month.total.requests).toBe(1)
+  })
+
+  it('shows each import’s estimated cost: its latest run only, and nothing for free models', async () => {
+    const paid = new SourceService(db, () => new Fake('claude-opus-5-5', 'Anthropic Messages API'), () => 'Frank')
+    const { source } = await paid.importAndExtract({ kind: 'note', title: 'A', content: 'Paid import' })
+    expect(source.estimatedCost).toBeCloseTo(0.06)
+    await paid.extract(source.id) // Run again: the row shows the latest run, as the AI log does
+    expect(paid.get(source.id)!.estimatedCost).toBeCloseTo(0.06)
+    expect(paid.list()[0]!.estimatedCost).toBeCloseTo(0.06)
+
+    const free = await new SourceService(db, () => new Fake(null), () => 'Frank').importAndExtract({ kind: 'note', title: 'B', content: 'Free import' })
+    expect(free.source.estimatedCost).toBeNull()
+    db.prepare("INSERT INTO source_items (kind, title, occurred_at, imported_at, content, content_hash) VALUES ('note', 'Unread', '2026-11-01', '2026-11-01', 'x', 'h')").run()
+    expect(paid.list().find((s) => s.title === 'Unread')!.estimatedCost).toBeNull()
   })
 
   it('shows each briefing’s estimated cost in History', async () => {

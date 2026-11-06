@@ -1,3 +1,4 @@
+import { formatCost } from '@shared/pricing'
 import type { Person, Project, Task } from '@shared/types'
 import { daysUntil, FOLLOW_UP_BUSINESS_DAYS, needsFollowUp, NO_SIGNALS } from '@shared/priority'
 import { effectivePriority, initials, NO_PROJECT_COLOR } from '@shared/types'
@@ -165,5 +166,15 @@ export function ConfirmButton({ label, confirmLabel, onConfirm }: { label: strin
     >
       {label}
     </button>
+  )
+}
+
+/** " · est. $0.042" after an import's suggestion count; nothing when it cost nothing. */
+export function CostNote({ cost, what = 'this import' }: { cost: number | null; what?: string }) {
+  if (cost == null) return null
+  return (
+    <span data-import-cost title={`Estimated cost of ${what} at Anthropic's list price. Prices may have changed; the AI spending screen in Settings lists the prices used.`}>
+      {` · est. ${formatCost(cost)}`}
+    </span>
   )
 }
