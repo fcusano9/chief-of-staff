@@ -4,6 +4,8 @@ Every rule that decides what the AI sees, when it runs and what it may change, o
 
 **Keep this file current.** Any change to a rule below (a limit, a trigger, what's sent) updates this page in the same PR.
 
+**Where the wording is:** every word sent to an AI is in [`src/main/ai/prompts.ts`](../src/main/ai/prompts.ts), with a comment on each entry. The limits it quotes (top priorities, nudges, card bullets, points per list) are in [`src/main/ai/limits.ts`](../src/main/ai/limits.ts) and enforced by the code too.
+
 Status: ✅ built · 🟡 approved, not built yet
 
 ## Rules for every AI feature

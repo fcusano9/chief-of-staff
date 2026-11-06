@@ -2,6 +2,9 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-06 · All AI wording in one file, prompts.ts (Frank)
+Every string sent to an AI moved into `src/main/ai/prompts.ts`, with a comment on each entry saying what it's for, so prompts can be tuned in one place. Frank first asked for a key-value resource file; Markdown and TOML were considered, and a TypeScript file won because typos in names or placeholders become typecheck errors, limits come straight from the constants the code enforces (`limits.ts`), and comments show on hover. Entries are whole blocks with placeholders rather than one key per phrase, so each instruction is read in context. A snapshot test (`tests/prompts.test.ts`) proved the move changed no request, and shows every later wording change in the PR diff.
+
 ### 2026-11-06 · "Where this stands" joins the next action; the project brief goes (Frank)
 Frank's choices, asked up front (mockup `design/status-and-next.html`, approved after several rounds):
 - **One card, two parts:** "Where this stands" (2–3 short bullets, written for others, ready to paste to a manager) and the suggested next action. Instead of AI status updates going to Review, the roadmap item became this card: shown where you clicked, copy from it, nothing saved.

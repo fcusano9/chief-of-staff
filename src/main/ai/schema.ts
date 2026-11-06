@@ -1,48 +1,49 @@
 import { z } from 'zod'
 import { PROJECT_COLORS, type BriefScope, type SuggestionKind, type SuggestionPayload } from '@shared/types'
 import type { ExtractionContext } from './context'
+import { IMPORT_FIELDS as F, NEXT_ACTION_FIELDS, PRIORITY_CHANGE_FIELDS, STATUS_BULLETS_FIELD } from './prompts'
 
 /** The JSON shape the AI must return (enforced with structured outputs for Claude). */
 export const RawSuggestionSchema = z.object({
   kind: z.enum(['new_task', 'needs_reply', 'status_update', 'mark_done', 'waiting_on', 'brief_update', 'new_project', 'new_person']),
-  task_id: z.number().int().nullable().describe('ID of the existing task this is about, from the open-task list; null for new tasks'),
-  title: z.string().describe("New task title (imperative, under 80 characters); the project's name for new_project; the person's full name for new_person; else a short headline"),
-  details: z.string().describe('Status update text, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task'),
-  due_date: z.string().nullable().describe('YYYY-MM-DD if a deadline is stated or clearly implied, else null'),
-  project_id: z.number().int().nullable().describe('ID of the matching existing project, else null'),
-  project_name: z.string().nullable().describe('For a task in a project you propose with new_project in this response: that project name exactly; else null'),
-  requester_name: z.string().nullable().describe('Who asked for this, as written in the source, else null'),
-  waiting_on: z.string().nullable().describe('Who or what the user is waiting on (waiting_on only), else null'),
-  brief_scope: z.enum(['project', 'task', 'person']).nullable().describe('For brief_update: which kind of brief'),
-  brief_owner_id: z.number().int().nullable().describe('For brief_update: ID of the project, task, or person'),
-  role: z.string().nullable().describe("For new_person, or brief_update on a person: their job title or role as stated in the source, else null"),
-  company: z.string().nullable().describe('For new_person, or brief_update on a person: the company or organization they work for, as stated in the source, else null'),
-  email: z.string().nullable().describe('For new_person: their email address if it appears in the source, else null'),
-  evidence: z.string().describe('A short verbatim quote from the source that supports this suggestion'),
+  task_id: z.number().int().nullable().describe(F.task_id),
+  title: z.string().describe(F.title),
+  details: z.string().describe(F.details),
+  due_date: z.string().nullable().describe(F.due_date),
+  project_id: z.number().int().nullable().describe(F.project_id),
+  project_name: z.string().nullable().describe(F.project_name),
+  requester_name: z.string().nullable().describe(F.requester_name),
+  waiting_on: z.string().nullable().describe(F.waiting_on),
+  brief_scope: z.enum(['project', 'task', 'person']).nullable().describe(F.brief_scope),
+  brief_owner_id: z.number().int().nullable().describe(F.brief_owner_id),
+  role: z.string().nullable().describe(F.role),
+  company: z.string().nullable().describe(F.company),
+  email: z.string().nullable().describe(F.email),
+  evidence: z.string().describe(F.evidence),
 })
 
 /** "Where this stands": 2–3 short bullets, written so the user could paste them to a manager or stakeholder. */
 export const StatusBulletsSchema = z
   .array(z.string())
-  .describe('Where it stands now, as 2 or 3 short bullets (no bullet marks) the user could paste into an email to a manager: what is done, what is open or blocked, and the next date')
+  .describe(STATUS_BULLETS_FIELD)
 
 export const NextActionSchema = z.object({
-  task_id: z.number().int().describe('ID of the existing open task, from the open-task list'),
+  task_id: z.number().int().describe(NEXT_ACTION_FIELDS.task_id),
   status: StatusBulletsSchema,
-  action: z.string().describe('The one concrete next step, one sentence starting with a verb'),
+  action: z.string().describe(NEXT_ACTION_FIELDS.action),
 })
 
 /** A change to an open task's priority score, -15 to 15 (0 removes an earlier AI change). */
 export const PriorityChangeSchema = z.object({
-  task_id: z.number().int().describe('ID of the existing open task, from the open-task list'),
-  change: z.number().int().describe('Points to add to its score, from -15 to 15; 0 removes an earlier AI change'),
-  reason: z.string().describe('One short sentence on what the score misses'),
+  task_id: z.number().int().describe(PRIORITY_CHANGE_FIELDS.task_id),
+  change: z.number().int().describe(PRIORITY_CHANGE_FIELDS.change),
+  reason: z.string().describe(PRIORITY_CHANGE_FIELDS.reason),
 })
 
 export const ExtractionSchema = z.object({
   suggestions: z.array(RawSuggestionSchema),
-  next_actions: z.array(NextActionSchema).describe('Where it stands and the next step, for each existing open task this item is about; empty if none'),
-  priority_changes: z.array(PriorityChangeSchema).describe('Only for open tasks this item is about whose score clearly misses something; empty if none'),
+  next_actions: z.array(NextActionSchema).describe(F.next_actions),
+  priority_changes: z.array(PriorityChangeSchema).describe(F.priority_changes),
 })
 
 export type RawSuggestion = z.infer<typeof RawSuggestionSchema>

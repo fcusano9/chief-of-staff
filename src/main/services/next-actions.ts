@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { ACTIVE_STATUSES, type NextAction, type NextActionOrigin, type ProjectCard } from '@shared/types'
 import { noteLines, parseNote } from '@shared/notes'
 import { nowIso, transaction } from '../db'
+import { MAX_STATUS_BULLETS } from '../ai/limits'
 
 /** One task card the AI wrote (where it stands, and the next step), already checked against the tasks it was sent. */
 export interface NextActionDraft {
@@ -11,7 +12,7 @@ export interface NextActionDraft {
 }
 
 /** At most this many "Where this stands" bullets are kept. */
-export const MAX_STATUS_BULLETS = 3
+export { MAX_STATUS_BULLETS }
 
 const tidy = (s: string | null | undefined, max: number) => {
   const t = (s ?? '').replace(/\s+/g, ' ').trim()
