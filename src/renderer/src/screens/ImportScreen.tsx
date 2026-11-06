@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ImportResult, MailImportRun, SourceItem, SourceKind } from '@shared/types'
 import { SOURCE_KIND_LABELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
-import { ConfirmButton } from '../components/bits'
+import { ConfirmButton, CostNote } from '../components/bits'
 import { OutlookImport } from '../components/OutlookImport'
 import { useShortcutHints } from '../components/hints'
 import { useApp } from '../context'
@@ -190,6 +190,8 @@ function MailRunRow({ run, open, onToggle, busy, rerun }: { run: MailImportRun; 
   const total = run.conversations.reduce((n, s) => n + s.totalSuggestions, 0)
   const failed = run.conversations.filter((s) => s.extractError).length
   const n = run.conversations.length
+  const costs = run.conversations.map((s) => s.estimatedCost).filter((c): c is number => c != null)
+  const cost = costs.length ? costs.reduce((a, b) => a + b, 0) : null
   return (
     <>
       <div className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto', paddingLeft: 12, cursor: 'default' }}>
@@ -210,6 +212,7 @@ function MailRunRow({ run, open, onToggle, busy, rerun }: { run: MailImportRun; 
           ) : (
             `${total} suggestion${total === 1 ? '' : 's'}`
           )}
+          <CostNote cost={cost} what="every conversation in this import (each one's latest run)" />
         </span>
         <button className="btn ghost" onClick={onToggle}>
           {open ? 'Hide conversations' : 'Conversations'}
@@ -245,6 +248,7 @@ function SourceRow({ s, busy, rerun, nested }: { s: SourceItem; busy: boolean; r
         ) : (
           'Not read yet'
         )}
+        <CostNote cost={s.estimatedCost} what="this import's latest AI run" />
       </span>
       {s.fromOutlook ? (
         <button className="btn ghost" title="Show this conversation's newest message in Outlook" onClick={() => void cos['mail.open'](s.id).catch((err) => toast(errorMessage(err), true))}>

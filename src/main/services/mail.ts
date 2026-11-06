@@ -20,7 +20,7 @@ interface PendingCheck {
 export class MailService {
   private pending: PendingCheck | null = null
   private nextCheckId = 1
-  private job: MailJobStatus = { state: 'idle', done: 0, total: 0, suggestions: 0, failed: 0, current: null }
+  private job: MailJobStatus = { state: 'idle', done: 0, total: 0, suggestions: 0, failed: 0, estimatedCost: null, current: null }
   private stopRequested = false
 
   constructor(
@@ -58,7 +58,7 @@ export class MailService {
       conversations: plan.conversations.map((c) => ({ key: c.key, subject: c.subject, people: c.people, messageCount: c.messages.length, lastAt: c.lastAt, skipReason: c.skipReason })),
     }
     this.pending = { check, conversations: new Map(plan.conversations.map((c) => [c.key, c])) }
-    this.job = { state: 'idle', done: 0, total: 0, suggestions: 0, failed: 0, current: null }
+    this.job = { state: 'idle', done: 0, total: 0, suggestions: 0, failed: 0, estimatedCost: null, current: null }
     return check
   }
 
@@ -80,7 +80,7 @@ export class MailService {
         .run(pending.check.since, pending.check.checkedAt, nowIso(), this.providerLabel()).lastInsertRowid,
     )
     this.stopRequested = false
-    this.job = { state: 'reading', done: 0, total: chosen.length, suggestions: 0, failed: 0, current: chosen[0]!.subject }
+    this.job = { state: 'reading', done: 0, total: chosen.length, suggestions: 0, failed: 0, estimatedCost: null, current: chosen[0]!.subject }
     void this.run(importId, chosen)
     return { ...this.job }
   }
@@ -131,6 +131,7 @@ export class MailService {
         try {
           const result = await this.sources.extract(this.save(importId, c))
           this.job.suggestions += result.suggestionsCreated
+          if (result.source.estimatedCost != null) this.job.estimatedCost = (this.job.estimatedCost ?? 0) + result.source.estimatedCost
           if (result.error) this.job.failed++
         } catch {
           this.job.failed++
