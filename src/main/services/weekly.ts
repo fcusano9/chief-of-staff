@@ -221,8 +221,9 @@ export class WeeklyService {
         insert.run(week, c.purpose, c.endpoint, pretty(c.request), c.response == null ? null : pretty(c.response), c.error, c.startedAt, c.durationMs, c.inputTokens, c.outputTokens)
         this.usage.record(c, 'weekly')
       }
+      // Keep the newest weeks by week, not by write time: two writes can share a millisecond.
       this.db
-        .prepare(`DELETE FROM weekly_ai_calls WHERE week_start NOT IN (SELECT week_start FROM weekly_reflections ORDER BY written_at DESC LIMIT ${WEEKLY_CALLS_KEPT})`)
+        .prepare(`DELETE FROM weekly_ai_calls WHERE week_start NOT IN (SELECT week_start FROM weekly_reflections ORDER BY week_start DESC LIMIT ${WEEKLY_CALLS_KEPT})`)
         .run()
     })
     return this.get(week)
