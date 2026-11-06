@@ -31,8 +31,8 @@ class Fake implements AiProvider {
   writePersonBrief(_i: unknown, log?: AiCallLog) {
     return this.one(log, 'brief')
   }
-  writeProjectBrief(_i: unknown, log?: AiCallLog) {
-    return this.one(log, 'brief')
+  writeStatus(_i: unknown, log?: AiCallLog) {
+    return this.one(log, { status: ['Done.'], action: 'Do it.' })
   }
   writeBriefing(_i: unknown, log?: AiCallLog) {
     return this.one(log, { summary: 'A quiet day.', priorities: [], nudges: [], new_items: [], priority_changes: [] })
@@ -134,12 +134,12 @@ describe('AI spending', () => {
     await new SourceService(db, () => new Fake('claude-opus-5-5'), () => 'Frank').importAndExtract({ kind: 'note', title: 'A', content: 'Paid import' })
     await new SourceService(db, () => new Fake(null), () => 'Frank').importAndExtract({ kind: 'note', title: 'B', content: 'Free import' })
     await new Fake('claude-opus-5-5').writePersonBrief({}, usage.logFor('person_brief'))
-    await new Fake('claude-opus-5-5').writeProjectBrief({}, usage.logFor('project_brief'))
+    await new Fake('claude-opus-5-5').writeStatus({} as never, usage.logFor('status'))
     usage.record(call({ inputTokens: null, error: 'Rate limited' }), 'import')
 
     const { byPurpose, total } = usage.spending().month
     expect(total.requests).toBe(3)
-    expect(byPurpose.map((g) => g.key).sort()).toEqual(['import', 'person_brief', 'project_brief'])
+    expect(byPurpose.map((g) => g.key).sort()).toEqual(['import', 'person_brief', 'status'])
   })
 
   it('keeps usage after the import and its AI log are deleted', async () => {

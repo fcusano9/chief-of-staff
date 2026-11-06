@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { CLAUDE_MODELS } from '@shared/types'
-import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
+import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
+import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } from './status'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
 import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
@@ -45,14 +46,14 @@ export function buildBriefRequest(model: string, input: PersonBriefInput) {
   }
 }
 
-/** The request for a project's status brief. */
-export function buildProjectBriefRequest(model: string, input: ProjectBriefInput) {
-  const { system, user } = buildProjectBriefPrompt(input)
+/** The request for a task's or project's card ("Where this stands" and the next step). */
+export function buildStatusRequest(model: string, input: StatusInput) {
+  const { system, user } = buildStatusPrompt(input)
   return {
     model,
     max_tokens: 6000,
     // Low effort: condensing notes into a few lines needs little reasoning.
-    output_config: { effort: 'low' as const, format: betaZodOutputFormat(ProjectBriefSchema) },
+    output_config: { effort: 'low' as const, format: betaZodOutputFormat(StatusSchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -139,13 +140,13 @@ export class ClaudeProvider implements AiProvider {
     }
   }
 
-  async writeProjectBrief(input: ProjectBriefInput, log?: AiCallLog): Promise<string> {
+  async writeStatus(input: StatusInput, log?: AiCallLog): Promise<RawStatus> {
     try {
-      const response = await this.send(log, 'Write a project brief', buildProjectBriefRequest(this.model, input))
-      if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this brief. Nothing was changed.')
-      if (response.stop_reason === 'max_tokens') throw new AiError('The brief was cut off. Try again.')
+      const response = await this.send(log, `Write where this ${input.scope} stands`, buildStatusRequest(this.model, input))
+      if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this. Nothing was changed.')
+      if (response.stop_reason === 'max_tokens') throw new AiError('The answer was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
-      return response.parsed_output.brief
+      return response.parsed_output
     } catch (err) {
       throw toAiError(err)
     }

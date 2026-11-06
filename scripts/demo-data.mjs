@@ -69,7 +69,7 @@ try {
     people[key] = saved.id
   }
 
-  // Projects, with overviews and status briefs; one archived so the archive has something in it.
+  // Projects, with overviews and an update each; one archived so the archive has something in it.
   const projects = {}
   for (const [key, p, overview, brief] of [
     ['roadmap', { name: 'Roadmap 2027', color: '#7F77DD', status: 'active' }, 'The 2027 product roadmap for the exec team.', 'Exec team dropped the three-year view; deck now covers 2027 only. Due to Dana in two weeks.'],
@@ -81,7 +81,8 @@ try {
   ]) {
     const saved = await api('projects.save', { id: 0, ...p })
     await api('projects.saveOverview', saved.id, overview)
-    if (brief) await api('projects.saveBrief', saved.id, brief, 'user')
+    const day = new Date(Date.now() - 2 * 86_400_000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+    if (brief) await api('briefs.save', { scope: 'project', ownerId: saved.id, summary: `${day}: ${brief}`, standingInstructions: '', updatedAt: null })
     projects[key] = saved.id
   }
 

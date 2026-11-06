@@ -49,8 +49,8 @@ class FakeBriefer implements AiProvider {
   async writePersonBrief() {
     return ''
   }
-  async writeProjectBrief() {
-    return ''
+  async writeStatus() {
+    return { status: ['Done.'], action: 'Do it.' }
   }
   async writeBriefing(_input: BriefingInput, log?: AiCallLog) {
     this.calls++
@@ -73,10 +73,10 @@ describe('briefing: checking what the AI picked', () => {
     const b = assembleBriefing(input(), {
       summary: '  A heavy   morning. ',
       priorities: [
-        { task_id: 1, note: 'Due today.', next_action: '', next_why: '' },
-        { task_id: 99, note: 'Not a real task.', next_action: '', next_why: '' },
-        { task_id: 10, note: 'A waiting item, wrong section.', next_action: '', next_why: '' },
-        { task_id: 1, note: 'Duplicate.', next_action: '', next_why: '' },
+        { task_id: 1, note: 'Due today.', next_action: '', next_status: [''] },
+        { task_id: 99, note: 'Not a real task.', next_action: '', next_status: [''] },
+        { task_id: 10, note: 'A waiting item, wrong section.', next_action: '', next_status: [''] },
+        { task_id: 1, note: 'Duplicate.', next_action: '', next_status: [''] },
       ],
       nudges: [{ task_id: 10, note: '8 days with no reply.' }, { task_id: 1, note: 'Not waiting.' }],
       new_items: [], priority_changes: [],
@@ -90,7 +90,7 @@ describe('briefing: checking what the AI picked', () => {
   })
 
   it("keeps the AI's note on an overdue task it did pick", () => {
-    const b = assembleBriefing(input(), { summary: 'S', priorities: [{ task_id: 1, note: 'a', next_action: '', next_why: '' }, { task_id: 2, note: 'Finance needs it.', next_action: '', next_why: '' }], nudges: [], new_items: [], priority_changes: [] })
+    const b = assembleBriefing(input(), { summary: 'S', priorities: [{ task_id: 1, note: 'a', next_action: '', next_status: [''] }, { task_id: 2, note: 'Finance needs it.', next_action: '', next_status: [''] }], nudges: [], new_items: [], priority_changes: [] })
     expect(b.priorities.map((p) => [p.taskId, p.note])).toEqual([[2, 'Finance needs it.'], [1, 'a']])
   })
 

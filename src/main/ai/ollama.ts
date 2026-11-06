@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { localModelLabel, type SuggestionKind } from '@shared/types'
-import { buildBriefPrompt, buildProjectBriefPrompt, PersonBriefSchema, ProjectBriefSchema, type PersonBriefInput, type ProjectBriefInput } from './brief'
+import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
+import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } from './status'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
 import { ALL_KINDS, asksForNextActions, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
@@ -146,10 +147,10 @@ export function buildOllamaBriefRequest(model: string, input: PersonBriefInput, 
   return chatRequest(model, system, user, format, reasoning)
 }
 
-/** The request for a project's status brief. */
-export function buildOllamaProjectBriefRequest(model: string, input: ProjectBriefInput, reasoning: Reasoning = 'low') {
-  const { system, user } = buildProjectBriefPrompt(input)
-  const format = z.toJSONSchema(ProjectBriefSchema) as Record<string, unknown>
+/** The request for a task's or project's card ("Where this stands" and the next step). */
+export function buildOllamaStatusRequest(model: string, input: StatusInput, reasoning: Reasoning = 'low') {
+  const { system, user } = buildStatusPrompt(input)
+  const format = z.toJSONSchema(StatusSchema) as Record<string, unknown>
   delete format.$schema
   return chatRequest(model, system, user, format, reasoning)
 }
@@ -243,10 +244,11 @@ export class OllamaProvider implements AiProvider {
     return parsed.data.brief
   }
 
-  async writeProjectBrief(input: ProjectBriefInput): Promise<string> {
-    const parsed = ProjectBriefSchema.safeParse(this.parseJson(await this.chat(buildOllamaProjectBriefRequest(this.model, input, this.options.reasoning))))
+  async writeStatus(input: StatusInput, log?: AiCallLog): Promise<RawStatus> {
+    const body = await this.chat(buildOllamaStatusRequest(this.model, input, this.options.reasoning), `Write where this ${input.scope} stands`, log)
+    const parsed = StatusSchema.safeParse(this.parseJson(body))
     if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
-    return parsed.data.brief
+    return parsed.data
   }
 
   async writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing> {

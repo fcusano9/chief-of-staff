@@ -4,7 +4,8 @@ import type { DatabaseSync } from 'node:sqlite'
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import { API_CHANNELS, type Api } from '@shared/api'
 import { BASIC_LABEL, CLAUDE_MODELS, isTestedLocalModel, localModelLabel, type AiChoiceGroup, type AiProviderId, type AiStatus, type AppSettings } from '@shared/types'
-import { buildPersonBriefInput, buildProjectBriefInput, cleanBrief, cleanProjectBrief } from './ai/brief'
+import { buildPersonBriefInput, cleanBrief } from './ai/brief'
+import { buildProjectStatusInput, buildTaskStatusInput, cleanStatusCard } from './ai/status'
 import { ClaudeProvider } from './ai/claude'
 import { DemoProvider } from './ai/demo'
 import { isLoopbackUrl, OllamaProvider } from './ai/ollama'
@@ -17,7 +18,7 @@ import { BriefingService } from './services/briefings'
 import { WeeklyService } from './services/weekly'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { MailService } from './services/mail'
-import { NextActionService } from './services/next-actions'
+import { NextActionService, ProjectCardService } from './services/next-actions'
 import { PriorityAdjustmentService } from './services/priority-adjustments'
 import { nodeHost, OllamaManager } from './services/ollama-setup'
 import { KeyStore } from './services/secrets'
@@ -110,6 +111,7 @@ const projects = new ProjectService(db)
 const people = new PersonService(db)
 const briefs = new BriefService(db)
 const nextActions = new NextActionService(db)
+const projectCards = new ProjectCardService(db)
 const adjustments = new PriorityAdjustmentService(db)
 const suggestions = new SuggestionService(db, tasks, briefs, projects, people)
 
@@ -221,6 +223,16 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'tasks.delete': (id) => tasks.delete(id),
   'tasks.summary': () => tasks.summary(),
   'tasks.nextAction': (taskId) => nextActions.get(taskId),
+  'tasks.writeStatus': async (taskId) => {
+    const task = tasks.get(taskId)
+    if (!task) throw new Error('That task no longer exists.')
+    if (task.status === 'done') throw new AiError('Reopen the task to write where it stands.')
+    const input = buildTaskStatusInput(db, task, tasks.activity(taskId).events, settings.current.userName)
+    const provider = currentProvider()
+    const card = cleanStatusCard(await provider.writeStatus(input, usage.logFor('status')))
+    nextActions.save([{ taskId, ...card }], { writtenBy: provider.label, origin: 'manual' })
+    return nextActions.get(taskId)!
+  },
   'tasks.dismissNextAction': (taskId, dismissed) => nextActions.setDismissed(taskId, dismissed),
   'tasks.activity': (taskId) => tasks.activity(taskId),
   'tasks.removeAiAdjustment': (taskId) => {
@@ -233,12 +245,13 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'projects.listArchived': () => projects.listArchived(),
   'projects.save': (project) => projects.save(project),
   'projects.saveOverview': (id, text) => projects.saveOverview(id, text),
-  'projects.suggestBrief': async (id) => {
-    const input = buildProjectBriefInput(db, id, settings.current.userName)
+  'projects.card': (id) => projectCards.get(id),
+  'projects.writeStatus': async (id) => {
+    const input = buildProjectStatusInput(db, id, settings.current.userName)
     const provider = currentProvider()
-    return { text: cleanProjectBrief(await provider.writeProjectBrief(input, usage.logFor('project_brief'))), writtenBy: provider.label }
+    return projectCards.save(id, cleanStatusCard(await provider.writeStatus(input, usage.logFor('status'))), provider.label)
   },
-  'projects.saveBrief': (id, text, by) => projects.saveBrief(id, text, by),
+  'projects.dismissCard': (id, dismissed) => projectCards.setDismissed(id, dismissed),
   'projects.delete': (id) => projects.delete(id),
   'people.list': () => people.list(),
   'people.save': (person) => {

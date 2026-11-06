@@ -26,7 +26,7 @@ const raw = (o: Partial<RawSuggestion>): RawSuggestion => ({
   kind: 'new_task', task_id: null, title: '', details: '', due_date: null, project_id: null, requester_name: null,
   waiting_on: null, brief_scope: null, brief_owner_id: null, project_name: null, role: null, company: null, email: null, evidence: 'quote', ...o,
 })
-const next = (task_id: number, action: string, why = 'Because.'): RawNextAction => ({ task_id, action, why })
+const next = (task_id: number, action: string, status: string[] = ['Because.']): RawNextAction => ({ task_id, status, action })
 
 /** Stands in for an AI: canned import answer and briefing. */
 class Fake implements AiProvider {
@@ -39,8 +39,8 @@ class Fake implements AiProvider {
   async writePersonBrief() {
     return ''
   }
-  async writeProjectBrief() {
-    return ''
+  async writeStatus() {
+    return { status: ['Done.'], action: 'Do it.' }
   }
   async writeBriefing() {
     return this.o.briefing ?? { summary: 'S', priorities: [], nudges: [], new_items: [], priority_changes: [] }
@@ -67,23 +67,23 @@ const briefingInput = (): BriefingInput => ({
 describe('next actions: checking what the AI wrote', () => {
   it('keeps one per known task, tidied, and drops made-up ids and empty actions', () => {
     const out = cleanNextActions([next(1, '  Send   the deck. '), next(1, 'Second one'), next(99, 'Made up'), next(2, '   ')], new Set([1, 2]))
-    expect(out).toEqual([{ taskId: 1, action: 'Send the deck.', why: 'Because.' }])
+    expect(out).toEqual([{ taskId: 1, status: ['Because.'], action: 'Send the deck.' }])
   })
 
   it('the briefing keeps next actions only for the tasks it lists as top priorities', () => {
     const b = assembleBriefing(briefingInput(), {
       summary: 'S',
       priorities: [
-        { task_id: 1, note: 'Due today.', next_action: 'Finish the last two slides.', next_why: 'Dana reviews them at 3.' },
-        { task_id: 10, note: 'Wrong section.', next_action: 'Chase Northwind.', next_why: 'x' },
-        { task_id: 99, note: 'Made up.', next_action: 'Nothing.', next_why: 'x' },
+        { task_id: 1, note: 'Due today.', next_action: 'Finish the last two slides.', next_status: ['Dana reviews them at 3.'] },
+        { task_id: 10, note: 'Wrong section.', next_action: 'Chase Northwind.', next_status: ['x'] },
+        { task_id: 99, note: 'Made up.', next_action: 'Nothing.', next_status: ['x'] },
       ],
       nudges: [],
       new_items: [], priority_changes: [],
     })
     // Task 2 is overdue so it's listed, but the AI gave it no next action.
     expect(b.priorities.map((p) => [p.taskId, p.nextAction])).toEqual([[2, null], [1, 'Finish the last two slides.']])
-    expect(b.nextActions).toEqual([{ taskId: 1, action: 'Finish the last two slides.', why: 'Dana reviews them at 3.' }])
+    expect(b.nextActions).toEqual([{ taskId: 1, status: ['Dana reviews them at 3.'], action: 'Finish the last two slides.' }])
   })
 
   it('asks for next actions in the briefing prompt, and with the task kinds of an import only', () => {
@@ -129,13 +129,13 @@ describe('next actions: saving and showing', () => {
     const result = await importWith(
       new Fake({
         suggestions: [raw({ kind: 'mark_done', task_id: old.id, title: 'Old report' })],
-        next: [next(deck.id, 'Send the deck to EMEA.', 'Dana asked for it by Friday.'), next(old.id, 'Archive it.'), next(finished.id, 'Nope.'), next(999, 'Made up.')],
+        next: [next(deck.id, 'Send the deck to EMEA.', ['Dana asked for it by Friday.']), next(old.id, 'Archive it.'), next(finished.id, 'Nope.'), next(999, 'Made up.')],
       }),
     )
     expect(result.error).toBeNull()
     expect(nextActions.get(deck.id)).toMatchObject({
       action: 'Send the deck to EMEA.',
-      why: 'Dana asked for it by Friday.',
+      status: ['Dana asked for it by Friday.'],
       origin: 'import',
       originLabel: 'Pricing sync',
       writtenBy: 'Fake AI',
@@ -159,10 +159,10 @@ describe('next actions: saving and showing', () => {
 
   it('a briefing saves next actions for its top priorities; Basic writes none', async () => {
     const t = tasks.save(task({ title: 'Roadmap slides', dueDate: '2026-11-04' }))
-    const fake = new Fake({ briefing: { summary: 'S', priorities: [{ task_id: t.id, note: 'Due.', next_action: 'Finish the slides.', next_why: 'Due today.' }], nudges: [], new_items: [], priority_changes: [] } })
+    const fake = new Fake({ briefing: { summary: 'S', priorities: [{ task_id: t.id, note: 'Due.', next_action: 'Finish the slides.', next_status: ['Due today.'] }], nudges: [], new_items: [], priority_changes: [] } })
     const b = await new BriefingService(db, tasks, () => fake, () => 'Frank Cusano').write()
     expect(b.priorities[0]).toMatchObject({ taskId: t.id, nextAction: 'Finish the slides.' })
-    expect(nextActions.get(t.id)).toMatchObject({ action: 'Finish the slides.', why: 'Due today.', origin: 'briefing', originLabel: null })
+    expect(nextActions.get(t.id)).toMatchObject({ action: 'Finish the slides.', status: ['Due today.'], origin: 'briefing', originLabel: null })
 
     const other = tasks.save(task({ title: 'Something else' }))
     const basic = await new BriefingService(db, tasks, () => new DemoProvider(), () => 'Frank Cusano').write()
@@ -183,7 +183,7 @@ describe('next actions: saving and showing', () => {
 
   it('is marked out of date only by an update dated after the day it was written', () => {
     const t = tasks.save(task({ title: 'Pricing deck' }))
-    nextActions.save([{ taskId: t.id, action: 'Send it.', why: '' }], { writtenBy: 'Fake AI', origin: 'briefing' })
+    nextActions.save([{ taskId: t.id, action: 'Send it.', status: [] }], { writtenBy: 'Fake AI', origin: 'briefing' })
     const today = noteStamp(new Date())
     const tomorrow = noteStamp(new Date(Date.now() + 86_400_000))
     const setUpdates = (summary: string) => briefs.save({ scope: 'task', ownerId: t.id, summary, standingInstructions: '', updatedAt: null })
@@ -196,7 +196,7 @@ describe('next actions: saving and showing', () => {
 
   it('is deleted with its task', () => {
     const t = tasks.save(task({ title: 'Pricing deck' }))
-    nextActions.save([{ taskId: t.id, action: 'Send it.', why: '' }], { writtenBy: 'Fake AI', origin: 'briefing' })
+    nextActions.save([{ taskId: t.id, action: 'Send it.', status: [] }], { writtenBy: 'Fake AI', origin: 'briefing' })
     tasks.delete(t.id)
     expect(Number((db.prepare('SELECT COUNT(*) AS n FROM next_actions').get() as { n: number }).n)).toBe(0)
   })

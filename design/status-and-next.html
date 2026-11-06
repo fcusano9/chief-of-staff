@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Where this stands</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 8px 16px; min-height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex-wrap: wrap; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); padding: 0 6px; }
+.btn.ghost:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+.btn.sm { padding: 2px 9px; font-size: 12.5px; }
+.link { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; }
+.page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+.editor { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.stripe { height: 3px; background: #378ADD; }
+.inner { padding: 18px 22px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.score { font: 600 16px var(--mono); color: var(--warn); min-width: 26px; }
+.title-inp { flex: 1; font-size: 17px; font-weight: 600; border: 0; background: none; outline: 0; min-width: 0; }
+.iconbtn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; margin-top: 14px; }
+.label { color: var(--muted); font-size: 12.5px; margin: 16px 0 5px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 7px 9px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { resize: vertical; display: block; }
+.field { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; padding: 4px 0; }
+.field > span { color: var(--muted); }
+.field .inp { padding: 5px 8px; }
+.card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 12.5px; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 18px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.new { outline: 2px dashed var(--ok); outline-offset: 4px; border-radius: 8px; }
+.gone { position: relative; opacity: .5; }
+.gone::after { content: attr(data-why); position: absolute; right: 6px; top: 6px; font-size: 11px; background: var(--danger); color: #fff; padding: 1px 7px; border-radius: 4px; }
+
+/* The combined card */
+.nx { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 55%, transparent); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.nx.empty { background: none; border-color: var(--border); }
+.nx .h { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--accent); }
+.nx.empty .h { color: var(--muted); }
+.nx .sec { margin-top: 8px; }
+.nx .sec + .sec { border-top: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); padding-top: 8px; }
+.nx .sh { display: flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--text); }
+.nx .sh .btn { font-weight: 400; }
+.nx ul { margin: 3px 0 0; padding-left: 18px; }
+.nx li { margin: 1px 0; }
+.nx .act { margin: 3px 0 1px; font-size: 14px; }
+.nx .why { color: var(--muted); font-size: 12.5px; }
+.nx .meta { color: var(--faint); font-size: 11.5px; margin-top: 4px; }
+.nx .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.saved { color: var(--ok); font-size: 12px; }
+.stale, .nx .meta.stale { color: var(--warn); }
+.spin { display: inline-block; width: 11px; height: 11px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; animation: s .8s linear infinite; vertical-align: -1px; }
+@keyframes s { to { transform: rotate(360deg); } }
+.brief-box { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; white-space: pre-line; }
+.ov { color: var(--muted); margin-top: 2px; }
+@media (max-width: 760px) { .dgrid { grid-template-columns: minmax(0, 1fr); } .top .logo span { display: none; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Where this stands</span></div>
+  <div class="seg">
+    <button data-v="before">Task today</button>
+    <button data-v="task" class="on">Task with button</button>
+    <button data-v="stale">Out of date</button>
+    <button data-v="basic">Basic selected</button>
+    <button data-v="proj">Project</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+<div class="page">
+  <div id="stage"></div>
+  <div class="notes" id="notes"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id)
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1700) }
+
+// state
+let view = 'task'
+let st = {}
+const reset = () => { st = { phase: view === 'stale' ? 'done' : 'none', stale: view === 'stale', dismissed: false } }
+
+const TASK = {
+  bullets: ['Final FAQ draft approved by Kenji on Nov 4; rollback section now covers 3.2.', 'PDF template from Priya still pending; needed before the portal post.', 'Due Nov 14, ahead of the Nov 15 dealer webinar.'],
+  act: 'Ask Priya for the PDF template by Friday so marketing can post the FAQ.',
+  why: 'The draft is approved; the template is the only thing left before the Nov 14 due date.',
+}
+const PROJ = {
+  bullets: ['3 of 5 launch tasks done; dealer FAQ approved, firmware notes published Nov 3.', 'Waiting on Priya for the PDF template and on QA for the 3.2.1 hotfix sign-off.', 'On track for the Nov 15 dealer webinar.'],
+  act: 'Confirm the 3.2.1 hotfix date with QA so the webinar deck can name it.',
+  why: 'It is the one open item that could move the webinar; the others are on schedule.',
+}
+
+function card(data, { basic = false, beforeOnly = false } = {}) {
+  if (beforeOnly) return `<div class="nx">
+    <div class="h"><span>✦ Suggested next action</span><span class="spacer"></span><button class="btn ghost sm">Copy</button><button class="btn ghost sm">Dismiss</button></div>
+    <div class="act">Send the approved FAQ to marketing for the dealer portal.</div>
+    <div class="why">Kenji approved the final draft on Nov 4.</div>
+    <div class="meta">From the daily briefing · Nov 5, 2026</div></div>`
+  if (st.dismissed) return `<div class="row" style="margin-bottom:12px;font-size:12.5px;color:var(--faint)"><span>✦ Status and next step dismissed</span><button class="link" id="show">Show</button></div>`
+  const btn = basic
+    ? `<button class="btn sm" disabled>✦ Write</button>`
+    : st.phase === 'writing'
+      ? `<button class="btn sm" disabled><span class="spin"></span> Writing…</button>`
+      : `<button class="btn sm" id="write">✦ ${st.phase === 'done' ? 'Refresh' : 'Write'}</button>`
+  const head = `<div class="h"><span>✦ Where this stands and next step</span><span class="spacer"></span>${st.phase === 'done' ? '<button class="btn ghost sm" id="dismiss">Dismiss</button>' : ''}${btn}</div>`
+  if (basic) return `<div class="nx empty new">${head}<div class="hint">Select an AI model in <button class="link" id="settings">Settings</button> to use this feature.</div></div>`
+  if (st.phase !== 'done') {
+    return `<div class="nx empty new">${head}
+      <div class="hint">Click Write to see where this stands and the next step.</div></div>`
+  }
+  return `<div class="nx new">${head}
+    <div class="sec">
+      <div class="sh"><span>Where this stands</span><span class="spacer"></span><button class="btn ghost sm" id="copy">Copy</button></div>
+      <ul>${data.bullets.map((b) => `<li>${b}</li>`).join('')}</ul>
+    </div>
+    <div class="sec">
+      <div class="sh"><span>Suggested next action</span><span class="spacer"></span><button class="btn ghost sm" id="copy2">Copy</button></div>
+      <div class="act">${data.act}</div>
+    </div>
+    ${st.stale ? '<div class="meta stale">Out of date: a newer update arrived on Nov 6. Click Refresh to rewrite.</div>' : ''}
+  </div>`
+}
+
+const taskEditor = (box) => `
+<div class="editor"><div class="stripe"></div><div class="inner">
+  <div class="row"><span class="score">72</span><input class="title-inp" value="Dealer FAQ for DM-NVX 3.2 firmware"><button class="iconbtn">✕</button></div>
+  <div class="dgrid"><div>
+    ${box}
+    <div class="label">Notes</div><textarea class="inp" style="min-height:calc(13.5px * 1.5 * 6 + 16px)">Fix the rollback section (still says 3.1).
+Ask Priya about the PDF template.</textarea>
+    <div class="label">Updates <span class="faint">· 5</span></div>
+    <div class="card" style="margin-top:0"><div class="faint mono" style="font-size:11.5px">${st.stale ? 'Nov 6, 2026' : 'Nov 4, 2026'}</div>${st.stale ? 'Priya sent the PDF template.' : 'Kenji approved the final draft; marketing will post it to the dealer portal.'}</div>
+  </div><div>
+    <label class="field"><span>Status</span><select class="inp"><option>Open</option></select></label>
+    <label class="field"><span>Due</span><input class="inp" type="date" value="2026-11-14"></label>
+    <div class="card"><div class="label" style="margin:0 0 2px">Priority 72</div>Due in 8 days, 2 follow-ups</div>
+  </div></div>
+</div></div>`
+
+const projectEditor = () => `
+<div class="editor"><div class="stripe" style="background:#2f855a"></div><div class="inner">
+  <div class="row"><input class="title-inp" value="DM-NVX 3.2 launch"></div>
+  <div class="ov">Firmware 3.2 release and dealer rollout ✎</div>
+  <div class="dgrid"><div>
+    <div style="margin-top:12px">${card(PROJ)}</div>
+    <div class="label">Updates <span class="faint">· 8</span></div>
+    <div class="card" style="margin-top:0"><div class="faint mono" style="font-size:11.5px">Nov 4, 2026</div>Kenji approved the dealer FAQ.</div>
+  </div><div>
+    <label class="field"><span>Status</span><select class="inp"><option>Active</option></select></label>
+    <div class="label">Open tasks <span class="faint">· 2</span></div>
+    <div class="card" style="margin-top:0">72 Dealer FAQ for DM-NVX 3.2 firmware<br>58 Confirm 3.2.1 hotfix with QA</div>
+  </div></div>
+</div></div>`
+
+const NOTES = {
+  before: ['Today', ['The card shows only the suggested next action, written by a briefing or an import. There is no button.']],
+  task: ['Task with the button', [
+    '<b>One card, two parts:</b> “Where this stands” (2–3 short bullets, written so you can paste them into an email or Teams) and the suggested next action.',
+    '<b>Always written together.</b> ✦ Write, a daily briefing (for its top priorities) and an import (for the open tasks it is about) all write both parts at once. The newest one replaces the whole card.',
+    'This view shows a task nothing has written yet; click Write.',
+    '<b>Copy</b> on each part. Nothing is saved to the task; the card changes nothing.',
+    '<b>The next action is one sentence</b>; the why is gone, since “Where this stands” covers it. No date, model or source line.',
+    '<b>Dismiss</b> folds the card to one line with Show, like today.',
+    'The AI is sent the task’s Notes, its Updates (whole, newest first, up to 1,500 characters), its last 20 Activity lines, its due date and status. Each request is in the AI log and in AI spending.',
+  ]],
+  stale: ['Out of date', ['The only extra line: if a newer update arrived after the card was written, it says so in amber. Refresh rewrites it.']],
+  basic: ['Basic selected', ['The button is greyed out with a short note.']],
+  proj: ['Project', [
+    'The same card at the top of the project. The bullets cover the project and its open tasks; the next action is one step for the project as a whole. Task cards keep their own.',
+    'Written by ✦ Write, and by an import that mentions the project. The daily briefing works from tasks, so it doesn’t write project cards.',
+    '<b>The project brief is removed</b> (and its Regenerate button). Each project’s existing brief is saved as a dated update first, so nothing is lost. The one-line overview stays.',
+  ]],
+}
+
+function wire(data) {
+  const w = $('write'); if (w) w.onclick = () => { st.phase = 'writing'; render(); setTimeout(() => { st.phase = 'done'; st.stale = false; render() }, 900) }
+  const c = $('copy'); if (c) c.onclick = () => toast('Copied')
+  const c2 = $('copy2'); if (c2) c2.onclick = () => toast('Copied')
+  const d = $('dismiss'); if (d) d.onclick = () => { st.dismissed = true; render() }
+  const g = $('settings'); if (g) g.onclick = () => toast('Opens Settings → AI')
+  const sh = $('show'); if (sh) sh.onclick = () => { st.dismissed = false; render() }
+}
+
+function render() {
+  document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.v === view))
+  if (view === 'before') $('stage').innerHTML = taskEditor(card(TASK, { beforeOnly: true }))
+  else if (view === 'task' || view === 'stale') $('stage').innerHTML = taskEditor(card(TASK))
+  else if (view === 'basic') $('stage').innerHTML = taskEditor(card(TASK, { basic: true }))
+  else $('stage').innerHTML = projectEditor()
+  const [h, l] = NOTES[view]
+  $('notes').innerHTML = `<h3>${h}</h3><ul>${l.map((x) => `<li>${x}</li>`).join('')}</ul>`
+  wire()
+}
+document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { view = b.dataset.v; reset(); render() }))
+$('theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+reset(); render()
+</script>
+</body>
+</html>

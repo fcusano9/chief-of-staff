@@ -5,7 +5,7 @@ import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
 import { ConfirmButton, scoreClass } from './bits'
 import { ActivityLog } from './ActivityLog'
-import { NextActionCard } from './NextActionCard'
+import { StatusCard } from './StatusCard'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from './UpdatesWindow'
 
 const EDITABLE_STATUSES: TaskStatus[] = ['open', 'waiting_on', 'done']
@@ -195,7 +195,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
 
         <div className="dgrid">
           <div>
-            <NextActionCard taskId={isNew ? null : form.input.id} />
+            <StatusCard scope="task" id={isNew ? null : form.input.id} done={form.input.status === 'done'} />
 
             <div className="label" style={{ marginBottom: 4 }}>Subtasks</div>
             {form.input.subtasks.map((s, i) => (
