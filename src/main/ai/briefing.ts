@@ -11,6 +11,8 @@ export interface BriefingTask {
   id: number
   title: string
   project: string | null
+  /** The project's color, kept on the briefing item for the card (not sent to the AI). */
+  projectColor?: string | null
   requester: string | null
   /** 'YYYY-MM-DD' or null. */
   due: string | null
@@ -32,6 +34,7 @@ export interface BriefingWaiting {
   id: number
   title: string
   project: string | null
+  projectColor?: string | null
   waitingOn: string
   days: number
   followUps: number
@@ -45,6 +48,7 @@ export interface BriefingNew {
   id: number
   title: string
   project: string | null
+  projectColor?: string | null
   /** Set when it's waiting on someone. */
   waitingOn: string | null
   /** How it reads when the AI gives no note, e.g. "Added Nov 3, 4:10 PM." */
@@ -69,16 +73,16 @@ export interface BriefingInput {
 
 const Pick = z.object({
   task_id: z.number().int().describe('The id in square brackets'),
-  note: z.string().describe('One short sentence'),
+  note: z.string().describe('A short phrase, under 10 words'),
 })
 
 const PriorityPick = Pick.extend({
-  next_action: z.string().describe('The one concrete next step, one sentence starting with a verb'),
+  next_action: z.string().describe('The one concrete next step: a short command starting with a verb, under 10 words'),
   next_why: z.string().describe('Why that step, in one short sentence, from the facts given'),
 })
 
 export const BriefingSchema = z.object({
-  summary: z.string().describe('One sentence on what matters most today'),
+  summary: z.string().describe('One sentence, under 20 words, on what matters most today'),
   priorities: z.array(PriorityPick).describe('3 to 5 open tasks, most important first, every overdue task included'),
   nudges: z.array(Pick).describe('Up to 3 waiting-on items worth a follow-up today; empty if none'),
   new_items: z.array(Pick).describe('A note for each item new since the last briefing'),
@@ -97,10 +101,10 @@ export function buildBriefingPrompt(input: BriefingInput): { system: string; use
   const system = `You write ${me}'s daily briefing: a short read on the day, addressed to ${first} as "you". Today is ${input.weekday}, ${input.today}.
 
 Fill in:
-- summary: one sentence, under 35 words, on what matters most today.
-- priorities: the 3 to 5 tasks from <open_tasks> that most deserve attention today, most important first. Always include every task marked OVERDUE. Each note is one short sentence on why it matters today and what's left. Also give each one next_action: the single concrete step ${first} should take next, one sentence starting with a verb (for example "Send Dana the two budget options"), and next_why: one short sentence on why that step, from the task's notes, updates and dates. Don't repeat the note.
-- nudges: up to 3 items from <waiting_on> where a follow-up today is worth it, for example a long wait, a close deadline, or several follow-ups already. Each note says why, in one short sentence. Leave it empty if nothing needs a nudge.
-- new_items: one short sentence for each item in <new_since_last_briefing>, on what it is or why it matters.
+- summary: one sentence, under 20 words, on what matters most today.
+- priorities: the 3 to 5 tasks from <open_tasks> that most deserve attention today, most important first. Always include every task marked OVERDUE. Each note is a short phrase, under 10 words, on why it matters today or what's left. Also give each one next_action: the single concrete step ${first} should take next, a short command starting with a verb, under 10 words (for example "Send Dana the two budget options"), and next_why: one short sentence on why that step, from the task's notes, updates and dates. Don't repeat the note.
+- nudges: up to 3 items from <waiting_on> where a follow-up today is worth it, for example a long wait, a close deadline, or several follow-ups already. Each note says why, in a short phrase under 10 words. Leave it empty if nothing needs a nudge.
+- new_items: a short phrase, under 10 words, for each item in <new_since_last_briefing>, on what it is or why it matters.
 
 - priority_changes: see below.
 
@@ -183,7 +187,10 @@ export function assembleBriefing(
   const picked = new Map<number, string>()
   for (const p of raw.priorities) if (tasks.has(p.task_id) && !picked.has(p.task_id)) picked.set(p.task_id, tidy(p.note))
   const next = new Map(cleanNextActions(raw.priorities.map((p) => ({ task_id: p.task_id, action: p.next_action, why: p.next_why })), new Set(tasks.keys())).map((n) => [n.taskId, n]))
-  const item = (t: BriefingTask, note: string): BriefingItem => ({ taskId: t.id, title: t.title, who: null, note, overdueDays: t.overdueDays, kind: 'task', nextAction: next.get(t.id)?.action ?? null })
+  const item = (t: BriefingTask, note: string): BriefingItem => ({
+    taskId: t.id, title: t.title, who: null, note, overdueDays: t.overdueDays, kind: 'task',
+    nextAction: next.get(t.id)?.action ?? null, due: t.due, projectColor: t.projectColor ?? null,
+  })
   const overdue = input.tasks
     .filter((t) => t.overdueDays)
     .sort((a, b) => b.overdueDays! - a.overdueDays! || b.priority - a.priority)
@@ -199,7 +206,7 @@ export function assembleBriefing(
   for (const n of raw.nudges) {
     const w = waiting.get(n.task_id)
     if (!w || nudges.some((x) => x.taskId === w.id) || nudges.length >= MAX_NUDGES) continue
-    nudges.push({ taskId: w.id, title: w.title, who: w.waitingOn, note: tidy(n.note) || `Waiting ${w.days} days.`, overdueDays: null, kind: 'waiting' })
+    nudges.push({ taskId: w.id, title: w.title, who: w.waitingOn, note: tidy(n.note) || `Waiting ${w.days} days.`, overdueDays: null, kind: 'waiting', waitingDays: w.days, projectColor: w.projectColor ?? null })
   }
 
   // Everything new is listed, whether or not the AI wrote about it.
@@ -211,6 +218,7 @@ export function assembleBriefing(
     note: notes.get(n.id) || n.fallbackNote,
     overdueDays: null,
     kind: n.waitingOn ? 'waiting' : 'task',
+    projectColor: n.projectColor ?? null,
   }))
   if (input.newReviewCount) {
     const n = input.newReviewCount

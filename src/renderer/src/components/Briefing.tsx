@@ -27,40 +27,91 @@ const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 /** "Today, 8:12 AM" or "Tue, Nov 3, 8:05 AM". */
 const when = (iso: string) => `${dayKey(new Date(iso)) === dayKey(new Date()) ? 'Today' : day(iso)}, ${time(iso)}`
-/** "Tue 4:40 PM" for the New since line. */
+/** "Tue 4:40 PM" for the New line. */
 const sinceLabel = (iso: string) => `${new Date(iso).toLocaleDateString(undefined, { weekday: 'short' })} ${time(iso)}`
 const howStarted = (b: { trigger: string }) => (b.trigger === 'scheduled' ? 'Scheduled' : 'You clicked')
 
-/** The three sections; empty ones stay, with a line saying there's nothing there. */
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+/** Whole days from the briefing's day to a 'YYYY-MM-DD' date. */
+const daysUntil = (ymd: string, fromIso: string) => {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const from = new Date(fromIso)
+  return Math.round((new Date(y!, m! - 1, d!).getTime() - new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime()) / 86_400_000)
+}
+
+type Section = 'do' | 'follow' | 'new'
+/** The status tag on a line, worked out from the task as it was when the briefing was written (not by the AI). */
+function itemTag(item: BriefingItem, section: Section, writtenAt: string): [string, string] | null {
+  if (item.kind === 'review') return ['new', 'Review']
+  if (section === 'new') return ['new', item.kind === 'waiting' ? 'Now waiting' : 'New task']
+  if (item.overdueDays) return ['over', `Overdue ${plural(item.overdueDays, 'day')}`]
+  if (item.waitingDays != null) return ['wait', `Waiting ${plural(item.waitingDays, 'day')}`]
+  if (!item.due) return null
+  const n = daysUntil(item.due, writtenAt)
+  if (n <= 0) return ['due', 'Due today']
+  if (n === 1) return ['due', 'Due tomorrow']
+  const [y, m, d] = item.due.split('-').map(Number)
+  const date = new Date(y!, m! - 1, d!)
+  return n < 7 ? ['due', `Due ${date.toLocaleDateString(undefined, { weekday: 'short' })}`] : ['wait', `Due ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`]
+}
+
+function Tag({ item, section, writtenAt }: { item: BriefingItem; section: Section; writtenAt: string }) {
+  const tag = itemTag(item, section, writtenAt)
+  return tag ? <span className={`b-tag ${tag[0]}`}>{tag[1]}</span> : null
+}
+
+const Dot = ({ item }: { item: BriefingItem }) => <span className="b-dot" style={{ background: item.projectColor ?? 'var(--border-strong)' }} />
+
+/**
+ * Do next leads, one line per task: the suggested next step, then the task, its project color and
+ * status tag. Follow up and New are just names and tags. The AI's notes show on hover. Empty
+ * sections stay, with a line saying there's nothing there.
+ */
 function Sections({ briefing, columns, onOpen }: { briefing: Briefing; columns: boolean; onOpen: (item: BriefingItem) => void }) {
-  const sections: [string, string | null, BriefingItem[], string][] = [
-    ['Top priorities', null, briefing.priorities, 'Nothing is due or overdue. Your Focus list below is still in priority order.'],
-    ['Waiting-on nudges', null, briefing.nudges, 'No one needs a nudge.'],
-    ['New since last briefing', `since ${sinceLabel(briefing.since)}`, briefing.newItems, 'Nothing new since your last briefing.'],
-  ]
-  return (
-    <div className={columns ? 'b-cols' : undefined}>
-      {sections.map(([name, sub, items, none]) => (
-        <div key={name} className="b-sec" data-section={name}>
-          <div className="label">
-            {name}
-            {sub && <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>{sub}</span>}
-          </div>
-          {items.map((item, i) => (
-            <button key={`${item.taskId}-${i}`} className={`b-item ${item.overdueDays ? 'over' : ''}`} onClick={() => onOpen(item)}>
-              {item.overdueDays ? <span className="tag-over">Overdue {item.overdueDays} day{item.overdueDays === 1 ? '' : 's'}</span> : null}
-              <span className="t">
-                {item.title}
-                {item.who ? ` · ${item.who}` : ''}
-              </span>
-              {item.note && <span className="w"> — {item.note}</span>}
-              {item.nextAction && <span className="b-next">✦ Next: {item.nextAction}</span>}
-            </button>
-          ))}
-          {items.length === 0 && <div className="b-none">{none}</div>}
-        </div>
+  const at = briefing.createdAt
+  const hover = (item: BriefingItem) => [item.nextAction && item.title, item.note].filter(Boolean).join(' — ')
+  const small = (name: string, section: Section, sub: string | null, items: BriefingItem[], none: string) => (
+    <div className="b-sec" data-section={name}>
+      <div className="b-sec-h">
+        {name} {items.length > 0 && <span className="n">{items.length}</span>}
+        {sub && <span className="faint">{sub}</span>}
+      </div>
+      {items.map((item, i) => (
+        <button key={`${item.taskId}-${i}`} className="b-item" title={item.note} onClick={() => onOpen(item)}>
+          <Tag item={item} section={section} writtenAt={at} />
+          <span className="t">
+            {item.title}
+            {item.who && <span className="muted"> · {item.who}</span>}
+          </span>
+        </button>
       ))}
+      {items.length === 0 && <div className="b-none">{none}</div>}
     </div>
+  )
+  return (
+    <>
+      <div className="b-sec" data-section="Do next">
+        <div className="b-sec-h">
+          Do next {briefing.priorities.length > 0 && <span className="n">{briefing.priorities.length}</span>}
+        </div>
+        {briefing.priorities.map((item, i) => (
+          <button key={`${item.taskId}-${i}`} className="b-do" title={hover(item)} onClick={() => onOpen(item)}>
+            <span className="b-num">{i + 1}</span>
+            <span className="b-act">{item.nextAction || item.title}</span>
+            <span className="b-sub">
+              <Dot item={item} />
+              {item.nextAction && <span className="b-ttl">{item.title}</span>}
+              <Tag item={item} section="do" writtenAt={at} />
+            </span>
+          </button>
+        ))}
+        {briefing.priorities.length === 0 && <div className="b-none">Nothing is due or overdue. Your Focus list below is still in priority order.</div>}
+      </div>
+      <div className={columns ? 'b-cols' : undefined}>
+        {small('Follow up', 'follow', null, briefing.nudges, 'No one needs a follow-up.')}
+        {small('New', 'new', `since ${sinceLabel(briefing.since)}`, briefing.newItems, 'Nothing new since your last briefing.')}
+      </div>
+    </>
   )
 }
 
@@ -79,8 +130,8 @@ function useOpenItem() {
 }
 
 /**
- * The daily briefing on Today: a one-line summary and three short sections, written by the AI
- * only when Frank clicks. Each one is saved; History shows earlier ones.
+ * The daily briefing on Today: a one-line summary, then Do next, Follow up and New, written by
+ * the AI only when the user clicks. Each one is saved; History shows earlier ones.
  */
 export function BriefingCard() {
   const { go, toast, reviewCount, version } = useApp()

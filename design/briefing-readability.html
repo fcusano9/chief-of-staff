@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Briefing readability</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.pill { white-space: nowrap; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 28px; border-bottom: 1px dashed var(--border-strong); }
+.controls .grp { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.controls .grp > span { font-size: 11px; color: var(--faint); margin-right: 2px; text-transform: uppercase; letter-spacing: .04em; }
+.page { max-width: 1140px; margin: 0 auto; padding: 24px 28px 60px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+.label { font-size: 12.5px; color: var(--muted); }
+.cards4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 14px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px 16px; }
+.stat { font: 600 22px var(--mono); }
+.ai { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 45%, transparent); border-radius: 8px; padding: 16px 18px; }
+.summary { font-size: 14.5px; line-height: 1.55; margin: 4px 0 0; }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12.5px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+
+/* Shared bits */
+.tag { display: inline-block; font-size: 11px; font-weight: 500; border-radius: 4px; padding: 0 6px; white-space: nowrap; line-height: 18px; }
+.tag.over { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.tag.due { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.tag.wait { color: var(--muted); background: var(--sel); }
+.tag.new { color: var(--accent); background: var(--accent-bg); }
+.sec-h { display: flex; gap: 6px; align-items: baseline; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+.sec-h .n { font: 500 11px var(--mono); color: var(--faint); }
+.none { color: var(--faint); padding: 3px 0; }
+
+/* BEFORE: what ships today */
+.b-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 22px; }
+.b-sec { margin-top: 12px; min-width: 0; }
+.b-item { display: block; width: calc(100% + 12px); text-align: left; border: 0; background: none; padding: 3px 6px; margin: 0 -6px; border-radius: 5px; cursor: pointer; line-height: 1.45; }
+.b-item:hover { background: color-mix(in srgb, var(--accent-bg) 70%, transparent); }
+.b-item .t { font-weight: 500; }
+.b-item .w { color: var(--muted); }
+.b-item .nx { display: block; color: var(--accent); font-size: 12.5px; margin-top: 1px; }
+.b-item.over { box-shadow: inset 2px 0 0 var(--danger); border-radius: 0 5px 5px 0; }
+
+/* A: cards */
+.a-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 14px; }
+.a-list { display: grid; gap: 8px; }
+.a-item { display: grid; grid-template-columns: 3px minmax(0, 1fr); gap: 10px; text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: 7px; padding: 9px 12px 9px 0; cursor: pointer; overflow: hidden; }
+.a-item:hover { border-color: var(--border-strong); }
+.a-item .stripe { border-radius: 0 2px 2px 0; }
+.a-item .top-line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.a-item .t { font-weight: 500; }
+.a-item .w { color: var(--muted); font-size: 12.5px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.a-item .nx { margin-top: 6px; font-size: 12.5px; color: var(--accent); display: flex; gap: 6px; }
+
+/* B: scan list, one line each, click to expand */
+.bl-sec { margin-top: 16px; }
+.bl-list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.bl-row { display: grid; grid-template-columns: 3px 92px minmax(0, 1fr) auto 18px; gap: 12px; align-items: center; padding: 8px 12px 8px 0; border-top: 1px solid var(--border); cursor: pointer; }
+.bl-list > div:first-child .bl-row, .bl-list > .bl-row:first-child { border-top: 0; }
+.bl-row:hover { background: var(--hover); }
+.bl-row .stripe { align-self: stretch; border-radius: 0 2px 2px 0; }
+.bl-row .t { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-row .t .who { font-weight: 400; color: var(--muted); }
+.bl-row .nx { color: var(--accent); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+.bl-row .chev { color: var(--faint); font-size: 11px; transition: transform .15s; }
+.bl-row.open .chev { transform: rotate(90deg); }
+.bl-more { padding: 2px 16px 12px 119px; color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; background: var(--hover); }
+.bl-more b { color: var(--text); font-weight: 500; }
+.bl-more .btn { justify-self: start; margin-top: 4px; }
+
+/* C: action first */
+.c-sec { margin-top: 16px; }
+.c-item { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); cursor: pointer; }
+.sec-h + .c-item { border-top: 0; }
+.c-item:hover .act { text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.c-num { font: 600 12px var(--mono); color: var(--accent); background: var(--accent-bg); border-radius: 5px; height: 20px; display: grid; place-items: center; margin-top: 1px; }
+.c-item .act { font-weight: 500; font-size: 14px; }
+.c-item .sub { display: flex; gap: 6px; align-items: center; margin-top: 3px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+.c-item .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.c-item.cc { padding: 7px 0; align-items: center; }
+.c-item.cc .c-num { margin-top: 0; }
+.cc-line { display: flex; gap: 12px; align-items: baseline; min-width: 0; }
+.cc-line .act { flex: none; max-width: 55%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-line .sub { margin-top: 0; flex-wrap: nowrap; min-width: 0; }
+.cc-line .cc-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.c-more { border: 0; background: none; color: var(--accent); font-size: 12.5px; padding: 6px 0 0 32px; cursor: pointer; }
+.c-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+.c-side { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.c-mini { padding: 5px 0; display: flex; gap: 8px; align-items: center; cursor: pointer; border-radius: 5px; }
+.c-mini:hover .t { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.c-mini .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-mini .why { color: var(--muted); font-size: 12.5px; }
+@media (max-width: 860px) { .c-side { grid-template-columns: 1fr; } .bl-row { grid-template-columns: 3px 80px minmax(0, 1fr) 18px; } .bl-row .nx { display: none; } .cards4 { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab on">Today</button><button class="tab">Weekly</button><button class="tab">Tasks</button><button class="tab">Review</button>
+  <button class="tab">Waiting</button><button class="tab">Projects</button><button class="tab">People</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="controls">
+  <div class="grp"><span>Mockup</span>
+    <button class="pill" data-v="before">Before (today)</button>
+    <button class="pill" data-v="a">A · Cards</button>
+    <button class="pill" data-v="b">B · One line each</button>
+    <button class="pill" data-v="c">C · Next steps first</button>
+  </div>
+  <div class="grp" id="countGrp"><span>Do next items</span>
+    <button class="pill" data-n="3">3</button>
+    <button class="pill" data-n="6">6</button>
+  </div>
+  <div class="grp" id="longGrp"><span>Long list</span>
+    <button class="pill" data-l="all">Show all</button>
+    <button class="pill" data-l="cap">First 4</button>
+    <button class="pill" data-l="compact">Compact</button>
+  </div>
+  <div class="grp"><span>AI wording</span>
+    <button class="pill" data-w="now">As today</button>
+    <button class="pill" data-w="short">Shorter</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="head">
+    <h1>Good morning, Frank</h1>
+    <span class="muted">Friday, November 6</span>
+    <div class="spacer"></div>
+    <button class="btn" style="background:var(--text);color:var(--bg);border-color:var(--text)">New task</button>
+  </div>
+  <div class="cards4">
+    <div class="card"><div class="label">Urgent</div><div class="stat" style="color:var(--danger)">2</div></div>
+    <div class="card"><div class="label">Overdue</div><div class="stat" style="color:var(--warn)">1</div></div>
+    <div class="card"><div class="label">Waiting on</div><div class="stat">4</div></div>
+    <div class="card"><div class="label">Open</div><div class="stat">17</div></div>
+  </div>
+  <div id="briefing"></div>
+  <div class="notes" id="notes"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const PROJ = { pricing: ['Spring pricing', '#7F77DD'], training: ['Dealer training', '#1D9E75'], portal: ['Partner portal', '#D85A30'], roadmap: ['2027 roadmap', '#378ADD'] }
+// Each item: title, project, tag [kind, text] (from task data, not the AI), note (AI), short note, next action (AI), short next, why
+const PRI = [
+  { t: 'Review margin model with Priya', p: 'pricing', tag: ['over', 'Overdue 1 day'],
+    note: 'Was due yesterday. Finance needs the reviewed margin model before the EMEA deck can go out, and Priya is out Monday.',
+    short: 'Holds up the EMEA deck. Priya is out Monday.',
+    next: 'Book 30 minutes with Priya today to walk through the three margin scenarios and agree on the floor price.',
+    nshort: 'Book 30 min with Priya today',
+    why: 'Her last update says she can only meet before Monday.' },
+  { t: 'Roadmap slides for VP review', p: 'roadmap', tag: ['due', 'Due today'],
+    note: 'Due today for Dana. The timeline slide is done; the pricing assumptions and risks slides are still open.',
+    short: 'Pricing and risks slides still open.',
+    next: 'Draft the risks slide using the three risks from Tuesday’s planning sync, then send Dana the deck by 3 PM.',
+    nshort: 'Draft the risks slide, send to Dana by 3',
+    why: 'Dana asked for it before her 4 PM prep.' },
+  { t: 'Send pricing deck to EMEA distributors', p: 'pricing', tag: ['due', 'Due Mon'],
+    note: 'Due Monday, but it can’t go out until the margin model is reviewed. Distributors were promised euro pricing.',
+    short: 'Blocked on the margin review.',
+    next: 'Convert the four tiers to euros now so the deck is ready to send the moment margins are signed off.',
+    nshort: 'Convert the four tiers to euros',
+    why: 'This part doesn’t depend on the margin review.' },
+]
+const PRI_MORE = [
+  { t: 'Answer Dana’s questions on Q1 headcount', p: 'roadmap', tag: ['over', 'Overdue 2 days'],
+    note: 'Dana asked on Wednesday and needs it for her own budget review.', short: 'Dana needs it for her budget review.',
+    next: 'Reply to Dana with the two headcount options from the planning doc.', nshort: 'Reply to Dana with the two options', why: 'Both options are already in your notes.' },
+  { t: 'Pick a training platform', p: 'training', tag: ['due', 'Due Mon'],
+    note: 'Quotes from all three vendors are in; Alex wants a pick by Monday.', short: 'All three quotes are in.',
+    next: 'Compare the three quotes on price per seat and send Alex your pick.', nshort: 'Compare quotes and send Alex a pick', why: 'Alex’s update says the quotes are final.' },
+  { t: 'Expense report for October', p: null, tag: ['due', 'Due Tue'],
+    note: 'Finance closes October on Tuesday.', short: 'Finance closes Tuesday.',
+    next: 'Upload the five October receipts and submit the report.', nshort: 'Upload receipts and submit', why: 'Nothing else is needed for it.' },
+]
+let count = 3, long = 'all', showAll = false
+const NUDGE = [
+  { t: 'Signed pilot agreement', who: 'Northwind AV', p: 'portal', tag: ['wait', 'Waiting 8 days'],
+    note: '8 days with no reply, and the pilot starts Dec 1. A short follow-up today keeps it on track.',
+    short: 'Pilot starts Dec 1.' },
+  { t: 'Portal wireframe sign-off', who: 'Marcus Webb', p: 'portal', tag: ['wait', 'Waiting 6 days'],
+    note: '6 days. He may have approved it in Teams already; worth checking before chasing.',
+    short: 'Check Teams before chasing.' },
+]
+const NEW = [
+  { t: 'Expense report for October', p: null, tag: ['new', 'New task'],
+    note: 'Added from the Copilot summary of the finance sync on Thursday afternoon.',
+    short: 'From the finance sync.' },
+  { t: '3 suggestions in Review', p: null, tag: ['new', 'Review'], review: true,
+    note: 'From yesterday’s pricing call transcript. Waiting for you to accept or reject.',
+    short: 'From the pricing call.' },
+]
+const SUM = {
+  now: 'A heavy Friday: Dana’s roadmap slides are due today and the margin review slipped a day, which now holds up the EMEA deck going out on Monday.',
+  short: 'Roadmap slides are due today; the late margin review is holding up the EMEA deck.',
+}
+
+let view = 'b', words = 'short', openRow = null
+const $ = (s) => document.querySelector(s)
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+let tt
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 1800) }
+const N = (i) => (words === 'short' ? i.short : i.note)
+const X = (i) => (words === 'short' ? i.nshort : i.next)
+const color = (i) => (i.p ? PROJ[i.p][1] : 'var(--border-strong)')
+const tag = (i) => `<span class="tag ${i.tag[0]}">${i.tag[1]}</span>`
+const opens = (i) => `toast('${i.review ? 'Opens Review' : 'Opens the task'}')`
+const SECS = () => [['Top priorities', PRI], ['Waiting-on nudges', NUDGE], ['New since last briefing', NEW, 'since Thu 4:40 PM']]
+
+const header = () => `<div class="row" style="gap:6px"><span style="color:var(--accent)">✦</span><b style="font-weight:500">Briefing</b>
+  <span class="faint" style="font-size:11px">· Today, 8:12 AM</span><div class="spacer"></div>
+  <button class="btn ghost sm">History</button><button class="btn sm">Refresh</button></div>
+  <div class="summary">${esc(SUM[words])}</div>`
+const reviewBtn = `<div class="row" style="margin-top:14px"><button class="btn sm">Review suggestions <span class="mono muted">3</span></button></div>`
+
+function before() {
+  const sec = ([name, items, sub]) => `<div class="b-sec"><div class="label">${name}${sub ? ` <span class="faint" style="font-size:11px">${sub}</span>` : ''}</div>
+    ${items.map((i) => `<button class="b-item ${i.tag[0] === 'over' ? 'over' : ''}" onclick="${opens(i)}">${i.tag[0] === 'over' ? tag(i) + ' ' : ''}<span class="t">${esc(i.t)}${i.who ? ' · ' + esc(i.who) : ''}</span><span class="w"> — ${esc(N(i))}</span>${i.next ? `<span class="nx">✦ Next: ${esc(X(i))}</span>` : ''}</button>`).join('')}</div>`
+  return `<div class="ai">${header()}<div class="b-cols">${SECS().map(sec).join('')}</div>${reviewBtn}</div>`
+}
+
+function cards() {
+  const item = (i) => `<button class="a-item" onclick="${opens(i)}"><span class="stripe" style="background:${color(i)}"></span><div style="min-width:0">
+    <div class="top-line">${tag(i)}<span class="t">${esc(i.t)}</span></div>
+    <div class="w" title="${esc(N(i))}">${i.who ? `<span style="color:var(--text)">${esc(i.who)}</span> · ` : ''}${esc(N(i))}</div>
+    ${i.next ? `<div class="nx"><span>→</span><span>${esc(X(i))}</span></div>` : ''}</div></button>`
+  const sec = ([name, items, sub]) => `<div><div class="sec-h">${name} <span class="n">${items.length}</span>${sub ? `<span class="faint" style="font-size:11px">${sub}</span>` : ''}</div><div class="a-list">${items.map(item).join('')}</div></div>`
+  return `<div class="ai">${header()}<div class="a-cols">${SECS().map(sec).join('')}</div>${reviewBtn}</div>`
+}
+
+function lines() {
+  let k = 0
+  const row = (i) => {
+    const id = k++, open = openRow === id
+    return `<div><div class="bl-row ${open ? 'open' : ''}" onclick="openRow=${open ? 'null' : id};render()">
+      <span class="stripe" style="background:${color(i)}"></span><span>${tag(i)}</span>
+      <span class="t">${esc(i.t)}${i.who ? ` <span class="who">· ${esc(i.who)}</span>` : ''}</span>
+      <span class="nx">${i.next ? '→ ' + esc(X(i)) : ''}</span><span class="chev">▶</span></div>
+      ${open ? `<div class="bl-more"><div>${esc(i.note)}</div>${i.next ? `<div><b>Next:</b> ${esc(i.next)}</div><div class="faint">Why: ${esc(i.why)}</div>` : ''}${i.p ? `<div class="faint">${PROJ[i.p][0]}</div>` : ''}<button class="btn sm" onclick="event.stopPropagation();${opens(i)}">${i.review ? 'Open Review' : 'Open task'}</button></div>` : ''}</div>`
+  }
+  const sec = ([name, items, sub]) => `<div class="bl-sec"><div class="sec-h">${name} <span class="n">${items.length}</span>${sub ? `<span class="faint" style="font-size:11px">${sub}</span>` : ''}</div><div class="bl-list">${items.map(row).join('')}</div></div>`
+  return `<div class="ai">${header()}${SECS().map(sec).join('')}${reviewBtn}</div>`
+}
+
+function actionFirst() {
+  // Overdue first, as the briefing already does
+  const all = (count === 6 ? [...PRI, ...PRI_MORE] : PRI).slice().sort((a, b) => (b.tag[0] === 'over') - (a.tag[0] === 'over'))
+  const shown = long === 'cap' && !showAll ? all.slice(0, 4) : all
+  const hidden = all.length - shown.length
+  const item = (i, n) => long === 'compact'
+    ? `<div class="c-item cc" onclick="${opens(i)}"><span class="c-num">${n + 1}</span><div class="cc-line"><span class="act">${esc(X(i))}</span><span class="sub"><span class="dot" style="background:${color(i)}"></span><span class="cc-t">${esc(i.t)}</span>${tag(i)}</span></div><span></span></div>`
+    : `<div class="c-item" onclick="${opens(i)}"><span class="c-num">${n + 1}</span><div style="min-width:0">
+      <div class="act">${esc(X(i))}</div>
+      <div class="sub"><span class="dot" style="background:${color(i)}"></span><span>${esc(i.t)}</span>${tag(i)}${words === 'now' ? `<span>· ${esc(N(i))}</span>` : ''}</div></div><span></span></div>`
+  const pri = shown.map(item).join('')
+    + (hidden ? `<button class="c-more" onclick="showAll=true;render()">Show ${hidden} more</button>` : '')
+    + (long === 'cap' && showAll && all.length > 4 ? `<button class="c-more" onclick="showAll=false;render()">Show fewer</button>` : '')
+  const mini = (i) => `<div class="c-mini" onclick="${opens(i)}">${tag(i)}<span class="t">${esc(i.t)}${i.who ? ` <span class="muted">· ${esc(i.who)}</span>` : ''}</span></div>${words === 'now' ? `<div class="why" style="margin:-2px 0 6px">${esc(N(i))}</div>` : ''}`
+  return `<div class="ai">${header()}
+    <div class="c-sec"><div class="sec-h">Do next <span class="n">${all.length}</span></div>${pri}</div>
+    <div class="c-side">
+      <div><div class="sec-h">Follow up <span class="n">${NUDGE.length}</span></div>${NUDGE.map(mini).join('')}</div>
+      <div><div class="sec-h">New <span class="n">${NEW.length}</span><span class="faint" style="font-size:11px">since Thu 4:40 PM</span></div>${NEW.map(mini).join('')}</div>
+    </div>${reviewBtn}</div>`
+}
+
+const NOTES = {
+  before: ['<b>What ships today.</b> Every item is title, then a dash and the AI’s note, then a "Next:" line. Three columns of running text, no borders between items, and only overdue items get a tag.'],
+  a: [
+    '<b>Each item is its own small card</b> with its project’s color on the left edge, so items are clearly separate.',
+    '<b>A status tag on every item</b> (Overdue, Due today, Waiting 8 days, New), worked out from the task itself, not written by the AI. It does the job the first half of most notes did.',
+    '<b>The note is cut to one line</b>; hover shows the rest, and the task has it all. The next step sits under it with an arrow.',
+    'Most familiar and easiest to build. Still three pieces of text per priority, just better separated.',
+  ],
+  b: [
+    '<b>One line per item, like the task lists</b>: project stripe, status tag, title, and (for top priorities) the next step on the right. Nothing wraps.',
+    '<b>Click a row to see more</b>: the full note, the next step with its reason, the project, and an Open task button. Only one opens at a time.',
+    '<b>Sections stack</b> instead of sitting in three columns, so each line has room. It’s taller, but you can read it top to bottom in seconds.',
+    'Matches the rest of the app (Tasks, Waiting, Focus all look like this) and keyboard-friendly later (Up/Down, Enter to expand).',
+  ],
+  c: [
+    '<b>Leads with what to do</b>: Top priorities become "Do next", numbered, and the next step is the main line. The task name, project dot and status tag sit small underneath.',
+    '<b>The AI’s note is dropped</b> from the card (with "Shorter" wording). The next step usually says the same thing more usefully; the note stays on the task.',
+    '<b>Follow up and New are just names and tags</b>, side by side. Click opens the task as today.',
+    '<b>How many in Do next:</b> today the AI picks 3 to 5, but every overdue task must be included, so a bad week can give 6 or more. Use the "Do next items" switch to see 6. Each item is about 57px tall, so 6 makes the briefing about 200px taller than 3 (Compact: about 25px taller).',
+    '<b>Long list: Show all</b> lists every item. <b>First 4</b> shows the top four and a "Show 2 more" line. <b>Compact</b> keeps all of them but puts the task name on the same line as the step, so each item is one line.',
+    'Fewest words. The trade-off: if the AI’s next step is off, there’s less context on screen to tell why.',
+  ],
+}
+const SHARED = [
+  '<b>AI wording: Shorter</b> is a prompt change, not a layout change, and works with any option: the note becomes a short fragment (about 8 words), the next step a short command (about 8 words), the summary under 20 words. Switch it to see each layout with today’s longer text.',
+  '<b>Not changing:</b> items still come from real tasks only, clicking still opens the task (or Review), nothing goes to Review, History shows past briefings the same way.',
+  'Needs one small data addition: the project color for each item (looked up from the task when shown, so older briefings get it too).',
+]
+
+function render() {
+  document.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === view))
+  document.querySelectorAll('[data-w]').forEach((b) => b.classList.toggle('on', b.dataset.w === words))
+  document.querySelectorAll('[data-n]').forEach((b) => b.classList.toggle('on', +b.dataset.n === count))
+  document.querySelectorAll('[data-l]').forEach((b) => b.classList.toggle('on', b.dataset.l === long))
+  $('#countGrp').style.display = $('#longGrp').style.display = view === 'c' ? '' : 'none'
+  $('#briefing').innerHTML = { before, a: cards, b: lines, c: actionFirst }[view]()
+  $('#notes').innerHTML = `<h3>Mockup notes (not part of the app)</h3><ul>${[...NOTES[view], ...(view === 'before' ? [] : SHARED)].map((n) => `<li>${n}</li>`).join('')}</ul>`
+}
+document.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => { view = b.dataset.v; openRow = null; render() }))
+document.querySelectorAll('[data-w]').forEach((b) => (b.onclick = () => { words = b.dataset.w; render() }))
+$('#theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+document.querySelectorAll('[data-n]').forEach((b) => (b.onclick = () => { count = +b.dataset.n; showAll = false; render() }))
+document.querySelectorAll('[data-l]').forEach((b) => (b.onclick = () => { long = b.dataset.l; showAll = false; render() }))
+words = 'short'; view = 'c'; count = 6; render()
+</script>
+</body>
+</html>

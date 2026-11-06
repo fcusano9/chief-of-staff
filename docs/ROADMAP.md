@@ -33,7 +33,7 @@ The app is for people who track work in Microsoft To Do and OneNote and use M365
 
 ## Milestone 3: priorities and briefings
 
-- ✅ **Daily briefing (AI)** on Today, when the user clicks: a one-line summary, then Top priorities (overdue first, tagged), Waiting-on nudges, and New since last briefing. Every briefing is saved and browsable in History. A schedule (for example 7:30) can be added later; see DECISIONS.md.
+- ✅ **Daily briefing (AI)** on Today, when the user clicks: a one-line summary, then Do next (top priorities, one line each led by the next step, overdue first, with status tags), Follow up, and New since last briefing. Every briefing is saved and browsable in History. A schedule (for example 7:30) can be added later; see DECISIONS.md.
 - ✅ **Per-task "suggested next action"** on the task editor's card: one sentence plus why, written as part of a daily briefing or an import, never on its own. Tried on made-up demo data (AI-RULES.md, "How the AI has done in tests"): specific with all three Claude models, weak with gpt-oss:20b. The extraction benchmark hasn't been rerun since the prompt gained it.
 - **AI-written status updates** for open items. They go through Review like everything else.
 - ✅ **Weekly review** (Weekly tab): each Sunday-to-Saturday week's Completed, New, Slipping and Waiting on, live for the current week and saved when a week ends, plus an AI reflection for the user (written on click, with Copy). A status report for others (or saving to Outlook drafts in milestone 4) isn't part of it; the reflection is for the user alone.
