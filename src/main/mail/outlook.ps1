@@ -3,11 +3,12 @@
 # Never sends, moves, flags or deletes.
 #   -Action list -Since <ISO time> -OutFile <path>   writes received (Inbox and subfolders) and sent mail as JSON
 #   -Action open -EntryId <id> -StoreId <id> -OutFile <path>   shows the message in Outlook
+#   -Action latest -EntryId <id> -StoreId <id> -OutFile <path>   the newest sent or received email in that message's conversation
 #   -Action recipients -EntryId <id> -StoreId <id> -OutFile <path>   who Reply and Reply all would go to (nothing is saved)
 #   -Action reply -EntryId <id> -StoreId <id> -BodyFile <path> [-ReplyAll] -OutFile <path>   saves a reply to Drafts, never sends
 # The result is always JSON in -OutFile: { ok: true, ... } or { ok: false, error, code }.
 param(
-  [Parameter(Mandatory = $true)][ValidateSet('list', 'open', 'recipients', 'reply')][string]$Action,
+  [Parameter(Mandatory = $true)][ValidateSet('list', 'open', 'latest', 'recipients', 'reply')][string]$Action,
   [Parameter(Mandatory = $true)][string]$OutFile,
   [string]$Since,
   [string]$EntryId,
@@ -87,6 +88,15 @@ function Convert-Item($item, $folderPath, $direction) {
   }
 }
 
+function Get-MyAddresses($ns) {
+  $addresses = New-Object System.Collections.ArrayList
+  $me = $ns.CurrentUser
+  try { $u = $me.AddressEntry.GetExchangeUser(); if ($u) { [void]$addresses.Add([string]$u.PrimarySmtpAddress) } } catch {}
+  try { [void]$addresses.Add([string]$me.Address) } catch {}
+  foreach ($account in $ns.Accounts) { try { [void]$addresses.Add([string]$account.SmtpAddress) } catch {} }
+  return @($addresses)
+}
+
 try {
   try {
     $outlook = [System.Runtime.InteropServices.Marshal]::GetActiveObject('Outlook.Application')
@@ -100,6 +110,54 @@ try {
     $item = $ns.GetItemFromID($EntryId, $StoreId)
     $item.Display()
     Write-Result ([ordered]@{ ok = $true })
+    exit 0
+  }
+
+  if ($Action -eq 'latest') {
+    # Walks the message's conversation (Outlook's own threading, across folders) for the newest
+    # email that was actually sent: drafts and Deleted Items are left out. Falls back to the message
+    # itself when the store doesn't support conversations.
+    $item = $ns.GetItemFromID($EntryId, $StoreId)
+    $best = $item
+    $skipFolders = @()
+    foreach ($n in 3, 16) { try { $skipFolders += [string]$ns.GetDefaultFolder($n).EntryID } catch {} }
+    $conv = $null
+    try { $conv = $item.GetConversation() } catch {}
+    if ($conv) {
+      $stack = New-Object System.Collections.Stack
+      foreach ($root in $conv.GetRootItems()) { $stack.Push($root) }
+      while ($stack.Count -gt 0) {
+        $node = $stack.Pop()
+        try { foreach ($child in $conv.GetChildren($node)) { $stack.Push($child) } } catch {}
+        try {
+          if ($node.Class -ne 43 -or -not $node.Sent) { continue }
+          if ($skipFolders -contains [string]$node.Parent.EntryID) { continue }
+          if ($node.SentOn -gt $best.SentOn) { $best = $node }
+        } catch {}
+      }
+    }
+    $mine = @(Get-MyAddresses $ns | ForEach-Object { $_.ToLowerInvariant() })
+    $sentFolder = ''
+    try { $sentFolder = [string]$ns.GetDefaultFolder(5).EntryID } catch {}
+    $fromEmail = Get-SenderEmail $best
+    $fromMe = ([string]$best.Parent.EntryID -eq $sentFolder) -or ($mine -contains $fromEmail.ToLowerInvariant())
+    $body = ''
+    try { $body = [string]$best.Body } catch {}
+    if ($body.Length -gt $MaxBody) { $body = $body.Substring(0, $MaxBody) }
+    $to = ''; $cc = ''
+    try { $to = [string]$best.To; $cc = [string]$best.CC } catch {}
+    Write-Result ([ordered]@{
+      ok      = $true
+      entryId = [string]$best.EntryID
+      storeId = [string]$best.Parent.StoreID
+      fromMe  = [bool]$fromMe
+      from    = [string]$best.SenderName
+      to      = $to
+      cc      = $cc
+      subject = [string]$best.Subject
+      time    = $best.SentOn.ToUniversalTime().ToString('o')
+      body    = $body
+    })
     exit 0
   }
 
@@ -160,12 +218,7 @@ try {
   Read-Folder $sent $sent.Name 'sent'
 
   $me = $ns.CurrentUser
-  $addresses = New-Object System.Collections.ArrayList
-  try { $u = $me.AddressEntry.GetExchangeUser(); if ($u) { [void]$addresses.Add([string]$u.PrimarySmtpAddress) } } catch {}
-  try { [void]$addresses.Add([string]$me.Address) } catch {}
-  foreach ($account in $ns.Accounts) { try { [void]$addresses.Add([string]$account.SmtpAddress) } catch {} }
-
-  Write-Result ([ordered]@{ ok = $true; me = [ordered]@{ name = [string]$me.Name; addresses = @($addresses) }; messages = @($messages) })
+  Write-Result ([ordered]@{ ok = $true; me = [ordered]@{ name = [string]$me.Name; addresses = @(Get-MyAddresses $ns) }; messages = @($messages) })
 } catch {
   Write-Result ([ordered]@{ ok = $false; code = 'failed'; error = "Couldn't read Outlook: $($_.Exception.Message)" })
 }

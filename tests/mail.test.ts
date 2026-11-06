@@ -181,6 +181,9 @@ class FakeOutlook implements OutlookReader {
   async open(entryId: string) {
     this.opened.push(entryId)
   }
+  async latest() {
+    return { entryId: 'e', storeId: 's', fromMe: false, from: '', to: '', cc: '', subject: '', time: '', body: '' }
+  }
   async recipients() {
     return { subject: 'RE: x', reply: { to: '', cc: '' }, replyAll: { to: '', cc: '' } }
   }

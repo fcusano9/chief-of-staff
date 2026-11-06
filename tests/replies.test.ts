@@ -12,7 +12,7 @@ import { openDatabase } from '../src/main/db'
 import { FixtureOutlook, type OutlookMailbox, type OutlookMessage, type OutlookReader } from '../src/main/mail/outlook'
 import { BriefService, PersonService, ProjectService } from '../src/main/services/directory'
 import { MailService } from '../src/main/services/mail'
-import { ReplyService, senderOf } from '../src/main/services/replies'
+import { lastMessageOf, people, ReplyService, senderOf } from '../src/main/services/replies'
 import { SourceService } from '../src/main/services/sources'
 import { SuggestionService } from '../src/main/services/suggestions'
 import { TaskService } from '../src/main/services/tasks'
@@ -25,7 +25,7 @@ const input = (o: Partial<ReplyInput> = {}): ReplyInput => ({
   thread: 'From: Dana Lee <dana@example.com>\nCan you confirm the tier 2 discount by Friday?',
   task: { title: 'Reply to Dana: Q1 pricing', notes: null, updates: [] },
   recipients: { reply: { to: 'Dana Lee', cc: '' }, replyAll: { to: 'Dana Lee; Priya Shah', cc: 'Marcus Webb' } },
-  revision: null, ...o,
+  followUp: null, revision: null, ...o,
 })
 
 describe('draft replies: the prompt and checks', () => {
@@ -83,6 +83,23 @@ describe('draft replies: the prompt and checks', () => {
     expect(senderOf('From: Frank Cusano (you)')).toBeNull()
   })
 
+  it('writes a follow-up nudge, not an answer, when the newest email is the user\'s own', () => {
+    const { system } = buildReplyPrompt(input({ followUp: { to: 'Dana Lee and Priya Shah', sentAt: '2026-11-02' } }))
+    expect(system).toMatch(/The newest email in the thread below is Frank's own, sent 2026-11-02 to Dana Lee and Priya Shah/)
+    expect(system).toMatch(/short, polite check-in/)
+    expect(system).toMatch(/Never invent a date/)
+    expect(system).not.toMatch(/Answer what was asked/)
+    expect(buildReplyPrompt(input()).system).not.toMatch(/check-in/)
+  })
+
+  it('names who an email went to, and reads the newest message of a saved thread', () => {
+    expect(people('Dana Lee <dana@example.com>; Priya Shah')).toBe('Dana Lee and Priya Shah')
+    expect(people('A; B; C; D')).toBe('A, B and 2 more')
+    expect(lastMessageOf('Email conversation\n\n=== Message 1 of 2 · received\nFrom: Dana Lee <d@x.com>\nTo: Frank\n\n=== Message 2 of 2 · sent\nFrom: Frank Cusano (you)\nTo: Dana Lee; Priya Shah\n\nAny news?')).toEqual({
+      from: 'Frank Cusano', to: 'Dana Lee; Priya Shah', fromMe: true,
+    })
+  })
+
   it('reads the activity line for a saved draft', () => {
     expect(eventWhat({ kind: 'reply_draft', from: null, to: null, note: 'Reply all' })).toBe('Draft reply saved to Outlook Drafts')
   })
@@ -110,6 +127,12 @@ class FakeOutlook implements OutlookReader {
   }
   async open(entryId: string) {
     this.opened.push(entryId)
+  }
+  async latest(entryId: string) {
+    if (this.fail) throw this.fail
+    const m = this.mailbox.messages.find((x) => x.entryId === entryId)!
+    const n = this.mailbox.messages.filter((x) => x.conversationId === m.conversationId).sort((a, b) => a.time.localeCompare(b.time)).at(-1)!
+    return { entryId: n.entryId, storeId: n.storeId, fromMe: n.direction === 'sent', from: n.from, to: n.to, cc: n.cc, subject: n.subject, time: n.time, body: n.body }
   }
   async recipients(entryId: string) {
     if (this.fail) throw this.fail
@@ -171,9 +194,9 @@ describe('draft replies: from a task to Outlook Drafts', () => {
     return suggestions.accept(reply.id)!
   }
 
-  it('shows the email it answers: the newest message from someone else', async () => {
+  it('shows the email it answers: the newest message in the conversation', async () => {
     const id = await replyTask()
-    expect(replies.target(id)).toEqual({ sourceId: expect.any(Number), subject: 'Q1 pricing', from: 'Dana Lee', at: '2026-11-05T14:00:00.000Z', supported: true })
+    expect(replies.target(id)).toEqual({ sourceId: expect.any(Number), subject: 'Q1 pricing', from: 'Dana Lee', at: '2026-11-05T14:00:00.000Z', followUp: false, supported: true })
     expect(replies.target(tasks.save({ ...tasks.get(id)!, id: 0, title: 'Not from mail' }).id)).toBeNull()
   })
 
@@ -182,10 +205,10 @@ describe('draft replies: from a task to Outlook Drafts', () => {
     tasks.save({ ...tasks.get(id)!, notes: 'Tier 2 is fine.' })
     style = 'Short and direct.'
     const draft = await replies.draft(id)
-    expect(draft).toMatchObject({ replyAll: true, subject: 'RE: Q1 pricing', reply: { to: 'Dana Lee (NEW)', cc: '' }, replyAllTo: { to: 'Dana Lee; Priya Shah', cc: 'Marcus Webb' }, writtenBy: 'Basic' })
+    expect(draft).toMatchObject({ replyAll: true, subject: 'RE: Q1 pricing', reply: { to: 'Dana Lee (NEW)', cc: '' }, replyAllTo: { to: 'Dana Lee; Priya Shah', cc: 'Marcus Webb' }, writtenBy: 'Basic', email: { from: 'Dana Lee', at: '2026-11-05T14:00:00.000Z', followUp: false } })
     expect(draft.body).toContain('[date]')
     const asked = drafter.asked[0]!
-    expect(asked).toMatchObject({ userName: ME, today: '2026-11-06', style: 'Short and direct.', from: 'Dana Lee', revision: null, task: { title: 'Reply to Dana: Q1 pricing', notes: 'Tier 2 is fine.' } })
+    expect(asked).toMatchObject({ userName: ME, today: '2026-11-06', style: 'Short and direct.', from: 'Dana Lee', followUp: null, revision: null, task: { title: 'Reply to Dana: Q1 pricing', notes: 'Tier 2 is fine.' } })
     expect(asked.thread).toContain('Can you confirm the tier 2 discount by Friday?')
     // Nothing reaches Outlook until it's saved.
     expect(outlook.saved).toEqual([])
@@ -204,6 +227,40 @@ describe('draft replies: from a task to Outlook Drafts', () => {
 
     await replies.openDraft('DRAFT1', 'S1')
     expect(outlook.opened).toEqual(['DRAFT1'])
+  })
+
+  it('threads on the user\'s newest follow-up, even one sent after the last import, and drafts a nudge', async () => {
+    const id = await replyTask()
+    // A follow-up the user sent after the import: only Outlook knows about it.
+    outlook.mailbox.messages.push(
+      msg({ entryId: 'FU', direction: 'sent', folder: 'Sent Items', from: ME, fromEmail: 'frank@example.com', to: 'Dana Lee; Priya Shah', cc: '', time: '2026-11-06T09:00:00.000Z', body: 'Hi Dana, any update on tier 2?\n\nFrom: Dana Lee\nSent: Thursday\nold quoted text' }),
+    )
+    const draft = await replies.draft(id)
+    expect(draft.email).toEqual({ from: 'Dana Lee and Priya Shah', at: '2026-11-06T09:00:00.000Z', followUp: true })
+    expect(draft.reply.to).toBe('Dana Lee (FU)')
+    const asked = drafter.asked[0]!
+    expect(asked.followUp).toEqual({ to: 'Dana Lee and Priya Shah', sentAt: '2026-11-06' })
+    expect(asked.thread).toContain('Newest message, not read by the app before · sent by Frank Cusano')
+    expect(asked.thread).toContain('Hi Dana, any update on tier 2?')
+    expect(asked.thread).not.toContain('old quoted text')
+    await replies.save(id, { replyAll: true, body: 'Hi Dana, checking in.' })
+    expect(outlook.saved.at(-1)).toMatchObject({ entryId: 'FU', replyAll: true })
+  })
+
+  it('shows a follow-up on the card once the app has read the user\'s newest email, and does not repeat it to the AI', async () => {
+    const id = await replyTask()
+    const sources = new SourceService(db, () => new DemoProvider(), () => ME)
+    const mail = new MailService(db, sources, outlook, () => ME, () => 'Basic', () => new Date('2026-11-07T15:00:00.000Z'))
+    outlook.mailbox.messages.push(msg({ entryId: 'FU', direction: 'sent', folder: 'Sent Items', from: ME, fromEmail: 'frank@example.com', to: 'Dana Lee', cc: '', time: '2026-11-06T09:00:00.000Z', body: 'Any update?' }))
+    const check = await mail.check('2026-11-06T00:00:00.000Z')
+    mail.read(check.id, check.conversations.map((c) => c.key))
+    for (let i = 0; i < 100 && mail.status().state === 'reading'; i++) await new Promise((r) => setTimeout(r, 10))
+    expect(replies.target(id)).toMatchObject({ from: 'Dana Lee', at: '2026-11-06T09:00:00.000Z', followUp: true })
+    await replies.draft(id)
+    const thread = drafter.asked[0]!.thread
+    expect(thread).toContain('Can you confirm the tier 2 discount by Friday?')
+    expect(thread).toContain('Any update?')
+    expect(thread).not.toContain('not read by the app before')
   })
 
   it('says plainly when Outlook is missing, closed, or the email is gone', async () => {

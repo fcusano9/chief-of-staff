@@ -14,8 +14,10 @@ export interface ReplyInput {
   /** The user's own note on how they write (Settings → AI). May be empty. */
   style: string
   subject: string
-  /** Who sent the email being answered. */
+  /** Who sent the email being answered; for a follow-up, who the user's email went to. */
   from: string
+  /** The newest email is the user's own ('YYYY-MM-DD' sent), unanswered: write a follow-up nudge, not an answer. */
+  followUp: { to: string; sentAt: string } | null
   /** The conversation as the mail import saved it, oldest first. */
   thread: string
   task: { title: string; notes: string | null; updates: string[] }
@@ -35,7 +37,7 @@ const fence = (s: string) => s.replace(/<\/?(email_thread|task|style|revision|pr
 export function buildReplyPrompt(input: ReplyInput): { system: string; user: string } {
   const me = input.userName
   const first = me.split(/\s+/)[0] || me
-  const system = replySystem({ me, first, from: input.from, hasStyle: !!input.style.trim(), revision: !!input.revision, today: input.today })
+  const system = replySystem({ me, first, from: input.from, followUp: input.followUp, hasStyle: !!input.style.trim(), revision: !!input.revision, today: input.today })
   const list = (items: string[]) => (items.length ? items.map((t) => `- ${t}`).join('\n') : '(none)')
   const thread = input.thread.length > REPLY_THREAD_CHARS ? `(older messages left out)\n${input.thread.slice(-REPLY_THREAD_CHARS)}` : input.thread
   const user = `<email_thread>
