@@ -1,6 +1,6 @@
 import { execFile, spawn } from 'node:child_process'
 import { createWriteStream, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, posix, win32 } from 'node:path'
 import { promisify } from 'node:util'
 import { isTestedLocalModel, type OllamaSetupStatus } from '@shared/types'
 import { isLoopbackUrl } from '../ai/ollama'
@@ -60,6 +60,8 @@ export class OllamaManager {
   /** Where an installed Ollama is, if anywhere: the app (to start it) or the command-line program. */
   findInstall(): { app: string | null; cli: string | null } {
     const { platform, env, exists } = this.host
+    // Paths follow the platform being checked, not the one running (the tests check every platform on any computer).
+    const join = platform === 'win32' ? win32.join : posix.join
     const first = (paths: string[]) => paths.find((p) => exists(p)) ?? null
     const onPath = (name: string) => (env.PATH ?? env.Path ?? '').split(platform === 'win32' ? ';' : ':').filter(Boolean).map((d) => join(d, name))
     if (platform === 'win32') {

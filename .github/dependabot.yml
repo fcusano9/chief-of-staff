@@ -1,0 +1,20 @@
+# Dependabot opens PRs for outdated packages. Security fixes come separately, as soon as they're published.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Minor and patch updates arrive as one PR a week. Major versions (Electron, Vite, TypeScript…) get their own PR.
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
