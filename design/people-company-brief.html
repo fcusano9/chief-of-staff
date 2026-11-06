@@ -248,7 +248,7 @@ function renderRight() {
         </div>` : ''}
     </div>
 
-    <label class="field"><span>Company</span><input class="inp" data-f="company" list="companies" value="${esc(p.company)}" placeholder="e.g. Fabrikam" /></label>
+    <label class="field"><span>Company</span><input class="inp" data-f="company" list="companies" value="${esc(p.company)}" placeholder="e.g. Google" /></label>
     <datalist id="companies">${companies.map((c) => `<option value="${esc(c)}"></option>`).join('')}</datalist>
     <label class="field"><span>Role</span><input class="inp" data-f="role" value="${esc(p.role)}" placeholder="e.g. VP, Product" /></label>
     <label class="field"><span>Email</span><input class="inp" data-f="email" value="${esc(p.email)}" placeholder="name@company.com" /></label>
