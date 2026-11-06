@@ -140,29 +140,29 @@ select.inp { width: auto; padding: 3px 8px; }
 
 <script>
 const initial = () => [
-  { id: 1, name: 'Dana Lee', role: 'VP, Product', company: 'Crestron', email: 'dlee@crestron.com', w: 5, asks: 2, waiting: 0,
-    brief: "Dana Lee is Frank's VP of Product at Crestron and signs off on pricing and roadmap decisions.", briefBy: 'ai', briefAt: 'Oct 30', newNotes: 0,
+  { id: 1, name: 'Dana Lee', role: 'VP, Product', company: 'Stark Industries', email: 'dlee@stark.com', w: 5, asks: 2, waiting: 0,
+    brief: "Dana Lee is Frank's VP of Product at Stark Industries and signs off on pricing and roadmap decisions.", briefBy: 'ai', briefAt: 'Oct 30', newNotes: 0,
     instructions: 'Lead with the ask; keep updates to three bullets.',
     history: 'Oct 14, 2026: Wants pricing changes reviewed with Finance before they go to distributors. (from “Pricing sync”)\nOct 28, 2026: Approved the four-tier pricing model for the spring launch. (from “Copilot summary, week of Oct 26”)',
     tasks: [['Send pricing deck to EMEA distributors', 'Fri'], ['Draft spring launch roadmap slide', 'Nov 12']],
-    variants: ["Dana Lee is Crestron's VP of Product and Frank's manager; she approves pricing and roadmap decisions, including the four-tier spring pricing."] },
-  { id: 2, name: 'Marcus Webb', role: 'Web platform manager', company: 'Crestron', email: '', w: 4, asks: 1, waiting: 0,
-    brief: "Marcus Webb manages Crestron's partner portal and also owns the portal side of dealer training.", briefBy: 'ai', briefAt: 'Nov 2', newNotes: 0,
+    variants: ["Dana Lee is Stark Industries' VP of Product and Frank's manager; she approves pricing and roadmap decisions, including the four-tier spring pricing."] },
+  { id: 2, name: 'Marcus Webb', role: 'Web platform manager', company: 'Stark Industries', email: '', w: 4, asks: 1, waiting: 0,
+    brief: "Marcus Webb manages Stark Industries' partner portal and also owns the portal side of dealer training.", briefBy: 'ai', briefAt: 'Nov 2', newNotes: 0,
     instructions: '',
     history: 'Oct 27, 2026: Confirmed the partner portal wireframes are approved. (from “Copilot summary, week of Oct 26”)\nNov 2, 2026: Now also owns the portal side of dealer training. (from “Dealer training kickoff”)',
     tasks: [['Review Training tile design', 'Nov 12']],
-    variants: ["Marcus Webb runs Crestron's partner portal, including the new Training tile for dealer courses."] },
-  { id: 3, name: 'Alex Rivera', role: 'Training manager', company: 'Crestron', email: '', w: 3, asks: 1, waiting: 1,
-    brief: 'Alex Rivera is a training manager at Crestron.', briefBy: 'ai', briefAt: 'Nov 2', newNotes: 2,
+    variants: ["Marcus Webb runs Stark Industries' partner portal, including the new Training tile for dealer courses."] },
+  { id: 3, name: 'Alex Rivera', role: 'Training manager', company: 'Stark Industries', email: '', w: 3, asks: 1, waiting: 1,
+    brief: 'Alex Rivera is a training manager at Stark Industries.', briefBy: 'ai', briefAt: 'Nov 2', newNotes: 2,
     instructions: '',
     history: 'Nov 2, 2026: Runs dealer training. Prefers a short weekly sync on Thursdays. (from “Dealer training kickoff”)\nNov 2, 2026: Getting quotes from two training platforms. (from “Dealer training kickoff”)\nNov 2, 2026: Owns the online certification courses launching with the new tiers in Q2. (from “Dealer training kickoff”)',
     tasks: [['Send course outline to Alex', 'Fri']],
-    variants: ["Alex Rivera is Crestron's training manager and runs the dealer training program, including the online certification courses launching in Q2.",
-               "Alex Rivera runs dealer training at Crestron and is choosing the platform for the Q2 certification courses."] },
-  { id: 4, name: 'Priya Shah', role: 'Finance analyst', company: 'Crestron', email: '', w: 3, asks: 0, waiting: 1,
-    brief: 'Priya Shah is a finance analyst at Crestron who builds the margin models for product pricing.', briefBy: 'you', briefAt: 'Oct 20', newNotes: 0,
+    variants: ["Alex Rivera is Stark Industries' training manager and runs the dealer training program, including the online certification courses launching in Q2.",
+               "Alex Rivera runs dealer training at Stark Industries and is choosing the platform for the Q2 certification courses."] },
+  { id: 4, name: 'Priya Shah', role: 'Finance analyst', company: 'Stark Industries', email: '', w: 3, asks: 0, waiting: 1,
+    brief: 'Priya Shah is a finance analyst at Stark Industries who builds the margin models for product pricing.', briefBy: 'you', briefAt: 'Oct 20', newNotes: 0,
     instructions: '', history: 'Oct 20, 2026: Building the margin model for the new pricing tiers. (from “Pricing sync”)', tasks: [],
-    variants: ['Priya Shah is a Crestron finance analyst building the margin model for the new pricing tiers.'] },
+    variants: ['Priya Shah is a Stark Industries finance analyst building the margin model for the new pricing tiers.'] },
   { id: 5, name: 'Jordan Kim', role: 'Account manager', company: 'Northwind AV', email: 'jordan@northwind-av.example', w: 3, asks: 1, waiting: 0,
     brief: 'Jordan Kim is the account manager at Northwind AV, a dealer piloting the new pricing tiers.', briefBy: 'ai', briefAt: 'Oct 29', newNotes: 0,
     instructions: 'Copy their sales lead on anything about pricing.', history: 'Oct 29, 2026: Northwind AV agreed to pilot the new tiers. (from “Dealer call”)',
@@ -248,7 +248,7 @@ function renderRight() {
         </div>` : ''}
     </div>
 
-    <label class="field"><span>Company</span><input class="inp" data-f="company" list="companies" value="${esc(p.company)}" placeholder="e.g. Crestron" /></label>
+    <label class="field"><span>Company</span><input class="inp" data-f="company" list="companies" value="${esc(p.company)}" placeholder="e.g. Google" /></label>
     <datalist id="companies">${companies.map((c) => `<option value="${esc(c)}"></option>`).join('')}</datalist>
     <label class="field"><span>Role</span><input class="inp" data-f="role" value="${esc(p.role)}" placeholder="e.g. VP, Product" /></label>
     <label class="field"><span>Email</span><input class="inp" data-f="email" value="${esc(p.email)}" placeholder="name@company.com" /></label>

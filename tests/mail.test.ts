@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DemoProvider } from '../src/main/ai/demo'
 import { validateSuggestions } from '../src/main/ai/schema'
 import { buildExtractionContext } from '../src/main/ai/context'
@@ -200,6 +200,9 @@ describe('mail import end to end (demo AI, fake Outlook)', () => {
   const now = new Date('2026-11-03T15:00:00.000Z')
 
   beforeEach(() => {
+    // The import reads today's date from the clock, so pin it to `now` ("by Friday" is then Nov 6).
+    // Only Date is faked, so the polling timers below still run.
+    vi.useFakeTimers({ toFake: ['Date'], now })
     folder = mkdtempSync(join(tmpdir(), 'cos-mail-'))
     db = openDatabase(join(folder, 'test.db'))
     tasks = new TaskService(db, () => DEFAULT_SETTINGS.priorityWeights)
@@ -209,6 +212,7 @@ describe('mail import end to end (demo AI, fake Outlook)', () => {
     mail = new MailService(db, sources, outlook, () => ME, () => 'Demo AI', () => now)
   })
   afterEach(() => {
+    vi.useRealTimers()
     db.close()
     rmSync(folder, { recursive: true, force: true })
   })

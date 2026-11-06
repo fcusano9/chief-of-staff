@@ -47,7 +47,7 @@ The app is for people who track work in Microsoft To Do and OneNote and use M365
 - ✅ **Mail import** (Import → Outlook mail): a button, not a schedule. "Check Outlook" reads Inbox, its subfolders and Sent Items since the last import (7 days on the first run, or any date) and shows what it found and skipped; "Read" sends each new conversation to the AI. Review gets "Needs reply" tasks, action items, waiting-on items from sent mail (flagged for follow-up after 3 business days), and "Reply arrived" to clear them.
 - A calendar read for meeting prep.
 - ✅ **Draft reply** on tasks linked to an email: the AI's own first draft, an editable preview with To and Cc and an AI-picked Reply or Reply all, Try again with a note, then Save to Outlook Drafts (`ReplyAll()`/`Reply()`, then `Save()`); **never sent**. A writing-style note in Settings. Built 2026-11-06 and tested with a fixture Outlook only: **to check on the Windows PC** whether saving triggers Outlook's security prompt, and whether the Outlook signature appears.
-- **Test early:** Outlook's programmatic-access security prompt may appear, depending on Crestron's antivirus and policy.
+- **Test early:** Outlook's programmatic-access security prompt may appear, depending on the company's antivirus and policy.
 - **Mac:** the new Outlook for Mac has no scripting (Microsoft cancelled the AppleScript roadmap item RM88537 in August 2026), so Mac mail needs Graph (milestone 6). Outlook MCP servers (including Microsoft's preview Mail MCP server) also go through Graph, so they need the same IT app registration. Apple Mail can be scripted, but its Microsoft 365 connection uses EWS, which Microsoft began retiring on October 1, 2026; Apple says a Graph-based update is coming in a future macOS 27 release (checked 2026-11-06).
 
 ## Milestone 5: knowledge archive and meeting prep
@@ -56,7 +56,7 @@ The app is for people who track work in Microsoft To Do and OneNote and use M365
 - **Ask the archive:** a chat that answers with citations to dated sources.
 - **Meeting prep:** for the next calendar meeting, the open items with its attendees, recent decisions, and talking points.
 
-## Milestone 6: Graph and Copilot connectors (needs Crestron IT)
+## Milestone 6: Graph and Copilot connectors (needs company IT)
 
 - Microsoft Graph for mail, Teams chats and meeting transcripts.
 - M365 Copilot Chat API and Meeting Insights as AI providers or sources.

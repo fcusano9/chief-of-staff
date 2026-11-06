@@ -191,7 +191,7 @@ export function PeopleScreen() {
       {person && draft.id !== 0 && <PersonBrief key={person.id} person={person} hasContext={!!history.trim()} />}
       <label className="field">
         <span>Company</span>
-        <input className="inp" list="company-options" value={draft.company} placeholder="e.g. Crestron" onChange={(e) => setDraft({ ...draft, company: e.target.value })} />
+        <input className="inp" list="company-options" value={draft.company} placeholder="e.g. Google" onChange={(e) => setDraft({ ...draft, company: e.target.value })} />
       </label>
       <datalist id="company-options">
         {companies.map((c) => (
