@@ -2,6 +2,9 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-06 · The repo is public, MIT licensed (Frank)
+**Why:** the app isn't specific to any company, and on a public repo GitHub's code scanning, secret scanning and branch protection are free. Company-specific text was replaced first: sample data uses a fictional company (Stark Industries). Older commits are left as they are. CI (typecheck and tests on Windows and Linux) must pass before a PR merges, and Dependabot proposes package updates weekly. An override in `package.json` pins `minimatch` to a fixed version until electron-builder ships one.
+
 ### 2026-11-06 · Draft replies: on the task, preview first, saved to Drafts only (Frank)
 Frank's choices, asked up front (mockup `design/draft-reply.html`, approved after three rounds):
 - **On the task only**, for tasks linked to an Outlook email (not in Review or on the import).

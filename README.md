@@ -121,6 +121,8 @@ npm run package:mac   # Mac .dmg (run on a Mac; not tested yet)
 
 npm holds back install scripts, so Electron downloads its binary the first time it runs. You can also run `node node_modules/electron/install.js`.
 
+Every pull request runs the typecheck and unit tests on Windows and Linux (GitHub Actions, `.github/workflows/ci.yml`).
+
 ## Data
 
 - **Database and settings:** `%APPDATA%\Chief of Staff` on Windows, `~/Library/Application Support/Chief of Staff` on Mac. Only the installed app uses this folder.
@@ -133,3 +135,7 @@ npm holds back install scripts, so Electron downloads its binary the first time 
 ## For AI assistants and new contributors
 
 Start with [AGENTS.md](AGENTS.md), which covers the rules, architecture, conventions and how to make common changes. Then read [docs/ROADMAP.md](docs/ROADMAP.md) for what's built and what's next, and [docs/DECISIONS.md](docs/DECISIONS.md) for why.
+
+## License
+
+[MIT](LICENSE). To report a security problem, see [SECURITY.md](SECURITY.md).
