@@ -25,7 +25,7 @@ The app is for people who track work in Microsoft To Do and OneNote and use M365
 | 2.4 | Data safety: safety copy before upgrades, separate dev/test data, Restore from backup | ✅ Built (`data-safety` e2e suite) |
 | 2.5 | Projects: hand-written overview, AI status brief from the history, History window | ✅ Built |
 | 2.6 | AI log: the exact requests and responses for each import, plus why suggestions were dropped | ✅ Built (`ai-log` e2e suite). Not yet seen with a real Claude or Ollama run |
-| 2.7 | AI spending: estimated Claude costs by month, purpose and model, and per run in the AI logs | ✅ Built (`ai-spending` e2e suite, with seeded usage). Not yet checked against a real Claude bill |
+| 2.7 | AI spending: estimated Claude costs by month, purpose and model, per run in the AI logs, and per import (with an Outlook mail total) in Recent imports | ✅ Built (`ai-spending` e2e suite, with seeded usage). Not yet checked against a real Claude bill |
 | 3 | Priorities and briefings | In progress. Daily briefing, weekly review, "Where this stands" cards with the suggested next action (tasks and projects), the AI priority adjustment and the task Activity log (with pushed-back dates in weekly Slipping) built (`briefing` and `weekly` e2e suites; next actions and priority adjustments have unit tests only). Next actions and priority changes tried on made-up demo data on Nov 5 with Claude Opus, Sonnet and Haiku (good) and gpt-oss:20b (not useful yet); see AI-RULES.md. Briefing and reflection not yet tried on real data |
 | 4 | Outlook | Mail import built (`mail` e2e suite; checked against real Outlook, AI reading not yet tried on real mail). Calendar and draft replies planned |
 | 5 | Knowledge archive and meeting prep | Planned |

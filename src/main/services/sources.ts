@@ -30,7 +30,7 @@ const SOURCE_SELECT = `
          (SELECT COUNT(*) FROM suggestions g WHERE g.source_id = s.id) AS total_count
   FROM source_items s`
 
-function toSource(r: Record<string, unknown>): SourceItem {
+function toSource(r: Record<string, unknown>, estimatedCost: number | null): SourceItem {
   return {
     id: Number(r.id),
     kind: r.kind as SourceKind,
@@ -45,6 +45,7 @@ function toSource(r: Record<string, unknown>): SourceItem {
     pendingCount: Number(r.pending_count),
     totalSuggestions: Number(r.total_count),
     fromOutlook: Number(r.from_outlook) === 1,
+    estimatedCost,
   }
 }
 
@@ -87,12 +88,16 @@ export class SourceService {
 
   /** Recent imports, except Outlook mail, which is listed by mail import instead (see forMailImport). */
   list(limit = 30): SourceItem[] {
-    return (this.db.prepare(`${SOURCE_SELECT} WHERE s.mail_import_id IS NULL ORDER BY s.imported_at DESC, s.id DESC LIMIT ?`).all(limit) as Record<string, unknown>[]).map(toSource)
+    return (this.db.prepare(`${SOURCE_SELECT} WHERE s.mail_import_id IS NULL ORDER BY s.imported_at DESC, s.id DESC LIMIT ?`).all(limit) as Record<string, unknown>[]).map((r) => this.toItem(r))
   }
 
   /** The conversations one Outlook mail import read, newest first. */
   forMailImport(importId: number): SourceItem[] {
-    return (this.db.prepare(`${SOURCE_SELECT} WHERE s.mail_import_id = ? ORDER BY s.occurred_at DESC, s.id DESC`).all(importId) as Record<string, unknown>[]).map(toSource)
+    return (this.db.prepare(`${SOURCE_SELECT} WHERE s.mail_import_id = ? ORDER BY s.occurred_at DESC, s.id DESC`).all(importId) as Record<string, unknown>[]).map((r) => this.toItem(r))
+  }
+
+  private toItem(r: Record<string, unknown>): SourceItem {
+    return toSource(r, this.aiLog.latestRunCost(Number(r.id)))
   }
 
   mailMeta(sourceId: number): MailMeta | null {
@@ -102,7 +107,7 @@ export class SourceService {
 
   get(id: number): SourceItem | null {
     const row = this.db.prepare(`${SOURCE_SELECT} WHERE s.id = ?`).get(id) as Record<string, unknown> | undefined
-    return row ? toSource(row) : null
+    return row ? this.toItem(row) : null
   }
 
   /** Saves the source (skipping exact duplicates) and asks the AI for suggestions. */

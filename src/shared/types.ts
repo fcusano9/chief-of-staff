@@ -131,6 +131,8 @@ export interface SourceItem extends SourceRef {
   length: number
   pendingCount: number
   totalSuggestions: number
+  /** Estimated cost in US dollars of its latest AI run; null when it cost nothing, wasn't read, or the price isn't known. */
+  estimatedCost: number | null
 }
 
 export interface ImportRequest {
@@ -729,6 +731,8 @@ export interface MailJobStatus {
   total: number
   suggestions: number
   failed: number
+  /** Estimated cost in US dollars of the conversations read so far; null while none has cost anything. */
+  estimatedCost: number | null
   /** Subject of the conversation being read. */
   current: string | null
 }
