@@ -1,7 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { type AiCall, type Briefing, type BriefingListItem, type BriefingTrigger, type Task } from '@shared/types'
 import { assembleBriefing, type BriefingInput } from '../ai/briefing'
-import { recentNotes, UPDATES_FOR_AI } from '@shared/notes'
+import { recentNotes } from '@shared/notes'
+import { BRIEFING_TASKS_SENT, BRIEFING_WAITING_SENT, UPDATES_FOR_AI } from '../ai/limits'
 import type { AiCallRecord, AiProvider } from '../ai/provider'
 import { nowIso, transaction } from '../db'
 import type { TaskService } from './tasks'
@@ -11,9 +12,6 @@ import { paidModelOf, UsageService } from './usage'
 
 /** Briefings whose AI requests are kept. The briefings themselves are all kept. */
 export const BRIEFING_CALLS_KEPT = 5
-/** Open tasks sent to the AI to pick priorities from, highest priority first (overdue ones always go). */
-const TASKS_SENT = 25
-const WAITING_SENT = 20
 
 const DAY = 86_400_000
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -107,8 +105,8 @@ export class BriefingService {
     const active = this.tasks.listActive()
     const open = active.filter((t) => t.status !== 'waiting_on')
     const overdue = (t: Task) => (t.dueDate && t.dueDate < today ? daysBetween(t.dueDate, today) : null)
-    const sent = open.filter((t, i) => i < TASKS_SENT || overdue(t))
-    const waiting = this.tasks.listWaiting().slice(0, WAITING_SENT)
+    const sent = open.filter((t, i) => i < BRIEFING_TASKS_SENT || overdue(t))
+    const waiting = this.tasks.listWaiting().slice(0, BRIEFING_WAITING_SENT)
     const isNew = (t: Task) => t.createdAt > since || (t.status === 'waiting_on' && (t.waitingSince ?? '') > since)
     const fresh = active.filter(isNew).sort((a, b) => Math.max(+new Date(b.createdAt), +new Date(b.waitingSince ?? 0)) - Math.max(+new Date(a.createdAt), +new Date(a.waitingSince ?? 0)))
     const summaries = new Map(

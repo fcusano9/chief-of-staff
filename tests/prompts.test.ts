@@ -137,8 +137,7 @@ describe('prompt safety and limits', () => {
   }
 
   it('quotes the limits the code enforces', async () => {
-    const { MAX_NUDGES, MAX_POINTS, MAX_PRIORITIES, MAX_STATUS_BULLETS, MIN_PRIORITIES } = await import('../src/main/ai/limits')
-    const { MAX_AI_ADJUSTMENT } = await import('@shared/types')
+    const { MAX_AI_ADJUSTMENT, MAX_NUDGES, MAX_POINTS, MAX_PRIORITIES, MAX_STATUS_BULLETS, MIN_PRIORITIES } = await import('../src/main/ai/limits')
     expect(systemOf(every.briefing)).toContain(`the ${MIN_PRIORITIES} to ${MAX_PRIORITIES} tasks`)
     expect(systemOf(every.briefing)).toContain(`up to ${MAX_NUDGES} items`)
     expect(systemOf(every.briefing)).toContain(`from -${MAX_AI_ADJUSTMENT} to ${MAX_AI_ADJUSTMENT}`)

@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { ACTIVE_STATUSES, SOURCE_KIND_LABELS, type SourceKind, type SuggestionKind } from '@shared/types'
-import { recentNotes, UPDATES_FOR_AI } from '@shared/notes'
+import { recentNotes } from '@shared/notes'
+import { IMPORT_TEXT_CHARS, PROJECT_UPDATES_FOR_AI, UPDATES_FOR_AI } from './limits'
 import { importAsk, importCalendar, importKindDefinitions, importNextActionRule, importSystem } from './prompts'
 
 export const ALL_KINDS: SuggestionKind[] = ['new_task', 'needs_reply', 'status_update', 'mark_done', 'waiting_on', 'new_project', 'new_person', 'brief_update']
@@ -84,7 +85,7 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
       id: Number(p.id),
       name: String(p.name),
       overview: (p.overview as string) ?? '',
-      brief: recentNotes(String(p.history), 400).join(' | '),
+      brief: recentNotes(String(p.history), PROJECT_UPDATES_FOR_AI).join(' | '),
       instructions: String(p.instructions),
     })),
     // A person's one-line brief; without one, their latest updates (whole ones only).
@@ -143,10 +144,10 @@ export function buildUserPrompt(ctx: ExtractionContext, source: SourceForExtract
         .join('\n')
     : '(none)'
   const projects = ctx.projects.length
-    ? ctx.projects.map((p) => `- [${p.id}] ${p.name}${p.overview ? `: ${oneLine(p.overview, 300)}` : ''}${p.brief ? ` (Status: ${oneLine(p.brief, 500)})` : ''}${p.instructions ? ` (Instructions: ${oneLine(p.instructions, 200)})` : ''}`).join('\n')
+    ? ctx.projects.map((p) => `- [${p.id}] ${p.name}${p.overview ? `: ${oneLine(p.overview, IMPORT_TEXT_CHARS.overview)}` : ''}${p.brief ? ` (Status: ${oneLine(p.brief, IMPORT_TEXT_CHARS.projectStatus)})` : ''}${p.instructions ? ` (Instructions: ${oneLine(p.instructions, IMPORT_TEXT_CHARS.instructions)})` : ''}`).join('\n')
     : '(none)'
   const people = ctx.people.length
-    ? ctx.people.map((p) => `- [${p.id}] ${p.name}${p.role ? `, ${p.role}` : ''}${p.company ? `, ${p.company}` : ''}${p.brief ? `: ${oneLine(p.brief, 300)}` : ''}`).join('\n')
+    ? ctx.people.map((p) => `- [${p.id}] ${p.name}${p.role ? `, ${p.role}` : ''}${p.company ? `, ${p.company}` : ''}${p.brief ? `: ${oneLine(p.brief, IMPORT_TEXT_CHARS.personBrief)}` : ''}`).join('\n')
     : '(none)'
 
   return `<open_tasks>

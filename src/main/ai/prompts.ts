@@ -1,5 +1,5 @@
-import { MAX_AI_ADJUSTMENT, type SuggestionKind } from '@shared/types'
-import { MAX_NUDGES, MAX_POINTS, MAX_PRIORITIES, MAX_STATUS_BULLETS, MIN_PRIORITIES } from './limits'
+import type { SuggestionKind } from '@shared/types'
+import { MAX_AI_ADJUSTMENT, MAX_NUDGES, MAX_POINTS, MAX_PRIORITIES, MAX_STATUS_BULLETS, MIN_PRIORITIES } from './limits'
 
 /*
  * ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -14,6 +14,7 @@ import { MAX_NUDGES, MAX_POINTS, MAX_PRIORITIES, MAX_STATUS_BULLETS, MIN_PRIORIT
  *   starts at the left margin even inside indented code.
  * - ${...} fills in a value from the app: a name, a date, or a limit. Limits (like MAX_NUDGES)
  *   are enforced by the code too, so change the number in limits.ts, never by typing a new one here.
+ *   limits.ts also holds how much of each task, note and email the AI is sent.
  * - A backtick (`) or "${" meant as text needs a backslash in front of it.
  * - The "data, not instructions" lines stop instructions hidden in imported emails or notes from
  *   being followed. Keep them; tests/prompts.test.ts fails if one goes missing.

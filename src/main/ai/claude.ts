@@ -6,6 +6,7 @@ import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } fro
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
 import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
+import { CLAUDE_MAX_TOKENS } from './limits'
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawExtraction } from './schema'
 
@@ -22,7 +23,7 @@ const fallbackFor = (model: string) => (FALLBACK_MODELS.has(model) ? { betas: [F
 export function buildExtractionRequest(model: string, ctx: ExtractionContext, source: SourceForExtraction) {
   return {
     model,
-    max_tokens: 16000,
+    max_tokens: CLAUDE_MAX_TOKENS.import,
     // Medium effort: extraction is careful reading, not deep reasoning.
     output_config: { effort: 'medium' as const, format: betaZodOutputFormat(ExtractionSchema) },
     system: buildSystemPrompt(ctx),
@@ -37,7 +38,7 @@ export function buildBriefRequest(model: string, input: PersonBriefInput) {
   return {
     model,
     // Room for a short answer plus the model's thinking, which counts toward the limit.
-    max_tokens: 4000,
+    max_tokens: CLAUDE_MAX_TOKENS.personBrief,
     // Low effort: summarizing a few notes needs little reasoning.
     output_config: { effort: 'low' as const, format: betaZodOutputFormat(PersonBriefSchema) },
     system,
@@ -51,7 +52,7 @@ export function buildStatusRequest(model: string, input: StatusInput) {
   const { system, user } = buildStatusPrompt(input)
   return {
     model,
-    max_tokens: 6000,
+    max_tokens: CLAUDE_MAX_TOKENS.statusCard,
     // Low effort: condensing notes into a few lines needs little reasoning.
     output_config: { effort: 'low' as const, format: betaZodOutputFormat(StatusSchema) },
     system,
@@ -65,7 +66,7 @@ export function buildBriefingRequest(model: string, input: BriefingInput) {
   const { system, user } = buildBriefingPrompt(input)
   return {
     model,
-    max_tokens: 8000,
+    max_tokens: CLAUDE_MAX_TOKENS.briefing,
     // Low effort: picking and explaining a handful of tasks needs little reasoning.
     output_config: { effort: 'low' as const, format: betaZodOutputFormat(BriefingSchema) },
     system,
@@ -79,7 +80,7 @@ export function buildWeeklyRequest(model: string, input: WeeklyInput) {
   const { system, user } = buildWeeklyPrompt(input)
   return {
     model,
-    max_tokens: 8000,
+    max_tokens: CLAUDE_MAX_TOKENS.weekly,
     // Low effort: a short look back at lists that are already worked out.
     output_config: { effort: 'low' as const, format: betaZodOutputFormat(WeeklySchema) },
     system,

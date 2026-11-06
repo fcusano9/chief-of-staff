@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_POINTS } from './limits'
+import { MAX_POINTS, WEEKLY_ITEMS_SENT } from './limits'
 import { AiError } from './provider'
 import { WEEKLY_ASK, WEEKLY_FIELDS as F, weeklySystem } from './prompts'
 
@@ -31,8 +31,6 @@ export type RawReflection = z.infer<typeof WeeklySchema>
 
 /** Points per list in the reflection; lives in limits.ts, re-exported here for callers. */
 export { MAX_POINTS }
-/** Items per list sent to the AI; the counts are always exact. */
-const ITEMS_SENT = 40
 
 export function buildWeeklyPrompt(input: WeeklyInput): { system: string; user: string } {
   const me = input.userName
@@ -41,8 +39,8 @@ export function buildWeeklyPrompt(input: WeeklyInput): { system: string; user: s
 
   const fence = (tag: string, text: string) => text.replace(new RegExp(`</?${tag}`, 'gi'), `[${tag}`)
   const section = <T>(tag: string, items: T[], line: (x: T) => string) => {
-    const shown = items.slice(0, ITEMS_SENT).map(line)
-    if (items.length > ITEMS_SENT) shown.push(`(and ${items.length - ITEMS_SENT} more)`)
+    const shown = items.slice(0, WEEKLY_ITEMS_SENT).map(line)
+    if (items.length > WEEKLY_ITEMS_SENT) shown.push(`(and ${items.length - WEEKLY_ITEMS_SENT} more)`)
     return `<${tag} count="${items.length}">\n${fence(tag, shown.length ? shown.join('\n') : '(none)')}\n</${tag}>`
   }
   const proj = (p: string | null) => (p ? ` · project: ${p}` : '')

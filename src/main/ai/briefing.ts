@@ -4,7 +4,7 @@ import { AiError } from './provider'
 import { cleanNextActions, type NextActionDraft } from '../services/next-actions'
 import { cleanAdjustments, type AdjustmentDraft } from '../services/priority-adjustments'
 import { aiChangeText } from './context'
-import { MAX_NEW, MAX_NUDGES, MAX_PRIORITIES } from './limits'
+import { BRIEFING_NOTES_CHARS, MAX_NEW, MAX_NUDGES, MAX_PRIORITIES } from './limits'
 import { BRIEFING_ASK, BRIEFING_FIELDS as F, briefingSystem } from './prompts'
 import { PriorityChangeSchema, StatusBulletsSchema } from './schema'
 
@@ -109,7 +109,7 @@ export function buildBriefingPrompt(input: BriefingInput): { system: string; use
       t.requester && `asked by: ${t.requester}`,
       t.due && `due ${t.due}${t.overdueDays ? ` (OVERDUE by ${t.overdueDays} day${t.overdueDays === 1 ? '' : 's'})` : ''}`,
       `priority ${t.priority}${t.reason ? ` (${t.reason})` : ''}${aiChangeText(t.aiChange)}`,
-      t.notes && `notes: ${clip(t.notes.replace(/\s+/g, ' ').trim(), 300)}`,
+      t.notes && `notes: ${clip(t.notes.replace(/\s+/g, ' ').trim(), BRIEFING_NOTES_CHARS)}`,
       t.updates.length > 0 && `updates: ${t.updates.join(' | ')}`,
     ]
       .filter(Boolean)

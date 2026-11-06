@@ -4,7 +4,7 @@ Every rule that decides what the AI sees, when it runs and what it may change, o
 
 **Keep this file current.** Any change to a rule below (a limit, a trigger, what's sent) updates this page in the same PR.
 
-**Where the wording is:** every word sent to an AI is in [`src/main/ai/prompts.ts`](../src/main/ai/prompts.ts), with a comment on each entry. The limits it quotes (top priorities, nudges, card bullets, points per list) are in [`src/main/ai/limits.ts`](../src/main/ai/limits.ts) and enforced by the code too.
+**Where the wording is:** every word sent to an AI is in [`src/main/ai/prompts.ts`](../src/main/ai/prompts.ts), with a comment on each entry. Every limit on this page (what the AI may answer, how much it's sent, the local model's memory) is in [`src/main/ai/limits.ts`](../src/main/ai/limits.ts), also with comments. The code enforces them, and the prompts quote the same numbers.
 
 Status: ✅ built · 🟡 approved, not built yet
 

@@ -5,17 +5,15 @@ import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } fro
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
 import { ALL_KINDS, asksForNextActions, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
+import { LOCAL_CONTEXT, LOCAL_OUTPUT_HEADROOM, LOCAL_TIMEOUT_MS } from './limits'
 import { IMPORT_LINK_ASK, IMPORT_LINK_SYSTEM } from './prompts'
 import { AiError, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawExtraction, type RawSuggestion } from './schema'
 
-/** Context window bounds. Ollama's default is small and it silently drops the start of longer prompts. */
-const MIN_CONTEXT = 8192
-const MAX_CONTEXT = 65536
-/** Room left for the JSON answer plus thinking after the prompt. More reasoning needs more room. */
-const OUTPUT_HEADROOM: Record<Reasoning, number> = { low: 4096, medium: 12288, high: 20480 }
-/** A local model on a laptop can be slow on long transcripts; give up on one request after this long. */
-const TIMEOUT_MS = 6 * 60_000
+/** Context window bounds, answer room and time-out: see limits.ts. */
+const MIN_CONTEXT = LOCAL_CONTEXT.min
+const MAX_CONTEXT = LOCAL_CONTEXT.max
+const OUTPUT_HEADROOM: Record<Reasoning, number> = LOCAL_OUTPUT_HEADROOM
 
 /** How hard the model thinks before answering. Higher is slower and usually more careful. */
 export type Reasoning = 'low' | 'medium' | 'high'
@@ -326,7 +324,7 @@ export class OllamaProvider implements AiProvider {
         method: payload ? 'POST' : 'GET',
         headers: payload ? { 'content-type': 'application/json' } : undefined,
         body: payload ? JSON.stringify(payload) : undefined,
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(LOCAL_TIMEOUT_MS),
       })
     } catch (err) {
       if (err instanceof Error && err.name === 'TimeoutError') throw new AiError('The local model took too long to answer. Try a shorter item or a smaller model.')

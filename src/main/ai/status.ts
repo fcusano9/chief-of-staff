@@ -7,15 +7,12 @@ import { eventWhat, eventWho } from '@shared/events'
 import { recentNotes } from '@shared/notes'
 import { cleanStatus } from '../services/next-actions'
 import { STATUS_CARD_FIELDS, statusCardAsk, statusCardSystem } from './prompts'
+import { STATUS_ACTIVITY_LINES, STATUS_NOTES_CHARS, STATUS_UPDATES_CHARS } from './limits'
 import { AiError } from './provider'
 import { StatusBulletsSchema } from './schema'
 
-/** How much of an item's Updates is sent: whole updates only, newest first. */
-export const STATUS_UPDATES_CHARS = 1500
-/** How many of a task's newest Activity lines are sent. */
-export const STATUS_ACTIVITY_LINES = 20
-/** How much of a task's Notes is sent. */
-const NOTES_CHARS = 1000
+/** How much a card is sent: these live in limits.ts, re-exported here for callers and tests. */
+export { STATUS_ACTIVITY_LINES, STATUS_UPDATES_CHARS }
 
 /** What the AI is sent when it writes a card. */
 export interface StatusInput {
@@ -55,7 +52,7 @@ export function buildTaskStatusInput(db: DatabaseSync, task: Task, events: TaskE
     subtasks.length ? `Subtasks: ${subtasks.join('; ')}` : null,
   ].filter((f): f is string => !!f)
   const updates = updatesFor(db, 'task', task.id)
-  const notes = task.notes?.trim() ? task.notes.trim().slice(0, NOTES_CHARS) : null
+  const notes = task.notes?.trim() ? task.notes.trim().slice(0, STATUS_NOTES_CHARS) : null
   if (!updates.length && !notes && !events.some((e) => e.kind !== 'created')) {
     throw new AiError('There is nothing to go on yet. Add a note or an update, then try again.')
   }
