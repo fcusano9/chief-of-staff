@@ -7,9 +7,17 @@ files:
   - package.json
 win:
   target: nsis
+  artifactName: Chief-of-Staff-${version}-Setup.${ext}
 nsis:
   oneClick: false
   perMachine: false
 mac:
-  target: dmg
+  target:
+    - target: dmg
+      arch: arm64
+  artifactName: Chief-of-Staff-${version}-${arch}.${ext}
   category: public.app-category.productivity
+  # Not signed with an Apple Developer ID. "-" seals the app with an ad-hoc signature, which Apple-silicon Macs
+  # need to open it; hardened runtime is only for notarized apps and stops an ad-hoc-signed Electron app launching.
+  identity: '-'
+  hardenedRuntime: false

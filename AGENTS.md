@@ -70,6 +70,7 @@ npm run build        # electron-vite build into out/
 npm run e2e          # build, then click through the real app (see e2e/README.md)
 npm run bench:ai     # score demo, local and Claude models on sample imports (see bench/README.md)
 npm run install:win  # package to %LOCALAPPDATA%\Programs\Chief of Staff (build) (Start-menu shortcut points here)
+npm run package:win  # Windows installer in release/; package:mac makes the Mac .dmg (see README, "Making a release": tagging vX.Y.Z builds both on GitHub as a draft release)
 ```
 
 Before telling Frank something is done, run `npm test` and `npm run typecheck`. CI runs the same two on Windows and Linux for every PR (`.github/workflows/ci.yml`); a red check needs fixing before merge. Ask Frank before running `npm run e2e`, because it takes a long time. When asking, say which suites cover the change. Never run `npm run bench:ai` without Frank's approval, not even for local models only: it ties up the computer for a long time and can spend money on Claude. After changing the extraction prompt or a provider, ask him whether to run it and say which models. If the packaged app is running, close it before `install:win`.
@@ -153,4 +154,4 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **npm install scripts:** npm holds these back. Electron downloads its binary on first run, or run `node node_modules/electron/install.js`.
 - **Repo location:** the working copy is `C:\GitHub\chief-of-staff`, outside OneDrive, so it isn't backed up automatically. GitHub is the backup: push branches regularly. Only the app's daily backups go to OneDrive.
 - **Claude Desktop sandbox:** Claude Desktop is a packaged Windows app, so anything run from a Claude session sees a private, redirected copy of `%APPDATA%` and `%LOCALAPPDATA%`, not the real folders. Reading `%APPDATA%\Chief of Staff` from a session shows that copy, not Frank's data. The installed app refuses to start in the sandbox (see DECISIONS.md, "Real data is never opened from inside Claude Desktop's sandbox"). The OneDrive backup folder is real.
-- **Mac:** Mac packaging (`npm run package:mac`) must run on a Mac and hasn't been tested.
+- **Mac:** `npm run package:mac` must run on a Mac. It builds for Apple silicon only, ad-hoc signed (no Apple Developer ID; `electron-builder.yml` explains why hardened runtime is off). The built app was checked to launch; installing from the `.dmg` by hand hasn't been tested.
