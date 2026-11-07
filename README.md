@@ -47,13 +47,24 @@ An AI-assisted work manager for Windows and Mac. It replaces Microsoft To Do: ta
 
 ## Install
 
+### Download a release
+
+The easiest way: open [Releases](https://github.com/fcusano9/chief-of-staff/releases) and download the latest version.
+
+- **Windows:** run `Chief-of-Staff-<version>-Setup.exe`. It isn't signed, so Windows may show "Windows protected your PC": click **More info**, then **Run anyway**.
+- **Mac (Apple silicon, M1 and newer):** open `Chief-of-Staff-<version>-arm64.dmg` and drag Chief of Staff to Applications. It isn't signed with an Apple Developer ID, so the first time macOS says it can't verify the app: click **Done**, go to System Settings → Privacy & Security, and click **Open Anyway**.
+
+Your data stays where it is when you install a newer version.
+
+### Build from source
+
 **You need:** [Node.js](https://nodejs.org) (the current LTS) and [Git](https://git-scm.com). Clone the repository once:
 
 ```bash
 git clone https://github.com/fcusano9/chief-of-staff.git
 ```
 
-### Windows
+#### Windows
 
 1. Close Chief of Staff if it's running.
 2. In a PowerShell window, get the latest code and build it into `%LOCALAPPDATA%\Programs\Chief of Staff (build)`:
@@ -70,9 +81,9 @@ git clone https://github.com/fcusano9/chief-of-staff.git
 
 Run these from a normal PowerShell or Terminal window, not from inside Claude Desktop: Claude Desktop gives the commands it runs a private copy of `%LOCALAPPDATA%`, so the app would be installed there instead.
 
-To make a regular installer instead, run `npm run package:win`. It writes `Chief of Staff Setup <version>.exe` to `release\`. The installer isn't signed, so Windows SmartScreen may warn before it runs.
+To make a regular installer instead, run `npm run package:win`. It writes `Chief-of-Staff-<version>-Setup.exe` to `release\`. The installer isn't signed, so Windows SmartScreen may warn before it runs.
 
-### Mac
+#### Mac
 
 1. Quit Chief of Staff if it's running.
 2. In Terminal, get the latest code and build the disk image:
@@ -116,12 +127,28 @@ npm run e2e           # build, then click through the real app (slow; see e2e/RE
 npm run bench:ai      # compare AI models on sample imports (bench/README.md)
 npm run install:win   # build the app into %LOCALAPPDATA%\Programs\Chief of Staff (build)
 npm run package:win   # Windows installer in release/
-npm run package:mac   # Mac .dmg (run on a Mac; not tested yet)
+npm run package:mac   # Mac .dmg for Apple silicon in release/ (run on a Mac)
 ```
 
 npm holds back install scripts, so Electron downloads its binary the first time it runs. You can also run `node node_modules/electron/install.js`.
 
 Every pull request runs the typecheck and unit tests on Windows and Linux (GitHub Actions, `.github/workflows/ci.yml`).
+
+### Making a release
+
+1. In a PR, set the new version in `package.json` (for example `npm version 0.3.0 --no-git-tag-version`) and merge it.
+2. Tag that version on `main` and push the tag:
+
+   ```bash
+   git switch main
+   git pull
+   git tag v0.3.0
+   git push origin v0.3.0
+   ```
+
+3. The Release workflow (`.github/workflows/release.yml`) runs the tests, builds the Windows installer and the Mac disk image, and saves them to a **draft** release with notes from the merged PRs. Check it on the Releases page, then click **Publish release**.
+
+The tag must match the version in `package.json`, or the workflow stops. To try a build without releasing, run the workflow by hand (Actions → Release → Run workflow); it also builds on every PR that changes packaging or packages. The files appear on that run's page.
 
 ## Data
 

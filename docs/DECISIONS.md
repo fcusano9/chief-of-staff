@@ -2,6 +2,9 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-06 · Release builds: unsigned, Apple silicon only, saved as drafts (Frank)
+Pushing a version tag builds the Windows installer and the Mac disk image on GitHub and saves them to a draft release, which is published by hand after a check. **Why unsigned:** signing costs money (Apple Developer account $99/year, plus a Windows certificate), so users click past a warning instead; signing can be added to the same workflow later. The Mac build is ad-hoc signed, because Apple-silicon Macs refuse a fully unsigned app, and has hardened runtime off, which only notarized apps need. **Apple silicon only:** covers the Macs it's used on and keeps the download small.
+
 ### 2026-11-06 · The repo is public, MIT licensed (Frank)
 **Why:** the app isn't specific to any company, and on a public repo GitHub's code scanning, secret scanning and branch protection are free. Company-specific text was replaced first: sample data uses a fictional company (Stark Industries). Older commits are left as they are. CI (typecheck and tests on Windows and Linux) must pass before a PR merges, and Dependabot proposes package updates weekly. An override in `package.json` pins `minimatch` to a fixed version until electron-builder ships one.
 
