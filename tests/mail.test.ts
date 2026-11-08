@@ -17,7 +17,7 @@ import { applyMailRules, SourceService, type MailMeta } from '../src/main/servic
 import { SuggestionService } from '../src/main/services/suggestions'
 import { TaskService } from '../src/main/services/tasks'
 import { businessDaysSince, needsFollowUp, scorePriority } from '@shared/priority'
-import { DEFAULT_SETTINGS, type MailJobStatus } from '@shared/types'
+import { DEFAULT_SETTINGS, type MailApp, type MailJobStatus } from '@shared/types'
 
 const ME = 'Frank Cusano'
 let seq = 0
@@ -173,8 +173,14 @@ describe('follow-ups on waiting items', () => {
 
 /** Stands in for Outlook: returns whatever mailbox the test sets. */
 class FakeOutlook implements OutlookReader {
+  app: MailApp = 'outlook'
   mailbox: OutlookMailbox = box([])
   opened: string[] = []
+  async addresses() {
+    return ['frank@example.com']
+  }
+  async openReply() {}
+  fillBodies?: (messages: OutlookMessage[]) => Promise<void>
   async list(from: Date) {
     return { ...this.mailbox, messages: this.mailbox.messages.filter((m) => Date.parse(m.time) >= from.getTime()) }
   }

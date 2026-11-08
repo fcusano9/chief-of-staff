@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react'
 import type { ReplyDraft, ReplyTarget } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
+import { mailAppName } from './mailApp'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
-type Phase = { kind: 'idle' } | { kind: 'writing' } | { kind: 'draft'; draft: ReplyDraft; replyAll: boolean; body: string; retry: boolean; note: string } | { kind: 'saved'; ids: { entryId: string; storeId: string } }
+type Phase = { kind: 'idle' } | { kind: 'writing' } | { kind: 'draft'; draft: ReplyDraft; replyAll: boolean; body: string; retry: boolean; note: string } | { kind: 'saved'; ids: { entryId: string; storeId: string } } | { kind: 'opened' }
 
 /**
- * The Reply card on a task linked to an Outlook email. Draft reply asks the AI for a reply (its
- * own first draft); the user checks the recipients and text, can Try again with a note, and saves
- * it to Outlook Drafts. Nothing is ever sent. Hidden on tasks with no linked email.
+ * The Reply card on a task linked to an email (Outlook, or Apple Mail on the Mac). Draft reply asks
+ * the AI for a reply (its own first draft); the user checks the recipients and text, can Try again
+ * with a note, then either opens it in a reply window of the mail app to finish, or saves it to the
+ * mail app's Drafts. Nothing is ever sent. Hidden on tasks with no linked email.
  */
 export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?: () => void }) {
   const { toast, ai, go } = useApp()
@@ -41,11 +43,20 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
         setPhase(back.kind === 'draft' ? { ...back, retry: false } : { kind: 'idle' })
       })
   }
+  const appName = mailAppName(target.app)
   const save = (p: Extract<Phase, { kind: 'draft' }>) => {
     cos['replies.save'](taskId, { replyAll: p.replyAll, body: p.body })
       .then((ids) => {
         setPhase({ kind: 'saved', ids })
-        toast('Saved to Outlook Drafts')
+        toast(`Saved to ${appName} Drafts`)
+        onSaved?.()
+      })
+      .catch((err) => toast(errorMessage(err), true))
+  }
+  const openInApp = (p: Extract<Phase, { kind: 'draft' }>) => {
+    cos['replies.open'](taskId, { replyAll: p.replyAll, body: p.body })
+      .then(() => {
+        setPhase({ kind: 'opened' })
         onSaved?.()
       })
       .catch((err) => toast(errorMessage(err), true))
@@ -115,13 +126,28 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
       <div className="rp" data-testid="reply-card">
         {head}
         <div className="row" style={{ marginTop: 6 }}>
-          <span className="rp-ok">Saved to Outlook Drafts</span>
+          <span className="rp-ok">Saved to {appName} Drafts</span>
           <span className="spacer" />
           <button type="button" className="btn ghost sm" onClick={() => setPhase({ kind: 'idle' })}>
             Write another
           </button>
           <button type="button" className="btn sm" onClick={() => cos['replies.openDraft'](phase.ids.entryId, phase.ids.storeId).catch((err) => toast(errorMessage(err), true))}>
-            Open in Outlook
+            Open in {appName}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase.kind === 'opened') {
+    return (
+      <div className="rp" data-testid="reply-card">
+        {head}
+        <div className="row" style={{ marginTop: 6 }}>
+          <span className="rp-ok">Opened in {appName}</span>
+          <span className="spacer" />
+          <button type="button" className="btn ghost sm" onClick={() => setPhase({ kind: 'idle' })}>
+            Write another
           </button>
         </div>
       </div>
@@ -193,8 +219,11 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
               ✦ Try again
             </button>
             <span className="spacer" />
+            <button type="button" className="btn sm" disabled={!p.body.trim()} onClick={() => openInApp(p)}>
+              Open in {appName}
+            </button>
             <button type="button" className="btn primary sm" disabled={!p.body.trim()} onClick={() => save(p)}>
-              Save to Outlook Drafts
+              Save to {appName} Drafts
             </button>
           </>
         )}

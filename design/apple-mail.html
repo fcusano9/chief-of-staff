@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Apple Mail on the Mac</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --reply: #c2417a; --wait: #b7791f; --done: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+    --reply: #e77aa8; --wait: #e0a84a; --done: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+  --reply: #e77aa8; --wait: #e0a84a; --done: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 8px 16px; min-height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: var(--muted); }
+.tab.on { background: var(--sel); color: var(--text); }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+.btn.ghost:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+.btn.sm { padding: 2px 9px; font-size: 12.5px; }
+.link { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: inherit; }
+.page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+.head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+h1 { font-size: 20px; margin: 0; }
+h2 { font-size: 13px; margin: 22px 0 8px; color: var(--muted); font-weight: 500; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.card + .card { margin-top: 12px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 9px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { width: 100%; resize: vertical; display: block; min-height: 120px; }
+.notice { padding: 8px 10px; border-radius: 6px; font-size: 12px; background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); }
+.hint { font-size: 12.5px; color: var(--muted); }
+.stat { display: flex; gap: 22px; flex-wrap: wrap; margin: 10px 0; }
+.stat div { display: grid; }
+.stat b { font: 500 18px var(--mono); }
+.stat span { font-size: 12px; color: var(--muted); }
+.bar { height: 4px; border-radius: 2px; background: var(--sel); overflow: hidden; margin: 10px 0 6px; }
+.bar > div { height: 100%; width: 40%; background: var(--accent); }
+.acct { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); }
+.acct:first-of-type { border-top: 0; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--sel); color: var(--muted); white-space: nowrap; }
+.chip { font-size: 11px; padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
+.k-reply { background: color-mix(in srgb, var(--reply) 14%, transparent); color: var(--reply); }
+.k-task { background: var(--accent-bg); color: var(--accent); }
+.thread { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.thread b { color: var(--text); font-weight: 500; }
+.sug { display: grid; grid-template-columns: 100px minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; align-items: start; }
+.list { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.rp { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--surface); }
+.rp-head b { font-weight: 600; }
+.rp-mail { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.field { display: grid; grid-template-columns: 64px 1fr; gap: 8px; padding: 3px 0; font-size: 12.5px; }
+.field span:first-child { color: var(--muted); }
+.ok { color: var(--ok); }
+.mockbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--faint); margin-bottom: 14px; }
+.ba { display: inline-flex; gap: 6px; align-items: center; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.mailwin { margin-top: 12px; border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; background: var(--surface); box-shadow: 0 8px 30px rgba(0,0,0,.08); }
+.mailwin .tb { display: flex; gap: 6px; align-items: center; padding: 7px 10px; background: var(--sel); font-size: 12px; color: var(--muted); }
+.mailwin .tb i { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); display: inline-block; }
+.mailwin .bd { padding: 10px 14px; font-size: 12.5px; }
+.quote { border-left: 2px solid var(--border-strong); padding-left: 10px; color: var(--faint); margin-top: 10px; }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+[hidden] { display: none !important; }
+@media (max-width: 760px) { .sug { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab" data-view="task">Tasks</button>
+  <button class="tab" data-view="review">Review</button>
+  <button class="tab on" data-view="import">Import</button>
+  <button class="tab" data-view="settings">Settings</button>
+  <div class="spacer"></div>
+  <span class="ba faint" style="font-size:12px">
+    <span class="seg"><button id="pWin">Windows</button><button id="pMac" class="on">Mac</button></span>
+    <span class="seg"><button id="bBefore">Before</button><button id="bAfter" class="on">After</button></span>
+  </span>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<!-- IMPORT -->
+<div class="page" id="v-import">
+  <div class="mockbar after mac">Mockup:
+    <button class="btn sm" data-imp="none">No account ticked</button>
+    <button class="btn sm" data-imp="idle">Ready</button>
+    <button class="btn sm" data-imp="denied">Not allowed to control Mail</button>
+  </div>
+  <div class="head"><h1>Import</h1><span class="muted">everything lands in the review queue first</span></div>
+
+  <div class="card before mac">
+    <b style="font-weight:500">Outlook mail</b> <span class="muted">· reading mail needs classic Outlook on Windows.</span>
+  </div>
+
+  <div class="card win">
+    <div class="row" style="flex-wrap:wrap"><b style="font-weight:600">Outlook mail</b><span class="muted">· last imported today at 9:14 AM</span></div>
+    <div class="row" style="margin-top:10px;flex-wrap:wrap">
+      <span class="muted">Read mail since</span>
+      <select class="inp"><option>Last import (today, 9:14 AM)</option><option>Last 7 days</option></select>
+      <div class="spacer"></div>
+      <span class="muted before" style="font-size:12px">Inbox and its subfolders, plus Sent Items</span>
+      <span class="muted after" style="font-size:12px">frank@company.com</span>
+      <button class="btn primary">Check Outlook</button>
+    </div>
+  </div>
+
+  <div class="card after mac" id="mailCard">
+    <div class="row" style="flex-wrap:wrap">
+      <b style="font-weight:600">Apple Mail</b>
+      <span class="muted" id="lastRun">· never imported</span>
+    </div>
+    <div id="i-none" hidden>
+      <div class="row" style="margin-top:10px;flex-wrap:wrap">
+        <span class="hint">Choose which Apple Mail accounts to read in <button class="link" data-go="settings">Settings</button>.</span>
+      </div>
+    </div>
+    <div id="i-idle">
+      <div class="row" style="margin-top:10px;flex-wrap:wrap">
+        <span class="muted">Read mail since</span>
+        <select class="inp"><option>Last 7 days</option><option>Last 30 days</option><option>Pick a date…</option></select>
+        <div class="spacer"></div>
+        <span class="muted" style="font-size:12px"><span id="acctLine">frank@company.com</span> · <button class="link" data-go="settings">Change</button></span>
+        <button class="btn primary" id="check">Check Apple Mail</button>
+      </div>
+      <div class="notice" id="deniedNote" hidden style="margin-top:10px">
+        Chief of Staff isn't allowed to control Mail. Open System Settings → Privacy &amp; Security → Automation, turn on Mail under Chief of Staff, then try again.
+      </div>
+    </div>
+    <div id="i-checking" hidden>
+      <div class="bar"><div></div></div>
+      <span class="muted">Looking through Apple Mail… nothing is sent to the AI yet</span>
+    </div>
+    <div id="i-ready" hidden>
+      <div class="stat">
+        <div><b>109</b><span>received</span></div>
+        <div><b>21</b><span>sent</span></div>
+        <div><b>64</b><span>conversations</span></div>
+        <div><b>27</b><span>skipped</span></div>
+        <div><b style="color:var(--accent)">37</b><span>to read</span></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap">
+        <span class="muted" style="font-size:12px">Claude Opus 5.5 · sent to Anthropic · about 5 min</span>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="cancel">Cancel</button>
+        <button class="btn primary" id="read">Read 37 conversations</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h3>Mockup notes (not part of the app)</h3>
+    <ul>
+      <li><b>Same flow as Outlook on Windows:</b> Check only looks (nothing goes to the AI), then Read sends each new conversation to the selected AI, and suggestions go to Review. Same skips, same "never read twice".</li>
+      <li><b>One card per computer:</b> Windows shows only Outlook mail, the Mac shows only Apple Mail. Use the Windows / Mac switch at the top.</li>
+      <li><b>Outlook on Windows</b> now shows the mailbox's email address next to Check Outlook, instead of "Inbox and its subfolders, plus Sent Items". Outlook has no account picker, so there's no Change link.</li>
+      <li><b>Only ticked accounts</b> (Settings) are read: Inbox and its subfolders, plus Sent. Their addresses show next to Change.</li>
+      <li><b>Mail opens by itself</b> if it isn't running. The first time, macOS asks once whether Chief of Staff may control Mail. If you say no, the amber note explains how to turn it on.</li>
+      <li><b>Never changes your mail:</b> no sending, moving, deleting, flagging or marking read.</li>
+      <li><b>On Windows nothing changes:</b> the card stays "Outlook mail".</li>
+    </ul>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="v-settings" hidden>
+  <div class="head"><h1>Settings</h1></div>
+  <div class="card"><div style="font-weight:500;margin-bottom:4px">Appearance</div><span class="faint">…</span></div>
+  <div class="card"><div style="font-weight:500;margin-bottom:4px">Priority weights</div><span class="faint">…</span></div>
+  <div class="card after mac">
+    <div class="row"><div style="font-weight:500">Apple Mail</div><span class="spacer"></span><button class="btn ghost sm" id="refreshAccts">Refresh list</button></div>
+    <div class="hint" style="margin:2px 0 8px">Accounts to read</div>
+    <label class="acct"><input type="checkbox" id="aWork" checked><span>Exchange <span class="muted">· frank@company.com</span></span><span class="tag">Exchange</span></label>
+    <label class="acct"><input type="checkbox" id="aHome"><span>Google <span class="muted">· frank@gmail.com</span></span><span class="tag">IMAP</span></label>
+  </div>
+  <div class="card"><div style="font-weight:500;margin-bottom:4px">Backup</div><span class="faint">…</span></div>
+  <div class="card before mac"><span class="muted">(No Apple Mail section today.)</span></div>
+  <div class="notes">
+    <h3>Mockup notes (not part of the app)</h3>
+    <ul>
+      <li><b>Mac only.</b> Windows has no Apple Mail section. The list comes from Apple Mail (account name, address, type). Nothing is ticked at first.</li>
+      <li><b>Saved like other settings.</b> Unticking an account stops future reads; mail already imported stays.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- REVIEW -->
+<div class="page" id="v-review" hidden>
+  <div class="head"><h1>Review queue</h1><span class="muted">2 suggestions</span></div>
+  <div class="list">
+    <div class="thread"><b>Q1 dealer pricing sheet</b> · Dana Lee · 4 messages <span class="spacer"></span>
+      <button class="btn ghost sm before-or-win">Open in Outlook</button><button class="btn ghost sm after mac">Open in Mail</button></div>
+    <div class="sug"><span class="chip k-reply">Needs reply</span><div>Reply to Dana Lee: Q1 dealer pricing sheet<div class="muted" style="font-size:12px">Asked by Dana Lee · Due Wed, Nov 11</div></div><span><button class="btn ghost sm">Accept</button></span></div>
+    <div class="sug" style="border-top:1px solid var(--border)"><span class="chip k-task">New task</span><div>Update tier 2 discount in the pricing model<div class="muted" style="font-size:12px">Project: Dealer pricing</div></div><span><button class="btn ghost sm">Accept</button></span></div>
+  </div>
+  <div class="notes"><h3>Mockup notes (not part of the app)</h3><ul><li>On the Mac, "Open in Outlook" becomes <b>"Open in Mail"</b> and shows that email in Apple Mail. Windows is unchanged.</li></ul></div>
+</div>
+
+<!-- TASK / REPLY CARD -->
+<div class="page" id="v-task" hidden>
+  <div class="mockbar after-or-win">Mockup:
+    <button class="btn sm" data-rp="idle">Before drafting</button>
+    <button class="btn sm" data-rp="preview">Draft ready</button>
+    <button class="btn sm" data-rp="saved">Saved to Drafts</button>
+    <button class="btn sm" data-rp="opened">Opened</button>
+  </div>
+  <div class="head"><h1>Reply to Dana Lee: Q1 dealer pricing sheet</h1></div>
+  <div class="rp">
+    <div class="row rp-head"><b>✉ Reply</b><span class="spacer"></span><button class="btn ghost sm">Open email</button></div>
+    <div class="rp-mail">To the email “Q1 dealer pricing sheet” from Dana Lee · Nov 9</div>
+    <div class="before mac hint" style="margin-top:6px">Draft replies only work with Classic Outlook on Windows.</div>
+    <div class="after-or-win">
+      <div id="r-idle" hidden>
+        <div class="row" style="margin-top:6px"><span class="hint">Click Draft reply for a reply written from the email and this task.</span><span class="spacer"></span><button class="btn sm" id="draft">✦ Draft reply</button></div>
+      </div>
+      <div id="r-preview">
+        <div style="margin-top:8px">
+          <div class="field"><span>Send to</span><span><span class="seg"><button class="on">Reply all</button><button>Reply</button></span> <span class="faint">AI pick</span></span></div>
+          <div class="field"><span>To</span><span>Dana Lee</span></div>
+          <div class="field"><span>Cc</span><span>Sam Ortiz; Priya Shah</span></div>
+          <div class="field"><span>Subject</span><span>Re: Q1 dealer pricing sheet</span></div>
+        </div>
+        <textarea class="inp" style="margin-top:6px" id="body">Hi Dana,
+
+Confirmed: tier 2 is 15%, not 12%. I'll update the pricing model today so the sheet matches before you send it Wednesday.
+
+Frank</textarea>
+        <div class="row" style="margin-top:8px;flex-wrap:wrap">
+          <button class="btn ghost sm">Discard</button>
+          <button class="btn ghost sm">✦ Try again</button>
+          <span class="spacer"></span>
+          <button class="btn sm new-btn" id="openMail">Open in <span class="appname">Mail</span></button>
+          <button class="btn sm primary" id="saveDraft">Save to <span class="appname">Mail</span> Drafts</button>
+        </div>
+      </div>
+      <div id="r-saved" hidden>
+        <div class="row" style="margin-top:6px"><span class="ok">Saved to <span class="appname">Mail</span> Drafts</span><span class="spacer"></span><button class="btn ghost sm" data-again>Write another</button><button class="btn sm" id="openSaved">Open in <span class="appname">Mail</span></button></div>
+      </div>
+      <div id="r-opened" hidden>
+        <div class="row" style="margin-top:6px"><span class="ok">Opened in <span class="appname">Mail</span></span><span class="spacer"></span><button class="btn ghost sm" data-again>Write another</button></div>
+        <div class="mailwin">
+          <div class="tb"><i></i><i></i><i></i><span style="margin-left:8px">Re: Q1 dealer pricing sheet (<span class="appname">Mail</span>)</span></div>
+          <div class="bd">
+            <div class="field"><span>To:</span><span>Dana Lee</span></div>
+            <div class="field"><span>Cc:</span><span>Sam Ortiz; Priya Shah</span></div>
+            <div style="margin-top:8px;white-space:pre-wrap" id="winBody"></div>
+            <div class="quote">On Nov 9, Dana Lee wrote:<br>Can you confirm the tier 2 discount before I send this to the dealers Wednesday?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <h3>Mockup notes (not part of the app)</h3>
+    <ul>
+      <li><b>Same as Windows up to the last step:</b> the AI writes the first draft, you check To, Cc and the text, Try again with a note, or Discard.</li>
+      <li><b>Two ways to finish, on both computers</b> (Windows says Outlook, the Mac says Mail):
+        <b>Open in …</b> opens a reply window with the text above the quoted email, for you to finish, save or send;
+        <b>Save to … Drafts</b> saves it to Drafts without opening anything (today's Outlook behavior). Neither ever sends. Keep both, or drop one after trying them.</li>
+      <li><b>Not yet proven on Apple Mail:</b> Save to Mail Drafts. Mail's scripting lists saving but doesn't fully define it, so it gets tested first (one test draft in your Drafts, with your OK). If it doesn't work, the Mac keeps only Open in Mail.</li>
+      <li><b>Activity</b> gets "Reply opened in Outlook/Mail" or "Draft reply saved to Outlook/Mail Drafts". The task stays open.</li>
+      <li><b>Newest email:</b> as on Windows, the reply goes on the newest email in the conversation, sent or received, so follow-ups stay in the chain.</li>
+      <li>To and Cc are worked out from the email itself (Apple Mail can't preview them), so check them in the Mail window.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id)
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1800) }
+const views = ['import', 'settings', 'review', 'task']
+function show(v) {
+  views.forEach((k) => ($('v-' + k).hidden = k !== v))
+  document.querySelectorAll('[data-view]').forEach((t) => t.classList.toggle('on', t.dataset.view === v))
+}
+document.querySelectorAll('[data-view]').forEach((t) => (t.onclick = () => show(t.dataset.view)))
+document.querySelectorAll('[data-go]').forEach((t) => (t.onclick = () => show(t.dataset.go)))
+
+let after = true, mac = true
+function applyBA() {
+  const win = !mac
+  document.querySelectorAll('.before, .after, .win, .mac, .before-or-win, .after-or-win, .new-btn').forEach((el) => {
+    const c = el.classList
+    let show = true
+    if (c.contains('mac')) show = mac && (c.contains('before') ? !after : c.contains('after') ? after : true)
+    else if (c.contains('win')) show = win
+    else if (c.contains('before-or-win')) show = !after || win
+    else if (c.contains('after-or-win')) show = after || win
+    else if (c.contains('before')) show = !after
+    else if (c.contains('after')) show = after
+    if (c.contains('new-btn')) show = after
+    el.hidden = !show
+  })
+  document.querySelectorAll('.appname').forEach((el) => (el.textContent = mac ? 'Mail' : 'Outlook'))
+  $('bBefore').classList.toggle('on', !after); $('bAfter').classList.toggle('on', after)
+  $('pMac').classList.toggle('on', mac); $('pWin').classList.toggle('on', !mac)
+}
+$('bBefore').onclick = () => { after = false; applyBA() }
+$('bAfter').onclick = () => { after = true; applyBA() }
+$('pMac').onclick = () => { mac = true; applyBA() }
+$('pWin').onclick = () => { mac = false; applyBA() }
+
+let denied = false
+function imp(s) {
+  ;['none', 'idle', 'checking', 'ready'].forEach((k) => ($('i-' + k).hidden = k !== s))
+  $('deniedNote').hidden = !(denied && s === 'idle')
+}
+document.querySelectorAll('[data-imp]').forEach((b) => (b.onclick = () => {
+  denied = b.dataset.imp === 'denied'
+  imp(b.dataset.imp === 'none' ? 'none' : 'idle')
+}))
+$('check').onclick = () => {
+  if (denied) { $('deniedNote').hidden = false; return }
+  imp('checking'); setTimeout(() => imp('ready'), 900)
+}
+$('cancel').onclick = () => imp('idle')
+$('read').onclick = () => { toast('Reading 37 conversations…'); imp('idle'); $('lastRun').textContent = '· last imported just now' }
+function syncAccts() {
+  const picked = [$('aWork').checked && 'frank@company.com', $('aHome').checked && 'frank@gmail.com'].filter(Boolean)
+  $('acctLine').textContent = picked.join(', ')
+  denied = false
+  imp(picked.length ? 'idle' : 'none')
+}
+$('aWork').onchange = syncAccts; $('aHome').onchange = syncAccts
+$('refreshAccts').onclick = () => toast('Account list refreshed from Apple Mail')
+
+function rp(s) { ['idle', 'preview', 'saved', 'opened'].forEach((k) => ($('r-' + k).hidden = k !== s)) }
+document.querySelectorAll('[data-rp]').forEach((b) => (b.onclick = () => { $('winBody').textContent = $('body').value; rp(b.dataset.rp) }))
+$('draft').onclick = () => { $('draft').textContent = 'Writing…'; setTimeout(() => { $('draft').textContent = '✦ Draft reply'; rp('preview') }, 800) }
+$('openMail').onclick = () => { $('winBody').textContent = $('body').value; rp('opened') }
+$('openSaved').onclick = () => { $('winBody').textContent = $('body').value; rp('opened') }
+$('saveDraft').onclick = () => rp('saved')
+document.querySelectorAll('[data-again]').forEach((b) => (b.onclick = () => rp('idle')))
+
+const root = document.documentElement
+$('theme').onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+  root.dataset.theme = dark ? 'light' : 'dark'
+}
+applyBA(); imp('idle'); rp('preview')
+</script>
+</body>
+</html>

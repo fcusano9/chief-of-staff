@@ -2,6 +2,20 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-07 · Mac mail through Apple Mail; Open in and Save to Drafts on both computers (Frank)
+Frank's choices (research in ROADMAP.md "Mac mail", mockup `design/apple-mail.html`, approved after two rounds):
+- **Apple Mail first** on the Mac, then Thunderbird, then Airmail and eM Client if it doesn't work out. New Outlook for Mac has no scripting, and Graph needs IT. Apple Mail reaches Microsoft 365 over EWS, which Microsoft is retiring by 2027-04-01, so this may stop working before Apple ships Graph support.
+- **One mail source per computer:** Windows shows only Outlook, the Mac only Apple Mail. Both Import cards show the mailbox address next to the Check button (Frank asked for the address instead of "Inbox and its subfolders, plus Sent Items").
+- **Accounts are chosen in Settings** (Mac only), nothing ticked at first, so personal accounts in Mail aren't read.
+- **Two ways to finish a reply, on both computers:** Open in Outlook / Mail (a reply window to finish) and Save to Outlook / Mail Drafts. Frank wants to try both and may keep one. Neither sends.
+- **No explaining sentences in the app** (Frank, during the mockup): see AGENTS.md.
+- **Decided while building:**
+  - **Conversations** come from Exchange's Thread-Index header (the first 22 bytes are shared by every message in an Outlook conversation); mail without one is grouped by its subject without "RE:"/"FW:", joining a Thread-Index conversation with the same subject. Apple Mail has no conversation object for scripts.
+  - **Message text is read only for what the AI reads** (at Read, not Check): Mail takes about a third of a second per message for text, against about 4 seconds to check 3 days of mail without it.
+  - **No quoted email in Apple Mail replies (Frank):** setting a reply's text through Mail's scripting replaces Mail's own quote of the original (found on real Mail). Adding the original back as plain text was tried; Frank chose to leave it out, since the reply is still threaded (`In-Reply-To`) and mail apps link it to the conversation. Outlook replies on Windows keep Outlook's own quote.
+  - **Recipients** for Reply and Reply all are worked out from the email's From, To, Cc and Reply-To (Apple Mail can't preview a reply without making one).
+  - The script is `src/main/mail/applemail.jxa` (JavaScript for Automation, run with `osascript`); the `.jxa` name stops Vite and Vitest from loading it as a module.
+
 ### 2026-11-06 · Release builds: unsigned, Apple silicon only, saved as drafts (Frank)
 Pushing a version tag builds the Windows installer and the Mac disk image on GitHub and saves them to a draft release, which is published by hand after a check. **Why unsigned:** signing costs money (Apple Developer account $99/year, plus a Windows certificate), so users click past a warning instead; signing can be added to the same workflow later. The Mac build is ad-hoc signed, because Apple-silicon Macs refuse a fully unsigned app, and has hardened runtime off, which only notarized apps need. **Apple silicon only:** covers the Macs it's used on and keeps the download small.
 

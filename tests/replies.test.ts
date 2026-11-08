@@ -9,7 +9,7 @@ import { buildOllamaReplyRequest, OllamaProvider } from '../src/main/ai/ollama'
 import type { AiProvider } from '../src/main/ai/provider'
 import { buildReplyPrompt, cleanReply, type RawReply, type ReplyInput } from '../src/main/ai/reply'
 import { openDatabase } from '../src/main/db'
-import { FixtureOutlook, type OutlookMailbox, type OutlookMessage, type OutlookReader } from '../src/main/mail/outlook'
+import { FixtureOutlook, OutlookError, type OutlookMailbox, type OutlookMessage, type OutlookReader } from '../src/main/mail/outlook'
 import { BriefService, PersonService, ProjectService } from '../src/main/services/directory'
 import { MailService } from '../src/main/services/mail'
 import { lastMessageOf, people, ReplyService, senderOf } from '../src/main/services/replies'
@@ -17,7 +17,7 @@ import { SourceService } from '../src/main/services/sources'
 import { SuggestionService } from '../src/main/services/suggestions'
 import { TaskService } from '../src/main/services/tasks'
 import { eventWhat } from '@shared/events'
-import { DEFAULT_SETTINGS } from '@shared/types'
+import { DEFAULT_SETTINGS, type MailApp } from '@shared/types'
 
 const ME = 'Frank Cusano'
 const input = (o: Partial<ReplyInput> = {}): ReplyInput => ({
@@ -118,8 +118,16 @@ const box = (messages: OutlookMessage[]): OutlookMailbox => ({ me: { name: ME, a
 
 /** Outlook stand-in that remembers what was asked of it. */
 class FakeOutlook implements OutlookReader {
+  app: MailApp = 'outlook'
   mailbox = box([])
-  saved: { entryId: string; replyAll: boolean; body: string }[] = []
+  saved: { entryId: string; replyAll: boolean; body: string; opened?: boolean }[] = []
+  async addresses() {
+    return ['frank@example.com']
+  }
+  async openReply(entryId: string, _storeId: string, replyAll: boolean, body: string) {
+    if (this.fail) throw this.fail
+    this.saved.push({ entryId, replyAll, body, opened: true })
+  }
   opened: string[] = []
   fail: Error | null = null
   async list(from: Date) {
@@ -196,7 +204,7 @@ describe('draft replies: from a task to Outlook Drafts', () => {
 
   it('shows the email it answers: the newest message in the conversation', async () => {
     const id = await replyTask()
-    expect(replies.target(id)).toEqual({ sourceId: expect.any(Number), subject: 'Q1 pricing', from: 'Dana Lee', at: '2026-11-05T14:00:00.000Z', followUp: false, supported: true })
+    expect(replies.target(id)).toEqual({ sourceId: expect.any(Number), subject: 'Q1 pricing', from: 'Dana Lee', at: '2026-11-05T14:00:00.000Z', followUp: false, supported: true, app: 'outlook' })
     expect(replies.target(tasks.save({ ...tasks.get(id)!, id: 0, title: 'Not from mail' }).id)).toBeNull()
   })
 
@@ -227,6 +235,31 @@ describe('draft replies: from a task to Outlook Drafts', () => {
 
     await replies.openDraft('DRAFT1', 'S1')
     expect(outlook.opened).toEqual(['DRAFT1'])
+  })
+
+  it('opens the reply in a window of the mail app instead, saving nothing, and notes it in Activity', async () => {
+    const id = await replyTask()
+    await replies.open(id, { replyAll: true, body: ' Hi Dana, yes. ' })
+    expect(outlook.saved).toEqual([{ entryId: 'NEW', replyAll: true, body: 'Hi Dana, yes.', opened: true }])
+    const event = tasks.activity(id).events.find((e) => e.kind === 'reply_opened')!
+    expect(event).toMatchObject({ by: 'user', note: 'Reply all', to: 'Outlook' })
+    expect(eventWhat(event)).toBe('Reply opened in Outlook')
+    await expect(replies.open(id, { replyAll: true, body: '' })).rejects.toThrow('The reply is empty')
+  })
+
+  it('says Mail, not Outlook, with Apple Mail, and shows its own errors', async () => {
+    outlook.app = 'apple-mail'
+    const id = await replyTask()
+    expect(replies.target(id)!.app).toBe('apple-mail')
+    await replies.save(id, { replyAll: false, body: 'Hi' })
+    expect(eventWhat(tasks.activity(id).events.find((e) => e.kind === 'reply_draft')!)).toBe('Draft reply saved to Mail Drafts')
+    outlook.fail = null
+    const original = outlook.openReply.bind(outlook)
+    outlook.openReply = async () => {
+      throw new OutlookError("Chief of Staff isn't allowed to control Mail.")
+    }
+    await expect(replies.open(id, { replyAll: false, body: 'Hi' })).rejects.toThrow("isn't allowed to control Mail")
+    outlook.openReply = original
   })
 
   it('threads on the user\'s newest follow-up, even one sent after the last import, and drafts a nudge', async () => {

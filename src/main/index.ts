@@ -14,6 +14,7 @@ import { openDatabase, SCHEMA_VERSION } from './db'
 import { chooseDataLocation, findRedirectingPackage } from './paths'
 import { applyPendingRestore, createBackup, listBackups, requestRestore, snapshotNow } from './services/backup'
 import { FixtureOutlook, PowerShellOutlook } from './mail/outlook'
+import { AppleMailReader } from './mail/applemail'
 import { BriefingService } from './services/briefings'
 import { WeeklyService } from './services/weekly'
 import { BriefService, PersonService, ProjectService } from './services/directory'
@@ -135,8 +136,13 @@ const weekly = new WeeklyService(db, tasks, currentProvider, () => settings.curr
 const usage = new UsageService(db)
 // Test data folders can read mail from a fixture file instead of Outlook (see e2e/README.md).
 const outlookFixture = isSeparateData ? process.env.COS_OUTLOOK_FIXTURE : undefined
-const outlook = outlookFixture ? new FixtureOutlook(outlookFixture, `${outlookFixture}.drafts.json`) : process.platform === 'win32' ? new PowerShellOutlook() : null
-const mail = new MailService(db, sources, outlook, () => settings.current.userName, () => aiLabel())
+// COS_MAIL_APP=apple-mail makes the fixture behave as Apple Mail, for the Mac's words and Settings.
+const outlook = outlookFixture
+  ? new FixtureOutlook(outlookFixture, `${outlookFixture}.drafts.json`, process.env.COS_MAIL_APP === 'apple-mail' ? 'apple-mail' : 'outlook')
+  : process.platform === 'win32' ? new PowerShellOutlook()
+  : process.platform === 'darwin' ? new AppleMailReader(() => settings.current.mailAccounts)
+  : null
+const mail = new MailService(db, sources, outlook, () => settings.current.userName, () => aiLabel(), undefined, () => settings.current.mailAccounts)
 const replies = new ReplyService(db, outlook, currentProvider, () => settings.current, () => usage.logFor('reply'))
 const ollama = new OllamaManager(() => settings.current.localUrl, nodeHost(app.getPath('temp')))
 
@@ -320,10 +326,13 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'mail.stop': () => mail.stop(),
   'mail.imports': () => mail.imports(),
   'mail.open': (sourceId) => mail.open(sourceId),
+  'mail.addresses': () => mail.addresses(),
+  'mail.accounts': (refresh) => mail.accounts(refresh),
   'replies.target': (taskId) => replies.target(taskId),
   'replies.draft': (taskId, revision) => replies.draft(taskId, revision),
   'replies.save': (taskId, reply) => replies.save(taskId, reply),
   'replies.openDraft': (entryId, storeId) => replies.openDraft(entryId, storeId),
+  'replies.open': (taskId, reply) => replies.open(taskId, reply),
   'suggestions.listPending': () => suggestions.listPending(),
   'suggestions.count': () => suggestions.pendingCount(),
   'suggestions.accept': (id, edits) => suggestions.accept(id, edits),
