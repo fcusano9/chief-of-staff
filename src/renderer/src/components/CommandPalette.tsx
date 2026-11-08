@@ -12,18 +12,26 @@ interface Command {
   run: () => void
 }
 
-export const TABS: [View, string][] = [
-  ['today', 'Today'],
-  ['weekly', 'Weekly'],
-  ['tasks', 'Tasks'],
-  ['review', 'Review'],
-  ['waiting', 'Waiting'],
-  ['projects', 'Projects'],
-  ['people', 'People'],
-  ['prep', 'Prep'],
-  ['archive', 'Archive'],
-  ['import', 'Import'],
+/** The top bar's main tabs, in groups split by a thin divider: the day's screens, then the reference lists. */
+export const MAIN_TABS: [View, string][][] = [
+  [
+    ['today', 'Today'],
+    ['tasks', 'Tasks'],
+    ['waiting', 'Waiting'],
+    ['weekly', 'Weekly'],
+  ],
+  [
+    ['projects', 'Projects'],
+    ['people', 'People'],
+  ],
 ]
+/** The daily intake group on the right of the top bar. Review shows only while it has items (or is open). */
+export const DAILY_TABS: [View, string][] = [
+  ['import', 'Import'],
+  ['review', 'Review'],
+]
+/** Every tab, left to right: the order ← and → step through. Prep and Archive stay hidden until they're built. */
+export const TABS: [View, string][] = [...MAIN_TABS.flat(), ...DAILY_TABS]
 
 /** Ctrl+K: jump to any screen, task, project, or person, or run an action. */
 export function CommandPalette({ onClose }: { onClose: () => void }) {
@@ -40,7 +48,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
 
   const commands = useMemo<Command[]>(() => {
     const all: Command[] = [
-      ...TABS.map(([v, l]) => ({ group: 'Go to', label: l === 'Prep' ? 'Meeting prep' : l, run: () => go(v) })),
+      ...TABS.map(([v, l]) => ({ group: 'Go to', label: l, run: () => go(v) })),
       { group: 'Go to', label: 'Settings', run: () => go('settings') },
       { group: 'Actions', label: 'New task', keys: 'N', run: () => openTask({ id: 'new' }) },
       {

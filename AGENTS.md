@@ -91,12 +91,12 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 
 ## Product and UI conventions
 
-- **Design "direction B":** sharp and keyboard-first. Top tabs, a Ctrl+K command palette, mono numbers, and colors from the CSS variables in `styles.css`, which cover light and dark. Fonts are bundled (Inter, JetBrains Mono).
+- **Design "direction B":** sharp and keyboard-first. Top tabs (Today, Tasks, Waiting, Weekly | Projects, People, then a boxed Import / Review group by the search box; Import tinted, Review shown only while it has items or is open; `MAIN_TABS` and `DAILY_TABS` in `CommandPalette.tsx`), a Ctrl+K command palette, mono numbers, and colors from the CSS variables in `styles.css`, which cover light and dark. Fonts are bundled (Inter, JetBrains Mono).
 - **Density** (Settings → Appearance, also in the palette): Compact (the original look), Comfortable (default) and Spacious. It sets `data-density` on the root, and `styles.css` defines the spacing and text-size variables for each level (`--fs`, `--fs-sm`, `--fs-xs`, `--row-py`, `--gap` and so on). Use those variables instead of fixed px for text sizes and spacing, including inline `fontSize`. In Spacious, task rows show the priority reason under the title. The tab bar and status bar keep a fixed size.
 - **Lists with details** (Tasks, Waiting, Projects, People) use `SplitView`: a draggable divider, a 360px minimum per pane, double-click for 50/50, and the position saved in settings. Each list has a search box (`SearchBox`, / to focus). Waiting is `TasksScreen` with `list="waiting"`; Tasks and Waiting have an Open / Done switch, and Reopen returns an item to the list it came from (`waited_on`).
 - **Editors save pending edits automatically** when you move away: the task editor when you switch tasks, and Projects and People (`useAutosave`) when you pick another item, start a new one, or change tabs. An empty name isn't saved, and says so. Mark-done through the editor saves edits too. Delete is a two-click `ConfirmButton`.
 - **Keyboard shortcuts:**
-  - Global: Ctrl+K palette, N new task, G-then-letter to go to a screen (G then V is Weekly), "/" to search the list. No tab-number or theme keys (the theme is in the palette).
+  - Global: Ctrl+K palette, N new task, G-then-letter to go to a screen (G then V is Weekly, G then I is Import), ← → for the previous or next tab (stopping at the ends; not while typing or while the SplitView divider has focus), "/" to search the list. No tab-number or theme keys (the theme is in the palette).
   - Lists (Tasks, Waiting, Projects, People, Review): Up/Down move, Enter opens or edits the item. No J/K.
   - Tasks: E marks done, Esc closes, Ctrl+Enter saves.
   - Review: A, R, Enter to edit. While editing, Ctrl+Enter accepts and Esc cancels.

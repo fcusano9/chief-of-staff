@@ -2,6 +2,9 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-07 · Top bar: Import and Review in their own group; arrow keys switch tabs (Frank)
+**Why:** the old order (Today, Weekly, Tasks, Review, Waiting, Projects, People, Prep, Archive, Import) didn't follow how the day goes, and Import and Review are a separate daily step. The tabs are now Today, Tasks, Waiting, Weekly | Projects, People, with a boxed Import / Review group next to the search box. Import is tinted with the accent so it stands out. Review shows only while it has items (or while it's open, so it doesn't vanish when the last item is accepted). Prep and Archive are hidden until they're built. ← and → step through the tabs and stop at the ends; they do nothing while typing, with a window open, or while the list/details divider has focus (it resizes with ← →). G then I goes to Import. Chosen from the options in `design/top-bar-tabs.html`.
+
 ### 2026-11-06 · Release builds: unsigned, Apple silicon only, saved as drafts (Frank)
 Pushing a version tag builds the Windows installer and the Mac disk image on GitHub and saves them to a draft release, which is published by hand after a check. **Why unsigned:** signing costs money (Apple Developer account $99/year, plus a Windows certificate), so users click past a warning instead; signing can be added to the same workflow later. The Mac build is ad-hoc signed, because Apple-silicon Macs refuse a fully unsigned app, and has hardened runtime off, which only notarized apps need. **Apple silicon only:** covers the Macs it's used on and keeps the download small.
 

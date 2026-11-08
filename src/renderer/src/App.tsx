@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AiStatus, AppInfo, AppSettings, PersonSummary, ProjectSummary } from '@shared/types'
 import { cos, errorMessage } from './api'
-import { CommandPalette, TABS } from './components/CommandPalette'
+import { CommandPalette, DAILY_TABS, MAIN_TABS, TABS } from './components/CommandPalette'
 import { ALWAYS_HINTS, DEFAULT_HINTS, type Hint } from './components/hints'
 import { ModelMenu, ProviderIcon } from './components/ModelMenu'
 import { AppContext, type AppContextValue, type TaskSelection, type View } from './context'
@@ -18,7 +18,7 @@ import { TodayScreen } from './screens/TodayScreen'
 import { WaitingScreen } from './screens/WaitingScreen'
 import { WeeklyScreen } from './screens/WeeklyScreen'
 
-const G_KEYS: Record<string, View> = { t: 'today', v: 'weekly', k: 'tasks', r: 'review', w: 'waiting', p: 'projects', e: 'people' }
+const G_KEYS: Record<string, View> = { t: 'today', v: 'weekly', k: 'tasks', r: 'review', w: 'waiting', p: 'projects', e: 'people', i: 'import' }
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
 const FALLBACK_AI: AiStatus = { provider: 'demo', model: '', hasKey: false, encryptionAvailable: false, label: 'Basic', sendsDataExternally: false, available: true, problem: null }
 const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -35,6 +35,13 @@ export function App() {
   const viewRef = useRef(view)
   viewRef.current = view
   const [aiLog, setAiLog] = useState<{ sourceId: number; from: View } | null>(null)
+  // The tab that looks selected: the AI log belongs to the screen it was opened from.
+  const tabView = view === 'ailog' ? aiLog?.from : view
+  // Review shows only while it has items, or while it is open (so it doesn't vanish when the last item is accepted).
+  const showReview = reviewCount > 0 || tabView === 'review'
+  const visibleTabs = TABS.filter(([v]) => v !== 'review' || showReview).map(([v]) => v)
+  const tabsRef = useRef({ tabView, visibleTabs })
+  tabsRef.current = { tabView, visibleTabs }
   const [selection, setSelection] = useState<TaskSelection>(null)
   const [version, setVersion] = useState(0)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -150,6 +157,16 @@ export function App() {
       } else if (e.key === 'n') {
         consume()
         openTask({ id: 'new', waiting: viewRef.current === 'waiting' })
+      } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.shiftKey) {
+        // ← → step through the tabs, stopping at the ends. Not while the list/details divider has
+        // focus (it resizes with ← →), and not from Settings, which isn't a tab.
+        if (document.activeElement?.getAttribute('role') === 'separator') return
+        const { tabView: current, visibleTabs: order } = tabsRef.current
+        const i = current ? order.indexOf(current) : -1
+        if (i < 0) return
+        const next = order[i + (e.key === 'ArrowRight' ? 1 : -1)]
+        consume()
+        if (next) setView(next)
       }
     }
     window.addEventListener('keydown', onKey, true)
@@ -189,14 +206,27 @@ export function App() {
             <span>Chief of Staff</span>
           </div>
           <nav className="tabs">
-            {TABS.map(([v, label]) => (
-              <button key={v} className={`tab ${view === v || (view === 'ailog' && aiLog?.from === v) ? 'on' : ''}`} onClick={() => setView(v)}>
+            {MAIN_TABS.map((group, gi) => (
+              <Fragment key={gi}>
+                {gi > 0 && <span className="tab-divider" />}
+                {group.map(([v, label]) => (
+                  <button key={v} className={`tab ${tabView === v ? 'on' : ''}`} onClick={() => setView(v)}>
+                    {label}
+                  </button>
+                ))}
+              </Fragment>
+            ))}
+          </nav>
+          <div className="spacer" />
+          <nav className="tab-group" aria-label="Daily intake">
+            {DAILY_TABS.filter(([v]) => v !== 'review' || showReview).map(([v, label]) => (
+              <button key={v} className={`tab ${v === 'import' ? 'import' : ''} ${tabView === v ? 'on' : ''}`} onClick={() => setView(v)}>
+                {v === 'import' && <span aria-hidden>↓</span>}
                 {label}
                 {v === 'review' && reviewCount > 0 && <span className="count">{reviewCount}</span>}
               </button>
             ))}
           </nav>
-          <div className="spacer" />
           <div className="search" onClick={() => setPaletteOpen(true)}>
             <span>⌕</span>
             <span className="stext" style={{ flex: 1 }}>Search or jump to…</span>
