@@ -17,7 +17,7 @@ import {
   type TaskStatus,
   type TodaySummary,
 } from '@shared/types'
-import { nowIso, transaction } from '../db'
+import { transaction } from '../db'
 import { taskChanges, TaskEventService } from './task-events'
 
 const BY_USER: ChangeBy = { by: 'user' }
@@ -178,7 +178,7 @@ export class TaskService {
   save(input: TaskInput, by: ChangeBy = BY_USER): Task {
     const title = input.title.trim()
     if (!title) throw new Error('A task needs a title.')
-    const now = nowIso()
+    const now = this.now().toISOString()
 
     const id = transaction(this.db, () => {
       const existing = input.id ? this.get(input.id) : null
