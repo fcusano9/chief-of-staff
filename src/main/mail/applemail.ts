@@ -39,7 +39,8 @@ const MAX_BODY = 30_000
 
 /** A header's value from applemail.jxa's header lines, or ''. */
 export function header(headers: string, name: string): string {
-  const m = new RegExp(`^${name.replace(/[-]/g, '\\-')}:[ \\t]*(.*)$`, 'im').exec(headers)
+  const escaped = name.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&')
+  const m = new RegExp(`^${escaped}:[ \\t]*(.*)$`, 'im').exec(headers)
   return m ? m[1]!.trim() : ''
 }
 
@@ -251,8 +252,9 @@ export const runAppleMail: AppleMailRunner = async (request) => {
   const id = randomUUID()
   const scriptPath = join(tmpdir(), `cos-mail-${id}.js`)
   const requestPath = join(tmpdir(), `cos-mail-${id}.json`)
-  writeFileSync(scriptPath, script, 'utf8')
-  writeFileSync(requestPath, JSON.stringify(request), 'utf8')
+  // Only the user can read these (the request can hold reply text); both are deleted when osascript finishes.
+  writeFileSync(scriptPath, script, { encoding: 'utf8', mode: 0o600 })
+  writeFileSync(requestPath, JSON.stringify(request), { encoding: 'utf8', mode: 0o600 })
   try {
     const stdout = await new Promise<string>((resolve, reject) => {
       execFile('osascript', ['-l', 'JavaScript', scriptPath, requestPath], { timeout: 10 * 60_000, maxBuffer: 256 * 1024 * 1024 }, (err, out, stderr) => {
