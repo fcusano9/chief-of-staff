@@ -125,7 +125,7 @@ export function PeopleScreen() {
       )}
       {people.length > 0 && (
         <div className="row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
-          <select className="inp" style={{ width: 'auto', padding: '3px 8px' }} aria-label="Company" value={filter.company} onChange={(e) => setFilter({ company: e.target.value })}>
+          <select className="inp" style={{ width: 'auto', paddingTop: 3, paddingBottom: 3 }} aria-label="Company" value={filter.company} onChange={(e) => setFilter({ company: e.target.value })}>
             <option value="">All companies</option>
             {[...companies, ...(filter.company && filter.company !== NO_COMPANY && !companies.includes(filter.company) ? [filter.company] : [])].map((c) => (
               <option key={c} value={c}>
