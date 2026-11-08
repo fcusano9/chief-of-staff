@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DENSITIES, type PriorityWeights, type ThemeSetting } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { AiSettings } from '../components/AiSettings'
+import { AppleMailSettings } from '../components/AppleMailSettings'
 import { RestoreBackups } from '../components/RestoreBackups'
 import { useApp } from '../context'
 
@@ -124,6 +125,8 @@ export function SettingsScreen() {
             </button>
           </div>
         </div>
+
+        <AppleMailSettings />
 
         <div className="card">
           <div style={{ fontWeight: 500, marginBottom: 8 }}>Backup</div>

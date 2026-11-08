@@ -1,20 +1,22 @@
 # Reads mail from classic Outlook over COM for Chief of Staff (see outlook.ts).
-# Read-only except -Action open (displays one message) and -Action reply (saves a reply to Drafts).
+# Read-only except -Action open (displays one message) and -Action reply (saves a reply to Drafts, or shows it).
 # Never sends, moves, flags or deletes.
 #   -Action list -Since <ISO time> -OutFile <path>   writes received (Inbox and subfolders) and sent mail as JSON
 #   -Action open -EntryId <id> -StoreId <id> -OutFile <path>   shows the message in Outlook
 #   -Action latest -EntryId <id> -StoreId <id> -OutFile <path>   the newest sent or received email in that message's conversation
 #   -Action recipients -EntryId <id> -StoreId <id> -OutFile <path>   who Reply and Reply all would go to (nothing is saved)
-#   -Action reply -EntryId <id> -StoreId <id> -BodyFile <path> [-ReplyAll] -OutFile <path>   saves a reply to Drafts, never sends
+#   -Action reply -EntryId <id> -StoreId <id> -BodyFile <path> [-ReplyAll] [-Open] -OutFile <path>   saves a reply to Drafts, or with -Open shows it in a window instead; never sends
+#   -Action me -OutFile <path>   the mailbox's email addresses
 # The result is always JSON in -OutFile: { ok: true, ... } or { ok: false, error, code }.
 param(
-  [Parameter(Mandatory = $true)][ValidateSet('list', 'open', 'latest', 'recipients', 'reply')][string]$Action,
+  [Parameter(Mandatory = $true)][ValidateSet('list', 'open', 'latest', 'recipients', 'reply', 'me')][string]$Action,
   [Parameter(Mandatory = $true)][string]$OutFile,
   [string]$Since,
   [string]$EntryId,
   [string]$StoreId,
   [string]$BodyFile,
   [switch]$ReplyAll,
+  [switch]$Open,
   [int]$MaxBody = 30000
 )
 $ErrorActionPreference = 'Stop'
@@ -106,6 +108,11 @@ try {
   }
   $ns = $outlook.GetNamespace('MAPI')
 
+  if ($Action -eq 'me') {
+    Write-Result ([ordered]@{ ok = $true; addresses = @(Get-MyAddresses $ns) })
+    exit 0
+  }
+
   if ($Action -eq 'open') {
     $item = $ns.GetItemFromID($EntryId, $StoreId)
     $item.Display()
@@ -189,6 +196,12 @@ try {
       $draft.HTMLBody = if ($m.Success) { $body.Insert($m.Index + $m.Length, $block) } else { $block + $body }
     } else {
       $draft.Body = $text + "`r`n`r`n" + [string]$draft.Body
+    }
+    if ($Open) {
+      # Shown in its own window for the user to finish; Outlook asks about saving if they close it. Never sent.
+      $draft.Display()
+      Write-Result ([ordered]@{ ok = $true })
+      exit 0
     }
     # Save puts it in Drafts. It is never sent.
     $draft.Save()

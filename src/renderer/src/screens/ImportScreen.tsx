@@ -5,6 +5,7 @@ import { cos, errorMessage } from '../api'
 import { ConfirmButton, CostNote } from '../components/bits'
 import { OutlookImport } from '../components/OutlookImport'
 import { useShortcutHints } from '../components/hints'
+import { mailAppName, useMailApp } from '../components/mailApp'
 import { useApp } from '../context'
 
 const KINDS: SourceKind[] = ['copilot_summary', 'meeting_transcript', 'teams_chat', 'email', 'note']
@@ -183,8 +184,9 @@ export function ImportScreen() {
   )
 }
 
-/** One Outlook mail import: a summary row that opens to show each conversation it read. */
+/** One mail import (Outlook or Apple Mail): a summary row that opens to show each conversation it read. */
 function MailRunRow({ run, open, onToggle, busy, rerun }: { run: MailImportRun; open: boolean; onToggle: () => void; busy: boolean; rerun: (id: number) => void }) {
+  const mailApp = useMailApp()
   const { go } = useApp()
   const pending = run.conversations.reduce((n, s) => n + s.pendingCount, 0)
   const total = run.conversations.reduce((n, s) => n + s.totalSuggestions, 0)
@@ -196,7 +198,7 @@ function MailRunRow({ run, open, onToggle, busy, rerun }: { run: MailImportRun; 
     <>
       <div className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto', paddingLeft: 12, cursor: 'default' }}>
         <div className="ttl">
-          Outlook mail · {n} conversation{n === 1 ? '' : 's'}
+          {mailApp === 'apple-mail' ? 'Apple Mail' : 'Outlook mail'} · {n} conversation{n === 1 ? '' : 's'}
           <span className="why">
             Email · {shortDate(run.startedAt)}
             {run.provider ? ` · ${run.provider}` : ''}
@@ -224,6 +226,7 @@ function MailRunRow({ run, open, onToggle, busy, rerun }: { run: MailImportRun; 
 }
 
 function SourceRow({ s, busy, rerun, nested }: { s: SourceItem; busy: boolean; rerun: (id: number) => void; nested?: boolean }) {
+  const mailApp = useMailApp()
   const { go, toast, refresh, openAiLog } = useApp()
   return (
     <div className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto auto auto auto', paddingLeft: nested ? 32 : 12, cursor: 'default', background: nested ? 'var(--bg)' : undefined }}>
@@ -251,8 +254,8 @@ function SourceRow({ s, busy, rerun, nested }: { s: SourceItem; busy: boolean; r
         <CostNote cost={s.estimatedCost} what="this import's latest AI run" />
       </span>
       {s.fromOutlook ? (
-        <button className="btn ghost" title="Show this conversation's newest message in Outlook" onClick={() => void cos['mail.open'](s.id).catch((err) => toast(errorMessage(err), true))}>
-          Open in Outlook
+        <button className="btn ghost" title={`Show this conversation's newest message in ${mailAppName(mailApp)}`} onClick={() => void cos['mail.open'](s.id).catch((err) => toast(errorMessage(err), true))}>
+          Open in {mailAppName(mailApp)}
         </button>
       ) : (
         <span />
@@ -268,7 +271,7 @@ function SourceRow({ s, busy, rerun, nested }: { s: SourceItem; busy: boolean; r
         confirmLabel="Delete import?"
         onConfirm={() =>
           void cos['sources.delete'](s.id).then(() => {
-            toast(s.fromOutlook ? 'Import deleted. Tasks created from it are kept, and the email stays in Outlook.' : 'Import deleted. Tasks created from it are kept.')
+            toast(s.fromOutlook ? `Import deleted. Tasks created from it are kept, and the email stays in ${mailAppName(mailApp)}.` : 'Import deleted. Tasks created from it are kept.')
             refresh()
           })
         }

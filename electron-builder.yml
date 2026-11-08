@@ -21,3 +21,6 @@ mac:
   # need to open it; hardened runtime is only for notarized apps and stops an ad-hoc-signed Electron app launching.
   identity: '-'
   hardenedRuntime: false
+  # macOS shows this when the app first asks to control Mail (reading Apple Mail for the mail import).
+  extendInfo:
+    NSAppleEventsUsageDescription: Chief of Staff reads the Apple Mail accounts you choose and opens or saves reply drafts you ask for.

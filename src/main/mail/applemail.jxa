@@ -1,0 +1,200 @@
+// Reads Apple Mail for Chief of Staff on the Mac (see applemail.ts), as JavaScript for Automation. Plain JavaScript; the .jxa name keeps bundlers from loading it as a module.
+// Run: osascript -l JavaScript applemail.jxa <request.json>. Prints JSON: { ok: true, ... } or { ok: false, code, error }.
+// Read-only except "open" (shows a message), "reply" with open (shows a reply window) and "reply" with save
+// (saves a reply to Drafts). Never sends, moves, deletes, flags or marks mail read.
+//   { action: 'accounts' }                                   every account: id, name, type, addresses
+//   { action: 'list', accounts: [id], since: ISO }           Inbox (and its subfolders) and Sent of each account, no message text
+//   { action: 'bodies', refs: [ref] }                        the text of each message
+//   { action: 'thread', account, since: ISO }                Inbox tree and Sent of one account since a time, no text (to find the newest in a conversation)
+//   { action: 'message', ref }                               one message, with its text
+//   { action: 'open', ref }                                  shows the message in Mail
+//   { action: 'drafts' }                                     brings Mail forward on its Drafts mailbox
+//   { action: 'reply', ref, replyAll, body, open }           a reply with body above the quoted message: shown (open) or saved to Drafts
+// A ref is { account, path: [mailbox names from the account down], id }.
+ObjC.import('Foundation')
+
+const HEADERS = /^(message-id|in-reply-to|references|thread-index|thread-topic|list-unsubscribe|list-id|precedence|auto-submitted|content-class|content-type|x-ms-exchange-calendar-series-instance-id|reply-to):/i
+const SENT = /^(sent items|sent messages|sent mail|sent)$/i
+
+function run(argv) {
+  let req
+  try {
+    const text = $.NSString.stringWithContentsOfFileEncodingError(argv[0], $.NSUTF8StringEncoding, null)
+    req = JSON.parse(ObjC.unwrap(text))
+  } catch (e) {
+    return JSON.stringify({ ok: false, code: 'failed', error: 'The Apple Mail reader got a bad request.' })
+  }
+  try {
+    const Mail = Application('Mail')
+    const result = act(Mail, req)
+    return JSON.stringify(Object.assign({ ok: true }, result))
+  } catch (e) {
+    const msg = String((e && e.message) || e)
+    if (/-1743|not allowed|Not authori[sz]ed/i.test(msg)) {
+      return JSON.stringify({ ok: false, code: 'not_allowed', error: "Chief of Staff isn't allowed to control Mail. Open System Settings → Privacy & Security → Automation, turn on Mail under Chief of Staff, then try again." })
+    }
+    if (/-1728|Can.t get/i.test(msg)) return JSON.stringify({ ok: false, code: 'not_found', error: "Couldn't find that email in Mail. It may have been moved or deleted." })
+    return JSON.stringify({ ok: false, code: 'failed', error: "Couldn't read Apple Mail: " + msg })
+  }
+}
+
+function act(Mail, req) {
+  switch (req.action) {
+    case 'accounts':
+      return {
+        accounts: Mail.accounts().map((a) => ({ id: a.id(), name: a.name(), type: String(a.accountType()), enabled: a.enabled(), addresses: a.emailAddresses() })),
+      }
+    case 'list': {
+      const since = new Date(req.since)
+      const messages = []
+      const accounts = []
+      for (const id of req.accounts) {
+        let acct
+        try {
+          acct = Mail.accounts.byId(id)
+          accounts.push({ id, name: acct.name(), addresses: acct.emailAddresses() })
+        } catch (e) {
+          continue
+        }
+        readAccount(acct, id, since, messages)
+      }
+      return { accounts, messages }
+    }
+    case 'thread': {
+      const messages = []
+      readAccount(Mail.accounts.byId(req.account), req.account, new Date(req.since), messages)
+      return { messages }
+    }
+    case 'bodies':
+      return {
+        bodies: req.refs.map((r) => {
+          try {
+            return String(find(Mail, r).content() || '')
+          } catch (e) {
+            return null
+          }
+        }),
+      }
+    case 'message': {
+      const msg = find(Mail, req.ref)
+      const direction = SENT.test(req.ref.path[0]) ? 'sent' : 'received'
+      const time = direction === 'sent' ? msg.dateSent() : msg.dateReceived()
+      const to = msg.toRecipients()
+      const cc = msg.ccRecipients()
+      return {
+        message: {
+          ref: req.ref,
+          direction,
+          folder: req.ref.path.join('/'),
+          subject: msg.subject() || '',
+          sender: msg.sender() || '',
+          to: to.map((r) => ({ name: r.name() || '', address: r.address() || '' })),
+          cc: cc.map((r) => ({ name: r.name() || '', address: r.address() || '' })),
+          time: time ? time.toISOString() : '',
+          headers: keep(msg.allHeaders() || ''),
+          body: String(msg.content() || ''),
+        },
+      }
+    }
+    case 'open': {
+      find(Mail, req.ref).open()
+      Mail.activate()
+      return {}
+    }
+    case 'drafts': {
+      Mail.activate()
+      const viewers = Mail.messageViewers()
+      if (viewers.length) viewers[0].selectedMailboxes = [Mail.draftsMailbox()]
+      return {}
+    }
+    case 'reply': {
+      const msg = find(Mail, req.ref)
+      const reply = msg.reply({ openingWindow: false, replyToAll: !!req.replyAll })
+      // Setting a reply's text replaces Mail's own quote of the original. It's left out on purpose:
+      // the reply is still threaded (In-Reply-To), so mail apps link it to the conversation.
+      reply.content = req.body
+      if (req.open) {
+        reply.visible = true
+        Mail.activate()
+      } else {
+        reply.save()
+        reply.close()
+      }
+      return {}
+    }
+  }
+  throw new Error('Unknown action ' + req.action)
+}
+
+/** Inbox (and its subfolders, as received) and the Sent mailbox (as sent) of one account. */
+function readAccount(acct, accountId, since, out) {
+  const tops = acct.mailboxes()
+  const names = acct.mailboxes.name()
+  for (let i = 0; i < tops.length; i++) {
+    if (/^inbox$/i.test(names[i])) readTree(tops[i], [names[i]], accountId, since, 'received', out)
+  }
+  for (let i = 0; i < tops.length; i++) {
+    if (SENT.test(names[i])) readBox(tops[i], [names[i]], accountId, since, 'sent', out)
+  }
+}
+
+function readTree(box, path, accountId, since, direction, out) {
+  readBox(box, path, accountId, since, direction, out)
+  let kids = []
+  let kidNames = []
+  try {
+    kids = box.mailboxes()
+    kidNames = box.mailboxes.name()
+  } catch (e) {}
+  for (let i = 0; i < kids.length; i++) readTree(kids[i], path.concat([kidNames[i]]), accountId, since, direction, out)
+}
+
+/** Every message since `since`, fetched a field at a time (one Apple event per field, not per message). */
+function readBox(box, path, accountId, since, direction, out) {
+  const field = direction === 'sent' ? 'dateSent' : 'dateReceived'
+  const query = {}
+  query[field] = { _greaterThan: since }
+  const msgs = box.messages.whose(query)
+  const ids = msgs.id()
+  if (!ids.length) return
+  const subject = msgs.subject()
+  const sender = msgs.sender()
+  const time = msgs[field]()
+  const toName = msgs.toRecipients.name()
+  const toAddr = msgs.toRecipients.address()
+  const ccName = msgs.ccRecipients.name()
+  const ccAddr = msgs.ccRecipients.address()
+  const headers = msgs.allHeaders()
+  for (let i = 0; i < ids.length; i++) {
+    out.push({
+      ref: { account: accountId, path, id: ids[i] },
+      direction,
+      folder: path.join('/'),
+      subject: subject[i] || '',
+      sender: sender[i] || '',
+      to: pairs(toName[i], toAddr[i]),
+      cc: pairs(ccName[i], ccAddr[i]),
+      time: time[i] ? time[i].toISOString() : '',
+      headers: keep(headers[i] || ''),
+    })
+  }
+}
+
+const pairs = (names, addrs) => (addrs || []).map((a, i) => ({ name: (names && names[i]) || '', address: a || '' }))
+
+/** Only the headers the app uses, with folded lines joined. */
+function keep(all) {
+  return String(all)
+    .replace(/\r?\n[ \t]+/g, ' ')
+    .split(/\r?\n/)
+    .filter((l) => HEADERS.test(l))
+    .join('\n')
+}
+
+function find(Mail, ref) {
+  let box = Mail.accounts.byId(ref.account).mailboxes.byName(ref.path[0])
+  for (let i = 1; i < ref.path.length; i++) box = box.mailboxes.byName(ref.path[i])
+  const msg = box.messages.byId(ref.id)
+  msg.id() // throws if it's gone
+  return msg
+}

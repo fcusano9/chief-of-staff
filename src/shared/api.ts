@@ -18,6 +18,7 @@ import type {
   ImportResult,
   MailCheck,
   MailImportRun,
+  MailAccount,
   MailInfo,
   MailJobStatus,
   SourceItem,
@@ -116,6 +117,10 @@ export interface Api {
   'mail.imports': () => MailImportRun[]
   /** Shows an imported conversation's newest message in Outlook. */
   'mail.open': (sourceId: number) => void
+  /** The mailbox addresses shown on the Import card (Outlook's, or the Apple Mail accounts chosen in Settings). */
+  'mail.addresses': () => string[]
+  /** Apple Mail's accounts, for Settings; refresh asks Mail again. Empty on other computers. */
+  'mail.accounts': (refresh: boolean) => MailAccount[]
   /** The Outlook email a task's Reply card answers, or null when the task isn't linked to one. */
   'replies.target': (taskId: number) => ReplyTarget | null
   /** Asks the selected AI for a draft reply (with a revision: rewrites the previous draft following the user's note). Saves nothing. */
@@ -124,6 +129,8 @@ export interface Api {
   'replies.save': (taskId: number, reply: { replyAll: boolean; body: string }) => { entryId: string; storeId: string }
   /** Shows a saved draft in Outlook. */
   'replies.openDraft': (entryId: string, storeId: string) => void
+  /** Opens the reply in a window of the mail app for the user to finish. Never saves or sends it. */
+  'replies.open': (taskId: number, reply: { replyAll: boolean; body: string }) => void
   'suggestions.listPending': () => Suggestion[]
   'suggestions.count': () => number
   'suggestions.accept': (id: number, edits?: Partial<SuggestionPayload>) => number | null
@@ -226,10 +233,13 @@ export const API_CHANNELS: ApiChannel[] = [
   'mail.stop',
   'mail.imports',
   'mail.open',
+  'mail.addresses',
+  'mail.accounts',
   'replies.target',
   'replies.draft',
   'replies.save',
   'replies.openDraft',
+  'replies.open',
   'suggestions.listPending',
   'suggestions.count',
   'suggestions.accept',

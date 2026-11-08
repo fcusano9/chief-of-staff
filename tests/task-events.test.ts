@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildWeeklyPrompt, demoReflection, type WeeklyInput } from '../src/main/ai/weekly'
 import { openDatabase } from '../src/main/db'
 import { BriefService, PersonService, ProjectService } from '../src/main/services/directory'
@@ -176,6 +176,8 @@ describe('weekly review: pushed-back due dates', () => {
   }
 
   it('lists tasks pushed later this week, net of all moves, after the overdue ones', () => {
+    // Runs as if today were after that week, so a task's creation time must come from the test's clock.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-20T12:00:00Z') })
     const sow = tasks.save(task({ title: 'Review SOW', dueDate: '2026-11-06' }))
     const slides = tasks.save(task({ title: 'Roadmap slides', dueDate: '2026-11-09' }))
     const pulled = tasks.save(task({ title: 'Pulled in', dueDate: '2026-11-20' }))
@@ -199,6 +201,7 @@ describe('weekly review: pushed-back due dates', () => {
       ['Roadmap slides', null, 8, 'Nov 9 → Nov 17, by you'],
       ['Review SOW', null, 7, 'Nov 6 → Nov 11, then Nov 13, by you'],
     ])
+    vi.useRealTimers()
   })
 
   it('moves from before the week do not count, and the AI reflection hears about pushed-back tasks', () => {
