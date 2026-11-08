@@ -2,6 +2,9 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-07 · Top bar: Import and Review in their own group; arrow keys switch tabs (Frank)
+**Why:** the old order (Today, Weekly, Tasks, Review, Waiting, Projects, People, Prep, Archive, Import) didn't follow how the day goes, and Import and Review are a separate daily step. The tabs are now Today, Tasks, Waiting, Weekly | Projects, People, with a boxed Import / Review group next to the search box. Import is tinted with the accent so it stands out. Review shows only while it has items (or while it's open, so it doesn't vanish when the last item is accepted). Prep and Archive are hidden until they're built. ← and → step through the tabs and stop at the ends; they do nothing while typing, with a window open, or while the list/details divider has focus (it resizes with ← →). G then I goes to Import. Chosen from the options in `design/top-bar-tabs.html`.
+
 ### 2026-11-07 · Mac mail through Apple Mail; Open in and Save to Drafts on both computers (Frank)
 Frank's choices (research in ROADMAP.md "Mac mail", mockup `design/apple-mail.html`, approved after two rounds):
 - **Apple Mail first** on the Mac, then Thunderbird, then Airmail and eM Client if it doesn't work out. New Outlook for Mac has no scripting, and Graph needs IT. Apple Mail reaches Microsoft 365 over EWS, which Microsoft is retiring by 2027-04-01, so this may stop working before Apple ships Graph support.

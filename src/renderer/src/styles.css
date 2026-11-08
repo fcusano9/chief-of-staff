@@ -60,6 +60,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tab { white-space: nowrap; border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); cursor: pointer; display: flex; gap: 6px; align-items: center; }
 .tab:hover { background: var(--hover); color: var(--text); }
 .tab.on { color: var(--text); background: var(--sel); }
+.tab-divider { width: 1px; height: 18px; background: var(--border-strong); margin: 0 6px; flex: none; align-self: center; }
+/* Import and Review: the daily intake group, boxed, next to the search box. Import is tinted with the accent so it stands out. */
+.tab-group { display: flex; align-items: center; gap: 2px; padding: 2px; margin-right: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); flex: none; }
+.tab-group .tab { padding: 4px 9px; }
+.tab-group .tab.on { color: var(--text); background: var(--surface); box-shadow: 0 0 0 1px var(--border-strong); }
+.tab-group .tab.import { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+.tab-group .tab.import:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.tab-group .tab.import.on { box-shadow: 0 0 0 1px var(--accent); }
 .count { font: 500 11px var(--mono); background: var(--accent-bg); color: var(--accent); padding: 0 5px; border-radius: 4px; }
 .search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--bg); border-radius: 7px; padding: 4px 8px 4px 10px; width: 230px; flex: none; color: var(--faint); cursor: pointer; white-space: nowrap; }
 .iconbtn { border: 0; background: none; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; color: var(--muted); display: grid; place-items: center; font-size: 15px; flex: none; }

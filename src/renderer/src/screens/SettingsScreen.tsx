@@ -14,6 +14,7 @@ export const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
       ['Ctrl K', 'Command palette'],
       ['N', 'New task'],
       ['/', 'Search the list'],
+      ['← / →', 'Previous / next tab'],
     ],
   },
   {
@@ -31,12 +32,13 @@ export const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
     title: 'Go to',
     keys: [
       ['G then T', 'Today'],
-      ['G then V', 'Weekly'],
       ['G then K', 'Tasks'],
-      ['G then R', 'Review'],
       ['G then W', 'Waiting'],
+      ['G then V', 'Weekly'],
       ['G then P', 'Projects'],
       ['G then E', 'People'],
+      ['G then I', 'Import'],
+      ['G then R', 'Review'],
     ],
   },
 ]
