@@ -59,7 +59,9 @@ export function eventWhat(e: Pick<TaskEvent, 'kind' | 'from' | 'to' | 'note'>, n
     case 'followups':
       return `Follow-ups: ${e.from ?? 0} → ${e.to ?? 0}`
     case 'reply_draft':
-      return 'Draft reply saved to Outlook Drafts'
+      return `Draft reply saved to ${e.to ?? 'Outlook'} Drafts`
+    case 'reply_opened':
+      return `Reply opened in ${e.to ?? 'Outlook'}`
     case 'ai_priority':
       if (e.to == null) return `AI priority change removed (was ${signed(e.from)})`
       return `AI priority change ${signed(e.to)}${e.note ? `: ${e.note}` : ''}`

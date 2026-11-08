@@ -74,20 +74,39 @@ export class ReplyService {
     return { replyAll, body, subject: recipients.subject || `RE: ${t.subject}`, reply: recipients.reply, replyAllTo: recipients.replyAll, writtenBy: provider.label, email: { from: person, at: live.time, followUp: live.fromMe } }
   }
 
-  /** Saves the (possibly edited) reply to Outlook Drafts and notes it in the task's Activity. Never sends. */
+  /** Saves the (possibly edited) reply to the mail app's Drafts and notes it in the task's Activity. Never sends. */
   async save(taskId: number, reply: { replyAll: boolean; body: string }): Promise<{ entryId: string; storeId: string }> {
     const t = this.require(taskId)
-    const body = reply.body.trim()
-    if (!body) throw new OutlookError('The reply is empty. Write something, or Discard it.')
+    const body = this.bodyOf(reply)
     const live = await this.outlook((r) => r.latest(t.entryId, t.storeId))
-    const ids = await this.outlook((r) => r.saveReply(live.entryId, live.storeId, reply.replyAll, body))
-    this.events.record(taskId, [{ kind: 'reply_draft', note: reply.replyAll ? 'Reply all' : 'Reply' }], { by: 'user' })
+    const ids = await this.outlook((r) => r.saveReply(live.entryId, live.storeId, reply.replyAll, body), undefined, this.reader?.app === 'apple-mail')
+    this.events.record(taskId, [{ kind: 'reply_draft', note: reply.replyAll ? 'Reply all' : 'Reply', to: this.appName() }], { by: 'user' })
     return ids
   }
 
-  /** Shows a saved draft in Outlook, so the user can check it and send it themselves. */
+  /** Opens the reply in a window of the mail app for the user to finish, and notes it in Activity. Never saves or sends it. */
+  async open(taskId: number, reply: { replyAll: boolean; body: string }): Promise<void> {
+    const t = this.require(taskId)
+    const body = this.bodyOf(reply)
+    const live = await this.outlook((r) => r.latest(t.entryId, t.storeId))
+    await this.outlook((r) => r.openReply(live.entryId, live.storeId, reply.replyAll, body), undefined, this.reader?.app === 'apple-mail')
+    this.events.record(taskId, [{ kind: 'reply_opened', note: reply.replyAll ? 'Reply all' : 'Reply', to: this.appName() }], { by: 'user' })
+  }
+
+  /** Shows a saved draft in the mail app, so the user can check it and send it themselves (Apple Mail: its Drafts). */
   async openDraft(entryId: string, storeId: string): Promise<void> {
-    await this.outlook((r) => r.open(entryId, storeId), "Couldn't find that draft in Outlook. It may have been sent or deleted.")
+    await this.outlook((r) => r.open(entryId, storeId), `Couldn't find that draft in ${this.appName()}. It may have been sent or deleted.`)
+  }
+
+  private bodyOf(reply: { body: string }): string {
+    const body = reply.body.trim()
+    if (!body) throw new OutlookError('The reply is empty. Write something, or Discard it.')
+    return body
+  }
+
+  /** "Mail" or "Outlook", as the buttons and Activity say it. */
+  private appName(): string {
+    return this.reader?.app === 'apple-mail' ? 'Mail' : 'Outlook'
   }
 
   private require(taskId: number): Target {
@@ -97,12 +116,14 @@ export class ReplyService {
     return t
   }
 
-  private async outlook<T>(run: (r: OutlookReader) => Promise<T>, notFound = "Couldn't find that email in Outlook. It may have been moved or deleted."): Promise<T> {
+  /** Runs a mail app step. Errors become "couldn't find that email" unless they say something more useful (`keep`: any OutlookError). */
+  private async outlook<T>(run: (r: OutlookReader) => Promise<T>, notFound?: string, keep = false): Promise<T> {
     if (!this.reader) throw new OutlookError('Draft replies only work with Classic Outlook on Windows.')
     try {
       return await run(this.reader)
     } catch (err) {
-      if (err instanceof OutlookError && /isn't running/.test(err.message)) throw err
+      if (err instanceof OutlookError && (keep || /isn't running|isn't allowed/.test(err.message))) throw err
+      notFound ??= `Couldn't find that email in ${this.appName()}. It may have been moved or deleted.`
       if (err instanceof AiError) throw err
       throw new OutlookError(notFound)
     }
@@ -169,6 +190,7 @@ export class ReplyService {
       at: msg.sent_at,
       followUp,
       supported: this.reader != null,
+      app: this.reader?.app ?? null,
       entryId: msg.entry_id,
       storeId: msg.store_id ?? '',
       thread: imports.join('\n\n'),

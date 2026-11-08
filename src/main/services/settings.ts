@@ -39,6 +39,7 @@ export class SettingsStore {
       backupsToKeep: Math.max(1, Math.round(settings.backupsToKeep)),
       backupFolder: settings.backupFolder?.trim() || null,
       replyStyle: String(settings.replyStyle ?? '').slice(0, 1000),
+      mailAccounts: Array.isArray(settings.mailAccounts) ? [...new Set(settings.mailAccounts.map(String).filter(Boolean))].slice(0, 20) : [],
     }
     mkdirSync(dirname(this.path), { recursive: true })
     const tmp = `${this.path}.tmp`

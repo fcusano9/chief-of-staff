@@ -18,8 +18,9 @@ const stamp = (iso: string) => {
 const estimate = (provider: string, n: number) => (provider === 'demo' ? null : Math.max(1, Math.ceil((n * (provider === 'local' ? 40 : 8)) / 60)))
 
 /**
- * "Outlook mail" on Import: Check Outlook looks (nothing is sent), then Read sends the chosen
- * conversations to the AI one at a time. Progress comes from polling mail.status.
+ * The mail card on Import: "Outlook mail" on Windows, "Apple Mail" on the Mac. Check looks (nothing
+ * is sent), then Read sends the chosen conversations to the AI one at a time. Progress comes from
+ * polling mail.status. It shows the mailbox addresses being read; on the Mac, Change opens Settings.
  */
 export function OutlookImport({ onFinished }: { onFinished: () => void }) {
   const { ai, toast, refresh, go } = useApp()
@@ -32,11 +33,13 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
   const [showSkipped, setShowSkipped] = useState(false)
   const [job, setJob] = useState<MailJobStatus | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [addresses, setAddresses] = useState<string[]>([])
 
   useEffect(() => {
     void cos['mail.info']().then((i) => {
       setInfo(i)
       if (!i.lastImportAt) setSince('7')
+      if (i.supported && !i.needsAccounts) void cos['mail.addresses']().then(setAddresses).catch(() => {})
     })
     // Reading carries on in the background if you leave Import; pick it back up.
     void cos['mail.status']().then((s) => {
@@ -76,6 +79,14 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
     )
   }
 
+  const apple = info.app === 'apple-mail'
+  const title = apple ? 'Apple Mail' : 'Outlook mail'
+  const appName = apple ? 'Apple Mail' : 'Outlook'
+  const openMailSettings = () => {
+    go('settings')
+    window.setTimeout(() => document.getElementById('apple-mail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+
   const sinceIso = () =>
     since === 'last' ? info.defaultSince
     : since === 'custom' ? new Date(`${customDate}T00:00:00`).toISOString()
@@ -86,6 +97,7 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
     setStage('checking')
     try {
       setCheck(await cos['mail.check'](sinceIso()))
+      if (!addresses.length) void cos['mail.addresses']().then(setAddresses).catch(() => {})
       setReadAnyway(new Set())
       setShowSkipped(false)
       setStage('ready')
@@ -121,11 +133,23 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
     <>
       <div className="card" data-outlook style={{ marginBottom: 12 }}>
         <div className="row" style={{ flexWrap: 'wrap' }}>
-          <b style={{ fontWeight: 600 }}>Outlook mail</b>
+          <b style={{ fontWeight: 600 }}>{title}</b>
           <span className="muted">· {info.lastImportAt ? `last imported ${stamp(info.lastImportAt)}` : 'never imported'}</span>
         </div>
 
-        {stage === 'idle' && (
+        {stage === 'idle' && info.needsAccounts && (
+          <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+            <span className="muted">
+              Choose which Apple Mail accounts to read in{' '}
+              <button type="button" className="link-btn" onClick={openMailSettings}>
+                Settings
+              </button>
+              .
+            </span>
+          </div>
+        )}
+
+        {stage === 'idle' && !info.needsAccounts && (
           <>
             <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
               <span className="muted">Read mail since</span>
@@ -137,11 +161,21 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
               </select>
               {since === 'custom' && <input className="inp" style={{ width: 150 }} type="date" value={customDate} max={localDay(new Date())} onChange={(e) => setCustomDate(e.target.value)} />}
               <div className="spacer" />
-              <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
-                Inbox and its subfolders, plus Sent Items
-              </span>
+              {(addresses.length > 0 || apple) && (
+                <span className="muted" style={{ fontSize: 'var(--fs-sm)' }} data-mail-addresses>
+                  {addresses.join(', ')}
+                  {apple && (
+                    <>
+                      {addresses.length > 0 && ' · '}
+                      <button type="button" className="link-btn" onClick={openMailSettings}>
+                        Change
+                      </button>
+                    </>
+                  )}
+                </span>
+              )}
               <button className="btn primary" onClick={() => void runCheck()}>
-                Check Outlook
+                Check {appName}
               </button>
             </div>
             {notice && (
@@ -155,7 +189,7 @@ export function OutlookImport({ onFinished }: { onFinished: () => void }) {
             <div className="progress">
               <div className="indeterminate" />
             </div>
-            <span className="muted">Looking through Outlook…</span>
+            <span className="muted">Looking through {appName}…</span>
           </>
         )}
 

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { MailAccount, MailApp } from '@shared/types'
 import script from './outlook.ps1?raw'
 
 /** One message as outlook.ps1 reports it. */
@@ -58,8 +59,19 @@ export interface LatestMessage {
   body: string
 }
 
-/** Where mail comes from: classic Outlook, or a fixture file in tests. */
+/**
+ * Where mail comes from: classic Outlook on Windows, Apple Mail on the Mac (applemail.ts), or a
+ * fixture file in tests. The message shapes are Outlook's; Apple Mail's are converted to them.
+ */
 export interface OutlookReader {
+  /** Which mail app this is, for the words on screen ("Check Outlook", "Open in Mail"). */
+  readonly app: MailApp
+  /** The mailbox's email addresses, shown on the Import card. Empty when unknown. */
+  addresses(): Promise<string[]>
+  /** Apple Mail only: every account in Mail, for Settings. */
+  accounts?(refresh?: boolean): Promise<MailAccount[]>
+  /** Fills in message text that list() left out (Apple Mail reads it only for what the AI reads). */
+  fillBodies?(messages: OutlookMessage[]): Promise<void>
   /** Received mail (Inbox and subfolders) and sent mail since `since`. */
   list(since: Date): Promise<OutlookMailbox>
   /** Shows one message in Outlook. */
@@ -70,6 +82,8 @@ export interface OutlookReader {
   recipients(entryId: string, storeId: string): Promise<ReplyRecipients>
   /** Saves a reply (text above the quoted thread) to Outlook Drafts. Never sends. Returns the draft's ids. */
   saveReply(entryId: string, storeId: string, replyAll: boolean, body: string): Promise<{ entryId: string; storeId: string }>
+  /** Opens a reply window (text above the quoted thread) for the user to finish. Never saves or sends. */
+  openReply(entryId: string, storeId: string, replyAll: boolean, body: string): Promise<void>
 }
 
 /** Errors with a message that is safe to show as-is, like "Outlook isn't running". */
@@ -80,6 +94,13 @@ export class OutlookError extends Error {}
  * PowerShell script (outlook.ps1, bundled as text) does the reading and writes JSON to a file.
  */
 export class PowerShellOutlook implements OutlookReader {
+  readonly app = 'outlook' as const
+
+  async addresses(): Promise<string[]> {
+    const r = await this.run(['-Action', 'me'])
+    return firstAddress(asArray(r.addresses as string[] | string | null))
+  }
+
   async list(since: Date): Promise<OutlookMailbox> {
     const result = (await this.run(['-Action', 'list', '-Since', since.toISOString()])) as Partial<OutlookMailbox>
     return { me: { name: result.me?.name ?? '', addresses: asArray(result.me?.addresses) }, messages: asArray(result.messages) }
@@ -102,11 +123,19 @@ export class PowerShellOutlook implements OutlookReader {
   }
 
   async saveReply(entryId: string, storeId: string, replyAll: boolean, body: string): Promise<{ entryId: string; storeId: string }> {
+    const r = await this.reply(entryId, storeId, replyAll, body, false)
+    return { entryId: String(r.entryId ?? ''), storeId: String(r.storeId ?? '') }
+  }
+
+  async openReply(entryId: string, storeId: string, replyAll: boolean, body: string): Promise<void> {
+    await this.reply(entryId, storeId, replyAll, body, true)
+  }
+
+  private async reply(entryId: string, storeId: string, replyAll: boolean, body: string, open: boolean): Promise<Record<string, unknown>> {
     const bodyPath = join(tmpdir(), `cos-outlook-${randomUUID()}.txt`)
     writeFileSync(bodyPath, body.replace(/\r?\n/g, '\r\n'), 'utf8')
     try {
-      const r = await this.run(['-Action', 'reply', '-EntryId', entryId, '-StoreId', storeId, '-BodyFile', bodyPath, ...(replyAll ? ['-ReplyAll'] : [])])
-      return { entryId: String(r.entryId ?? ''), storeId: String(r.storeId ?? '') }
+      return await this.run(['-Action', 'reply', '-EntryId', entryId, '-StoreId', storeId, '-BodyFile', bodyPath, ...(replyAll ? ['-ReplyAll'] : []), ...(open ? ['-Open'] : [])])
     } finally {
       rmSync(bodyPath, { force: true })
     }
@@ -149,12 +178,22 @@ export class PowerShellOutlook implements OutlookReader {
  * the app, written next to the fixture as <fixture>.drafts.json so e2e can check them).
  */
 export class FixtureOutlook implements OutlookReader {
-  readonly saved: { entryId: string; storeId: string; replyAll: boolean; body: string; draftId: string }[] = []
+  readonly saved: { entryId: string; storeId: string; replyAll: boolean; body: string; draftId: string; opened?: boolean }[] = []
 
   constructor(
     private readonly path: string,
     private readonly draftsPath: string | null = null,
+    readonly app: MailApp = 'outlook',
   ) {}
+
+  async addresses(): Promise<string[]> {
+    return firstAddress(this.box().me.addresses)
+  }
+
+  async accounts(): Promise<MailAccount[]> {
+    if (this.app !== 'apple-mail') return []
+    return [{ id: 'fixture-account', name: 'Work', type: 'unknown', enabled: true, addresses: this.box().me.addresses }]
+  }
 
   async list(since: Date): Promise<OutlookMailbox> {
     const box = this.box()
@@ -193,9 +232,20 @@ export class FixtureOutlook implements OutlookReader {
     return { entryId: draftId, storeId: 'fixture-store' }
   }
 
+  async openReply(entryId: string, storeId: string, replyAll: boolean, body: string): Promise<void> {
+    this.saved.push({ entryId, storeId, replyAll, body, draftId: '', opened: true })
+    if (this.draftsPath) writeFileSync(this.draftsPath, JSON.stringify(this.saved, null, 2), 'utf8')
+  }
+
   private box(): OutlookMailbox {
     return JSON.parse(readFileSync(this.path, 'utf8')) as OutlookMailbox
   }
+}
+
+/** The first real email address (Outlook can also list an Exchange "/o=…" address), or none. */
+function firstAddress(list: string[]): string[] {
+  const real = list.map((a) => a.trim()).filter((a) => a.includes('@'))
+  return real.length ? [real[0]!] : []
 }
 
 /** PowerShell 5.1 turns a one-item array into a lone object, and an empty one into null. */

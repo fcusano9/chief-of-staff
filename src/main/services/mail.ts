@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import type { MailCheck, MailImportRun, MailInfo, MailJobStatus } from '@shared/types'
+import type { MailAccount, MailCheck, MailImportRun, MailInfo, MailJobStatus } from '@shared/types'
 import { nowIso, transaction } from '../db'
 import { OutlookError, type OutlookReader } from '../mail/outlook'
 import { conversationContent, planMailbox, type PlannedConversation } from '../mail/plan'
@@ -30,15 +30,43 @@ export class MailService {
     private readonly userName: () => string,
     private readonly providerLabel: () => string,
     private readonly now: () => Date = () => new Date(),
+    private readonly chosenAccounts: () => string[] = () => [],
   ) {}
 
   info(): MailInfo {
     const last = this.db.prepare('SELECT checked_at FROM mail_imports WHERE complete = 1 ORDER BY checked_at DESC LIMIT 1').get() as { checked_at: string } | undefined
     const firstRun = new Date(this.now().getTime() - FIRST_RUN_DAYS * 86_400_000).toISOString()
-    return { supported: this.reader != null, defaultSince: last?.checked_at ?? firstRun, lastImportAt: last?.checked_at ?? null }
+    const app = this.reader?.app ?? null
+    return {
+      supported: this.reader != null,
+      app,
+      needsAccounts: app === 'apple-mail' && this.chosenAccounts().length === 0,
+      defaultSince: last?.checked_at ?? firstRun,
+      lastImportAt: last?.checked_at ?? null,
+    }
   }
 
-  /** Looks through Outlook for mail since `since` (ISO). Nothing is sent to the AI. */
+  private known: string[] | null = null
+
+  /** The mailbox addresses shown on the Import card. Remembered after the first ask; empty if the mail app can't be reached. */
+  async addresses(): Promise<string[]> {
+    if (!this.reader) return []
+    // Apple Mail's come from the accounts chosen in Settings, which can change; Outlook's are asked once.
+    if (this.known && this.reader.app === 'outlook') return this.known
+    try {
+      this.known = await this.reader.addresses()
+    } catch {
+      return this.known ?? []
+    }
+    return this.known
+  }
+
+  /** Apple Mail's accounts, for Settings. Empty on other computers. */
+  async accounts(refresh = false): Promise<MailAccount[]> {
+    return this.reader?.accounts ? this.reader.accounts(refresh) : []
+  }
+
+  /** Looks through the mail app for mail since `since` (ISO). Nothing is sent to the AI. */
   async check(since: string): Promise<MailCheck> {
     if (!this.reader) throw new OutlookError('Reading Outlook needs classic Outlook on Windows.')
     if (this.job.state === 'reading') throw new OutlookError('Mail is still being read. Wait for it to finish, or stop it.')
@@ -46,6 +74,10 @@ export class MailService {
     if (Number.isNaN(from.getTime())) throw new OutlookError('Pick a valid date to read mail from.')
     const checkedAt = this.now().toISOString()
     const box = await this.reader.list(from)
+    if (this.reader.app === 'outlook') {
+      const shown = box.me.addresses.filter((a) => a.includes('@')).slice(0, 1)
+      if (shown.length) this.known = shown
+    }
     const read = this.db.prepare('SELECT 1 FROM mail_messages WHERE message_key = ?')
     const plan = planMailbox(box, from, (key) => read.get(key) != null)
     const check: MailCheck = {
@@ -68,7 +100,7 @@ export class MailService {
    */
   read(checkId: number, keys: string[]): MailJobStatus {
     const pending = this.pending
-    if (!pending || pending.check.id !== checkId) throw new OutlookError('That check is out of date. Check Outlook again.')
+    if (!pending || pending.check.id !== checkId) throw new OutlookError('That check is out of date. Check again.')
     if (this.job.state === 'reading') throw new OutlookError('Mail is already being read.')
     const chosen = keys.map((k) => pending.conversations.get(k)).filter((c): c is PlannedConversation => c != null)
     if (chosen.length === 0) throw new OutlookError('There is nothing to read.')
@@ -109,17 +141,17 @@ export class MailService {
       .filter((r) => r.conversations.length > 0 || r.finishedAt == null)
   }
 
-  /** Shows the newest message of an imported conversation in Outlook. */
+  /** Shows the newest message of an imported conversation in the mail app. */
   async open(sourceId: number): Promise<void> {
     const meta = this.sources.mailMeta(sourceId)
-    if (!meta) throw new OutlookError('That import is not from Outlook.')
+    if (!meta) throw new OutlookError('That import is not from email.')
     if (!this.reader) throw new OutlookError('Opening mail needs classic Outlook on Windows.')
     try {
       await this.reader.open(meta.entryId, meta.storeId)
     } catch (err) {
-      throw err instanceof OutlookError && /isn't running/.test(err.message)
+      throw err instanceof OutlookError && /isn't running|isn't allowed/.test(err.message)
         ? err
-        : new OutlookError("Couldn't find that email in Outlook. It may have been moved or deleted.")
+        : new OutlookError(`Couldn't find that email in ${this.reader.app === 'apple-mail' ? 'Mail' : 'Outlook'}. It may have been moved or deleted.`)
     }
   }
 
@@ -129,6 +161,7 @@ export class MailService {
         if (this.stopRequested) break
         this.job.current = c.subject
         try {
+          await this.reader?.fillBodies?.(c.messages)
           const result = await this.sources.extract(this.save(importId, c))
           this.job.suggestions += result.suggestionsCreated
           if (result.source.estimatedCost != null) this.job.estimatedCost = (this.job.estimatedCost ?? 0) + result.source.estimatedCost
@@ -165,7 +198,7 @@ export class MailService {
             `INSERT INTO source_items (kind, title, from_name, occurred_at, content, content_hash, external_id, imported_at, mail_import_id, mail_meta)
              VALUES ('email', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
-          .run(c.subject.slice(0, 200), c.people || null, latest.time, content, contentHash(`outlook ${c.messages.map((m) => m.key).join(' ')}`), c.key, nowIso(), importId, JSON.stringify(meta))
+          .run(c.subject.slice(0, 200), c.people || null, latest.time, content, contentHash(`${this.reader?.app === 'apple-mail' ? 'apple-mail' : 'outlook'} ${c.messages.map((m) => m.key).join(' ')}`), c.key, nowIso(), importId, JSON.stringify(meta))
           .lastInsertRowid,
       )
       const mark = this.db.prepare(

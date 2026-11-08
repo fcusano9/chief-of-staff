@@ -382,6 +382,8 @@ export interface AppSettings {
   dailyBriefingTime: string
   /** How the user writes, sent with every draft reply (Settings → AI). Empty means plain, professional replies. */
   replyStyle: string
+  /** Apple Mail accounts to read (Mail's account ids), chosen in Settings. Empty reads nothing. */
+  mailAccounts: string[]
   /** Null means the default OneDrive backup folder. */
   backupFolder: string | null
   backupsToKeep: number
@@ -401,6 +403,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   peopleFilter: { company: '', openOnly: false },
   dailyBriefingTime: '07:30',
   replyStyle: '',
+  mailAccounts: [],
   backupFolder: null,
   backupsToKeep: 30,
   lastBackupAt: null,
@@ -491,7 +494,7 @@ export type ChangeBy =
   /** The AI itself (priority changes); label says where, e.g. "daily briefing" or 'import “Team sync”'. */
   | { by: 'ai'; label: string }
 
-export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority' | 'reply_draft'
+export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority' | 'reply_draft' | 'reply_opened'
 
 /** One recorded change to a task. Values are as they were then (names, not ids). */
 export interface TaskEvent {
@@ -561,8 +564,10 @@ export interface ReplyTarget {
   at: string
   /** The newest email in the conversation is the user's own, so the draft is a follow-up to it. */
   followUp: boolean
-  /** False when this computer can't reach classic Outlook (a Mac, or Windows without it). */
+  /** False when this computer has no mail app the app can use. */
   supported: boolean
+  /** The mail app replies go through, for the button words ("Open in Mail"). */
+  app: MailApp | null
 }
 
 /** A draft reply shown in the app before it's saved to Outlook Drafts. */
@@ -784,9 +789,25 @@ export interface MailImportRun {
   conversations: SourceItem[]
 }
 
+/** The mail app the app reads: classic Outlook on Windows, Apple Mail on the Mac. */
+export type MailApp = 'outlook' | 'apple-mail'
+
+/** An account in Apple Mail, for picking which ones to read (Settings). */
+export interface MailAccount {
+  id: string
+  name: string
+  /** Mail's account type: "imap", "iCloud", "pop", or "unknown" (Exchange). */
+  type: string
+  enabled: boolean
+  addresses: string[]
+}
+
 export interface MailInfo {
-  /** Reading Outlook needs classic Outlook on Windows. */
+  /** False when this computer has no mail app to read (Windows without classic Outlook is only found out on Check). */
   supported: boolean
+  app: MailApp | null
+  /** Apple Mail: no account is chosen in Settings yet, so there's nothing to read. */
+  needsAccounts: boolean
   /** Where the next check starts by default: the last finished import, or 7 days ago. */
   defaultSince: string
   lastImportAt: string | null

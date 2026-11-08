@@ -4,6 +4,7 @@ import { PROJECT_COLORS, SOURCE_KIND_LABELS, suggestionLabel } from '@shared/typ
 import { cos, errorMessage } from '../api'
 import { Avatar, dueLabel, ProjectChip, Stars } from '../components/bits'
 import { useShortcutHints } from '../components/hints'
+import { mailAppName, useMailApp } from '../components/mailApp'
 import { useApp } from '../context'
 
 const isTyping = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')
@@ -44,6 +45,7 @@ function alsoCreates(s: Suggestion, p: SuggestionPayload): string {
 
 /** AI suggestions waiting for a decision. Nothing changes until one is accepted. */
 export function ReviewScreen() {
+  const mailApp = useMailApp()
   const { version, refresh, toast, go, openTask, openAiLog } = useApp()
   const [items, setItems] = useState<Suggestion[]>([])
   const [cursor, setCursor] = useState(0)
@@ -155,8 +157,8 @@ export function ReviewScreen() {
             </span>
             <div className="spacer" />
             {g.source.fromOutlook && (
-              <button className="btn ghost" style={{ fontSize: 'var(--fs-sm)' }} title="Show this conversation's newest message in Outlook" onClick={() => void cos['mail.open'](g.source.id).catch((err) => toast(errorMessage(err), true))}>
-                Open in Outlook
+              <button className="btn ghost" style={{ fontSize: 'var(--fs-sm)' }} title={`Show this conversation's newest message in ${mailAppName(mailApp)}`} onClick={() => void cos['mail.open'](g.source.id).catch((err) => toast(errorMessage(err), true))}>
+                Open in {mailAppName(mailApp)}
               </button>
             )}
             <button className="btn ghost" style={{ fontSize: 'var(--fs-sm)' }} title="See exactly what was sent to the AI and what came back" onClick={() => openAiLog(g.source.id, 'review')}>
