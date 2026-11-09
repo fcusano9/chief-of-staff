@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Top bar tabs</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); padding: 20px 16px 48px; }
+button { font: inherit; color: inherit; }
+.wrap { max-width: 1240px; margin: 0 auto; }
+h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+h2 { font-size: 12px; font-weight: 500; color: var(--muted); margin: 22px 0 8px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); }
+.picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pick { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.pick.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.gap { width: 14px; }
+
+.win { border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; background: var(--bg); margin-top: 8px; }
+.top { display: flex; align-items: center; gap: 2px; height: 44px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tabs { display: flex; gap: 2px; align-items: center; min-width: 0; overflow: hidden; }
+.tab { white-space: nowrap; border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); cursor: pointer; display: flex; gap: 6px; align-items: center; }
+.tab:hover { background: var(--hover); color: var(--text); }
+.tab.on { color: var(--text); background: var(--sel); }
+.count { font: 500 11px var(--mono); background: var(--accent-bg); color: var(--accent); padding: 0 5px; border-radius: 4px; }
+.div { width: 1px; height: 18px; background: var(--border-strong); margin: 0 6px; flex: none; }
+.group { display: flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); flex: none; }
+.group .tab { padding: 4px 9px; }
+.group .tab.on { background: var(--surface); box-shadow: 0 0 0 1px var(--border-strong); }
+/* Import color options */
+.imp-tint .tab.imp { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+.imp-tint .tab.imp:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.imp-tint .tab.imp.on { background: var(--accent-bg); box-shadow: 0 0 0 1px var(--accent); }
+.imp-solid .tab.imp { background: var(--accent); color: #fff; font-weight: 500; }
+.imp-solid .tab.imp:hover { background: color-mix(in srgb, var(--accent) 85%, #000); color: #fff; }
+.imp-solid .tab.imp.on { box-shadow: 0 0 0 2px var(--accent-bg); }
+.imp-outline .tab.imp { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 500; }
+.imp-outline .tab.imp.on { background: var(--accent-bg); box-shadow: inset 0 0 0 1px var(--accent); }
+.spacer { flex: 1; }
+.search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--bg); border-radius: 7px; padding: 4px 8px 4px 10px; width: 230px; flex: none; color: var(--faint); white-space: nowrap; }
+.kbd { font: 500 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--surface); }
+.iconbtn { border: 0; background: none; width: 30px; height: 30px; border-radius: 6px; color: var(--muted); display: grid; place-items: center; font-size: 15px; flex: none; }
+.narrow .search .stext, .narrow .logo span { display: none; }
+.narrow .search { width: auto; }
+.body { padding: 22px 28px; min-height: 130px; }
+.body h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+.statusbar { height: 28px; display: flex; align-items: center; gap: 14px; padding: 0 14px; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 12px; white-space: nowrap; }
+.statusbar span { display: inline-flex; gap: 5px; align-items: center; }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.notes { margin-top: 18px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes b { color: var(--text); font-weight: 500; }
+.notes ul { margin: 4px 0 0; padding-left: 18px; } .notes li { margin: 3px 0; }
+.themebtn { float: right; }
+.hl { animation: hl 0.6s; } @keyframes hl { from { background: var(--accent-bg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="pick themebtn" id="theme">◐ Theme</button>
+  <h1>Top bar tabs</h1>
+  <div class="muted">Import and Review in their own group on the right; the other tabs ordered day → work → reference. Click anywhere on the page, then press ← and → to move between tabs.</div>
+
+  <h2>Show</h2>
+  <div class="picker">
+    <button class="pick" data-mode="before">Before</button><button class="pick" data-mode="after">After</button>
+    <span class="gap"></span><span class="muted">Items waiting in Review:</span>
+    <button class="pick" data-count="7">7</button><button class="pick" data-count="0">None</button>
+  </div>
+  <h2>Import button color</h2>
+  <div class="picker">
+    <button class="pick" data-imp="plain">Plain (like the other tabs)</button>
+    <button class="pick" data-imp="tint">Tinted</button>
+    <button class="pick" data-imp="outline">Outlined</button>
+    <button class="pick" data-imp="solid">Solid</button>
+  </div>
+
+  <h2>Full-width window (1400px; scroll sideways if your screen is smaller)</h2>
+  <div style="overflow-x:auto"><div class="win" style="width:1400px"><div id="barWide"></div><div class="body" id="body"></div><div class="statusbar" id="status"></div></div></div>
+
+  <h2>Narrow window (1100px)</h2>
+  <div style="overflow-x:auto"><div class="win narrow" style="width:1100px"><div id="barNarrow"></div></div></div>
+
+  <div class="notes">
+    <b>What changes</b>
+    <ul>
+      <li>Today, Tasks, Waiting, Weekly | Projects, People on the left. Import and Review in a boxed group by the search box.</li>
+      <li>Review shows only while there is something to review. If you accept the last item while on Review, you stay on it (it says you're all caught up) and the tab goes when you leave. G then R still opens Review when it's empty.</li>
+      <li>← and → step through the tabs in the order shown, skipping Review when it's hidden. They stop at the ends instead of wrapping round. The status bar shows "← → tabs".</li>
+      <li>They do nothing while you're typing (text boxes, dropdowns, sliders), while a window or the palette is open, or while the divider between list and details has focus (it uses ← → to resize). On Settings, which isn't a tab, they do nothing.</li>
+      <li>Prep and Archive are hidden until they're built. New shortcut: G then I for Import.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const LABEL = { today: 'Today', weekly: 'Weekly', tasks: 'Tasks', review: 'Review', waiting: 'Waiting', projects: 'Projects', people: 'People', prep: 'Prep', archive: 'Archive', import: 'Import' }
+const BEFORE = ['today', 'weekly', 'tasks', 'review', 'waiting', 'projects', 'people', 'prep', 'archive', 'import']
+let mode = 'after', count = 7, view = 'today', stayOnReview = false, imp = 'tint'
+
+const reviewShown = () => mode === 'before' || count > 0 || (view === 'review' && stayOnReview)
+const order = () => mode === 'before' ? BEFORE : ['today', 'tasks', 'waiting', 'weekly', 'projects', 'people', 'import', ...(reviewShown() ? ['review'] : [])]
+
+function tab(v) {
+  const c = v === 'review' && count > 0 ? `<span class="count">${count}</span>` : ''
+  const icon = v === 'import' && mode === 'after' && imp !== 'plain' ? '↓ ' : ''
+  return `<button class="tab ${view === v ? 'on' : ''} ${v === 'import' && mode === 'after' ? 'imp' : ''}" data-v="${v}">${icon}${LABEL[v]}${c}</button>`
+}
+function bar() {
+  const logo = `<div class="logo"><b>CS</b><span>Chief of Staff</span></div>`
+  const right = `<div class="search">⌕<span class="stext" style="flex:1">Search or jump to…</span><span class="kbd">Ctrl K</span></div><span class="iconbtn">＋</span><span class="iconbtn">◐</span><span class="iconbtn">⚙</span>`
+  if (mode === 'before') return `<div class="top">${logo}<nav class="tabs">${BEFORE.map(tab).join('')}</nav><div class="spacer"></div>${right}</div>`
+  const nav = `<nav class="tabs">${['today', 'tasks', 'waiting', 'weekly'].map(tab).join('')}<span class="div"></span>${['projects', 'people'].map(tab).join('')}</nav>`
+  const group = `<div class="group">${tab('import')}${reviewShown() ? tab('review') : ''}</div>`
+  return `<div class="top">${logo}${nav}<div class="spacer"></div>${group}<span style="width:10px"></span>${right}</div>`
+}
+function body() {
+  if (view === 'review' && count === 0) return `<h3>Review</h3><div class="muted">You're all caught up.</div>`
+  if (view === 'review') return `<h3>Review</h3><div class="muted">${count} suggestions. <button class="btn" id="acceptAll">Accept all (try it)</button></div>`
+  return `<h3>${LABEL[view]}</h3><div class="muted">The ${LABEL[view]} screen shows here.</div>`
+}
+function status() {
+  const h = [['Ctrl K', 'commands'], ['G', 'go to']]
+  if (mode === 'after') h.push(['← →', 'tabs'])
+  return h.map(([k, l]) => `<span>${k.split(' ').map((x) => `<span class="kbd">${x}</span>`).join(' ')} ${l}</span>`).join('')
+}
+function render(flash) {
+  document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode))
+  document.querySelectorAll('[data-count]').forEach((b) => b.classList.toggle('on', Number(b.dataset.count) === count))
+  document.querySelectorAll('[data-imp]').forEach((b) => b.classList.toggle('on', b.dataset.imp === imp))
+  document.body.className = 'imp-' + imp
+  document.getElementById('barWide').innerHTML = bar()
+  document.getElementById('barNarrow').innerHTML = bar()
+  document.getElementById('body').innerHTML = body()
+  document.getElementById('status').innerHTML = status()
+  if (flash) document.getElementById('body').classList.remove('hl'), void document.body.offsetWidth, document.getElementById('body').classList.add('hl')
+}
+function go(v) { if (v !== view) stayOnReview = false; view = v; render(true) }
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button')
+  if (!t) return
+  if (t.dataset.mode) { mode = t.dataset.mode; stayOnReview = false }
+  else if (t.dataset.count) { count = Number(t.dataset.count); if (count === 0 && view === 'review') stayOnReview = true }
+  else if (t.dataset.imp) imp = t.dataset.imp
+  else if (t.dataset.v) return go(t.dataset.v)
+  else if (t.id === 'acceptAll') { count = 0; stayOnReview = true }
+  else if (t.id === 'theme') {
+    const r = document.documentElement
+    const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+    r.dataset.theme = dark ? 'light' : 'dark'
+  }
+  render()
+})
+document.addEventListener('keydown', (e) => {
+  if (mode !== 'after' || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return
+  e.preventDefault()
+  const o = order(), i = o.indexOf(view)
+  const next = o[i + (e.key === 'ArrowRight' ? 1 : -1)]
+  if (next) go(next)
+})
+render()
+</script>
+</body>
+</html>

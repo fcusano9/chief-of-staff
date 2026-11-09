@@ -8,6 +8,7 @@ export type Hint = [keys: string, label: string]
 export const ALWAYS_HINTS: Hint[] = [
   ['Ctrl K', 'commands'],
   ['G', 'go to'],
+  ['← →', 'tabs'],
 ]
 /** For screens that register nothing. */
 export const DEFAULT_HINTS: Hint[] = [['N', 'new task']]
