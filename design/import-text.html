@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Text import</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 8px 16px; min-height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 4px 10px; border-radius: 6px; color: var(--muted); }
+.tab.on { background: var(--sel); color: var(--text); }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+.btn.ghost:hover { color: var(--text); background: var(--hover); }
+.btn.sm { padding: 2px 9px; font-size: 12.5px; }
+/* Primary button: today (white in dark mode) and the two options. */
+body[data-primary='today'] .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+body[data-primary='accent'] .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+:root[data-theme='dark'] body[data-primary='accent'] .btn.primary { background: #5b5bd6; border-color: #5b5bd6; }
+body[data-primary='accent'] .btn.primary:hover { filter: brightness(1.08); }
+body[data-primary='soft'] .btn.primary, body[data-primary='grey'] .btn.primary, body[data-primary='lav'] .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+:root[data-theme='dark'] body[data-primary='grey'] .btn.primary { background: #c9c9d1; color: #17171c; border-color: #c9c9d1; font-weight: 500; }
+:root[data-theme='dark'] body[data-primary='grey'] .btn.primary:hover { background: #d6d6dd; }
+:root[data-theme='dark'] body[data-primary='lav'] .btn.primary { background: #bcbcdc; color: #16162a; border-color: #bcbcdc; font-weight: 500; }
+:root[data-theme='dark'] body[data-primary='lav'] .btn.primary:hover { background: #c9c9e5; }
+:root[data-theme='dark'] body[data-primary='soft'] .btn.primary { background: #3a3a47; color: #fff; border-color: #55556a; font-weight: 500; box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+:root[data-theme='dark'] body[data-primary='soft'] .btn.primary:hover { background: #444453; border-color: #62627a; }
+.page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+h1 { font-size: 20px; margin: 0 0 14px; }
+h2 { font-size: 13px; margin: 22px 0 8px; color: var(--muted); font-weight: 500; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); }
+.inp { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 6px 9px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { width: 100%; min-height: 200px; resize: vertical; font-family: var(--mono); font-size: 12.5px; display: block; }
+textarea.drag { border-style: dashed; border-color: var(--accent); }
+.pill { border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; color: var(--muted); }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.details { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+.chip { border: 1px solid var(--border); border-radius: 6px; padding: 1px 8px; background: var(--bg); color: var(--text); cursor: pointer; font-size: 12.5px; }
+.chip:hover { border-color: var(--border-strong); }
+.chip.auto { color: var(--muted); }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 16px; z-index: 10; }
+.modal { width: min(760px, 100%); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 16px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.modal .cpText { max-height: 340px; }
+.cp { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: var(--bg); }
+.cpText { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; color: var(--muted); max-height: 220px; overflow: auto; margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--border); }
+.list { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.r { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--border); }
+.r:first-child { border-top: 0; }
+.meta { font-size: 12px; color: var(--muted); }
+.pencil { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 0 4px; visibility: hidden; }
+.r:hover .pencil { visibility: visible; }
+.mockbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--faint); margin-bottom: 14px; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body data-primary="grey">
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button><button class="tab">Tasks</button><button class="tab">Review</button><button class="tab on">Import</button>
+  <div class="spacer"></div>
+  <span class="seg"><button id="bBefore">Before</button><button id="bAfter" class="on">After</button></span>
+  <span class="seg"><button id="tLight">Light</button><button id="tDark" class="on">Dark</button></span>
+</div>
+
+<div class="page">
+  <div class="mockbar">Copilot prompt:
+    <span class="seg"><button data-opt="A">A: Own section</button><button data-opt="B" class="on">B: Button + pop-up</button></span>
+    &nbsp; Primary button:
+    <span class="seg"><button data-p="today">Today (white)</button><button data-p="soft">Soft grey</button><button data-p="grey" class="on">C: Light grey</button><button data-p="lav">D: Muted accent</button></span>
+  </div>
+  <div class="row" style="margin-bottom:14px"><h1 style="margin:0">Import</h1><div class="spacer"></div><button class="btn after optB" id="openModal">Copilot Prompt Generator</button></div>
+
+  <div class="card">
+    <div class="row" style="flex-wrap:wrap"><b style="font-weight:600">Apple Mail</b><span class="muted">· last imported today at 9:14 AM</span></div>
+    <div class="row" style="margin-top:10px;flex-wrap:wrap">
+      <span class="muted">Read mail since</span><select class="inp"><option>Last import (today, 9:14 AM)</option></select>
+      <div class="spacer"></div><span class="muted" style="font-size:12px">frank@company.com · <span style="color:var(--accent)">Change</span></span>
+      <button class="btn primary">Check Apple Mail</button>
+    </div>
+  </div>
+
+  <!-- BEFORE -->
+  <div class="card before">
+    <div class="row" style="gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="pill on">Copilot summary</button><button class="pill">Email</button><button class="pill">Teams chat</button><button class="pill">Meeting transcript</button><button class="pill">Notes</button>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) 150px;gap:8px;margin-bottom:8px">
+      <input class="inp" placeholder="Title, e.g. Copilot summary, week of Oct 26">
+      <input class="inp" placeholder="From (optional)">
+      <input class="inp" type="date" value="2026-11-08">
+    </div>
+    <textarea class="inp" placeholder="Paste a Copilot weekly summary, Teams chat, email, meeting transcript, or notes. You can also drop a .txt, .vtt, or .md file here."></textarea>
+    <div class="row" style="margin-top:8px;flex-wrap:wrap">
+      <button class="btn ghost">Choose file…</button><div class="spacer"></div>
+      <span class="muted" style="font-size:12px">Sent to Anthropic (Claude Opus 5.5) to find suggestions</span>
+      <button class="btn primary">Extract suggestions</button>
+    </div>
+  </div>
+
+  <div class="card after optA">
+    <div class="row" style="margin-bottom:8px"><b style="font-weight:600">Copilot prompts</b></div>
+    <div id="slotA"></div>
+  </div>
+  <!-- AFTER -->
+  <div class="card after">
+    <div class="row" style="margin-bottom:8px;flex-wrap:wrap">
+      <b style="font-weight:600">Paste or drop text</b>
+      <div class="spacer"></div>
+      <input class="chip" type="date" value="2026-11-08" title="When this happened">
+    </div>
+    <textarea class="inp" id="text" placeholder="Copilot summary, Teams chat, email, transcript or notes"></textarea>
+    <div class="row" style="margin-top:8px;flex-wrap:wrap">
+      <button class="btn ghost">Choose file…</button>
+      <span class="faint" style="font-size:12px" id="count"></span>
+      <div class="spacer"></div>
+      <span class="muted" style="font-size:12px">Claude Opus 5.5 · sent to Anthropic</span>
+      <button class="btn primary" id="extract">Extract suggestions</button>
+    </div>
+  </div>
+
+  <h2>Recent imports</h2>
+  <div class="list" id="recent"></div>
+
+  <div class="notes">
+    <h3>Mockup notes (not part of the app)</h3>
+    <ul>
+      <li><b>Just paste and Extract.</b> Type pills, Title and From are gone. The date stays at the top right (today by default); set it for something older and the AI reads "Friday" as the Friday after that date (new: today relative dates always count from today).</li>
+      <li><b>The AI names it</b> with Claude or Ollama (e.g. "Dealer pricing sync, Nov 6"); Basic uses the first line; a dropped file uses its file name.</li>
+      <li><b>Where the Copilot prompt lives</b> (switch at the top): <b>A</b> its own "Copilot prompts" card on Import, between the mail card and the text card; <b>B</b> a "Copilot Prompt Generator" button at the top right of Import that opens a pop-up (Esc or Copy closes it). Either way it's separate from the text box.</li>
+      <li><b>Copilot prompt</b> makes the Teams chats or Teams meetings prompt (from docs/COPILOT-PROMPTS.md) with exact dates instead of "the last 7 days". It starts where your last import of that prompt ended, so nothing is pulled twice and nothing is missed. Copy it, paste it into Copilot, then paste Copilot's answer here.</li>
+      <li><b>How the app knows what was covered:</b> the prompt asks Copilot to start its answer with a line like "Chief of Staff · Teams chats · 2026-11-07 15:14 to 2026-11-08 09:30". When you Extract text with that line, the app records the range (only once it's imported, so a prompt you copied but never used doesn't skip anything), names the import "Teams chats, Nov 7 – 8" and dates it. The first time, it starts 7 days back. You can change the start.</li>
+      <li><b>Rename later:</b> hover a row in Recent imports and click the pencil to change the title.</li>
+      <li><b>Primary button in dark mode, newest options:</b> <b>C</b> a light grey (#c9c9d1) with dark text, and <b>D</b> a pale, low-saturation version of the accent purple (#bcbcdc) with dark text. Both are clearly lighter than the surroundings but not bright white. Light mode keeps today's black button.</li>
+      <li><b>Earlier options</b> (all screens, not just Import): today it's bright white. Option A uses the accent purple in both themes; option B keeps black-on-light in light mode and a lighter grey button with white, slightly bolder text in dark mode, so it still stands out from the others. Toggle above, and try Light / Dark.</li>
+      <li><b>Other changes:</b> the card says what to do ("Paste or drop text"), the whole text box accepts dropped files, the character count shows once there's text, and the long privacy sentence becomes "Claude Opus 5.5 · sent to Anthropic", matching the mail card. Ctrl+Enter still extracts.</li>
+    </ul>
+  </div>
+</div>
+<div class="overlay" id="modal" hidden>
+  <div class="modal">
+    <div class="row" style="margin-bottom:10px"><b style="font-weight:600">Copilot Prompt Generator</b><div class="spacer"></div><button class="btn ghost sm" id="closeModal">Esc</button></div>
+    <div id="slotB"></div>
+  </div>
+</div>
+<div id="hold" hidden>    <div id="cpBody">
+      <div class="row" style="flex-wrap:wrap">
+        <span class="seg"><button data-k="chats" class="on">Teams chats</button><button data-k="meetings">Teams meetings</button></span>
+        <span class="muted" style="font-size:12.5px">From</span>
+        <input class="chip" type="datetime-local" id="cpFrom">
+        <span class="muted" style="font-size:12.5px">to now</span>
+        <span class="faint" style="font-size:12px" id="cpLast"></span>
+        <div class="spacer"></div>
+        <button class="btn ghost sm" id="cpShow">Show prompt</button>
+        <button class="btn sm primary" id="cpCopy">Copy prompt</button>
+      </div>
+      <pre class="cpText" id="cpText" hidden></pre>
+    </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id)
+const root = document.documentElement
+let after = true
+function apply() {
+  document.querySelectorAll('.before').forEach((e) => (e.hidden = after))
+  document.querySelectorAll('.after').forEach((e) => (e.hidden = !after))
+  $('bBefore').classList.toggle('on', !after); $('bAfter').classList.toggle('on', after)
+  renderRecent()
+  if (typeof placeCp === 'function' && $('cpBody')) placeCp()
+}
+$('bBefore').onclick = () => { after = false; apply() }
+$('bAfter').onclick = () => { after = true; apply() }
+function theme(t) { root.dataset.theme = t; $('tLight').classList.toggle('on', t === 'light'); $('tDark').classList.toggle('on', t === 'dark') }
+$('tLight').onclick = () => theme('light'); $('tDark').onclick = () => theme('dark')
+document.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => {
+  document.body.dataset.primary = b.dataset.p
+  document.querySelectorAll('[data-p]').forEach((x) => x.classList.toggle('on', x === b))
+}))
+let cpKind = 'chats'
+const LAST = { chats: '2026-11-07T15:14', meetings: '2026-11-05T17:02' }
+const fmt = (v) => new Date(v).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+function cpRender() {
+  $('cpFrom').value = LAST[cpKind]
+  $('cpLast').textContent = `· last imported up to ${fmt(LAST[cpKind])}`
+  const from = $('cpFrom').value.replace('T', ' ')
+  const what = cpKind === 'chats' ? 'Microsoft Teams chats' : 'Microsoft Teams meetings'
+  const label = cpKind === 'chats' ? 'Teams chats' : 'Teams meetings'
+  $('cpText').textContent = `Review my ${what} from ${from} to 2026-11-08 09:30 (my local time). Leave out anything before ${from}. I will paste your answer into my task tracker, which uses AI to turn it into tasks, so follow the format below exactly.\n\nStart your answer with this line, exactly:\nChief of Staff · ${label} · ${from} to 2026-11-08 09:30\n\nRules:\n- Only report what is actually in the ${cpKind === 'chats' ? 'chats' : 'meetings'}. Do not guess or fill gaps…\n(the rest of the prompt, as in docs/COPILOT-PROMPTS.md)`
+}
+let opt = 'B'
+function placeCp() {
+  const body = $('cpBody')
+  ;(opt === 'A' ? $('slotA') : $('slotB')).appendChild(body)
+  document.querySelectorAll('.optA').forEach((e) => (e.style.display = opt === 'A' && after ? '' : 'none'))
+  document.querySelectorAll('.optB').forEach((e) => (e.style.display = opt === 'B' && after ? '' : 'none'))
+  document.querySelectorAll('[data-opt]').forEach((x) => x.classList.toggle('on', x.dataset.opt === opt))
+  cpRender()
+}
+document.querySelectorAll('[data-opt]').forEach((b) => (b.onclick = () => { opt = b.dataset.opt; $('modal').hidden = true; placeCp() }))
+$('openModal').onclick = () => { $('modal').hidden = false; cpRender() }
+$('closeModal').onclick = () => ($('modal').hidden = true)
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('modal').hidden = true })
+$('modal').onclick = (e) => { if (e.target === $('modal')) $('modal').hidden = true }
+document.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => { cpKind = b.dataset.k; document.querySelectorAll('[data-k]').forEach((x) => x.classList.toggle('on', x === b)); cpRender() }))
+$('cpFrom').onchange = () => { LAST[cpKind] = $('cpFrom').value; cpRender() }
+$('cpShow').onclick = () => { $('cpText').hidden = !$('cpText').hidden; $('cpShow').textContent = $('cpText').hidden ? 'Show prompt' : 'Hide prompt' }
+$('cpCopy').onclick = () => { toast('Prompt copied'); if (opt === 'B') $('modal').hidden = true }
+$('text').oninput = () => { const n = $('text').value.length; $('count').textContent = n ? `${n.toLocaleString()} characters` : '' }
+$('text').ondragover = (e) => { e.preventDefault(); $('text').classList.add('drag') }
+$('text').ondragleave = () => $('text').classList.remove('drag')
+let added = false
+$('extract').onclick = () => {
+  if (!$('text').value.trim()) { toast('Paste some text or choose a file first'); return }
+  const marked = $('text').value.startsWith('Chief of Staff ·')
+  added = marked ? 'copilot' : true; $('text').value = ''; $('count').textContent = ''; renderRecent(); toast('3 suggestions ready to review')
+}
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1800) }
+function renderRecent() {
+  const rows = [
+    after && added === 'copilot' ? { t: 'Teams chats, Nov 7 – 8', w: 'Copilot summary · Nov 8', s: '3 to review' } : null,
+    after && added === true ? { t: 'Dealer pricing sync, Nov 6', w: 'Meeting transcript · Nov 6', s: '3 to review' } : null,
+    { t: after ? 'Partner portal launch: weekly summary' : 'Copilot summary, week of Oct 26', w: 'Copilot summary · Nov 2', s: '11 suggestions · Claude Opus 5.5' },
+    { t: after ? 'Firmware 3.2 release planning' : 'Notes from 1:1', w: 'Notes · Nov 1', s: '4 suggestions · Claude Opus 5.5' },
+  ].filter(Boolean)
+  $('recent').innerHTML = rows.map((r) => `<div class="r"><div>${r.t}${after ? '<button class="pencil" title="Rename">✎</button>' : ''}<div class="meta">${r.w}</div></div><span class="muted" style="font-size:12px">${r.s}</span><button class="btn ghost sm">AI log</button></div>`).join('')
+  document.querySelectorAll('.pencil').forEach((p) => (p.onclick = () => toast('Rename inline (Enter saves, Esc cancels)')))
+}
+theme('dark'); apply(); placeCp()
+</script>
+</body>
+</html>

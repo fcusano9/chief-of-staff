@@ -4,11 +4,11 @@ import { SOURCE_KIND_LABELS } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { ConfirmButton, CostNote } from '../components/bits'
 import { OutlookImport } from '../components/OutlookImport'
+import { CopilotPromptDialog } from '../components/CopilotPromptDialog'
 import { useShortcutHints } from '../components/hints'
 import { mailAppName, useMailApp } from '../components/mailApp'
 import { useApp } from '../context'
 
-const KINDS: SourceKind[] = ['copilot_summary', 'meeting_transcript', 'teams_chat', 'email', 'note']
 const today = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -19,9 +19,9 @@ const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, {
 export function ImportScreen() {
   const { ai, go, toast, refresh, version } = useApp()
   useShortcutHints([['Ctrl ↵', 'extract'], ['N', 'new task']])
-  const [kind, setKind] = useState<SourceKind>('copilot_summary')
-  const [title, setTitle] = useState('')
-  const [fromName, setFromName] = useState('')
+  // Set only by a dropped or chosen file (its name and type); otherwise the AI names the import.
+  const [file, setFile] = useState<{ title: string; kind: SourceKind | undefined } | null>(null)
+  const [copilotOpen, setCopilotOpen] = useState(false)
   const [occurredOn, setOccurredOn] = useState(today)
   const [content, setContent] = useState('')
   const [busy, setBusy] = useState(false)
@@ -45,9 +45,7 @@ export function ImportScreen() {
     if (file.size > 5_000_000) return toast('That file is over 5 MB. Paste the relevant part instead.', true)
     const text = await file.text()
     setContent(text)
-    if (!title) setTitle(file.name.replace(/\.[^.]+$/, ''))
-    if (/\.(vtt|srt)$/i.test(file.name)) setKind('meeting_transcript')
-    else if (/\.eml$/i.test(file.name)) setKind('email')
+    setFile({ title: file.name.replace(/\.[^.]+$/, ''), kind: /\.(vtt|srt)$/i.test(file.name) ? 'meeting_transcript' : /\.eml$/i.test(file.name) ? 'email' : undefined })
   }
 
   const handleResult = (r: ImportResult) => {
@@ -62,8 +60,7 @@ export function ImportScreen() {
     }
     setFailure(null)
     setContent('')
-    setTitle('')
-    setFromName('')
+    setFile(null)
     if (r.suggestionsCreated > 0) {
       toast(`${r.suggestionsCreated} suggestion${r.suggestionsCreated === 1 ? '' : 's'} ready to review`)
       go('review')
@@ -74,7 +71,7 @@ export function ImportScreen() {
     if (!content.trim()) return toast('Paste some text or choose a file first', true)
     setBusy(true)
     try {
-      handleResult(await cos['sources.importAndExtract']({ kind, title, content, fromName, occurredOn }))
+      handleResult(await cos['sources.importAndExtract']({ content, occurredOn, ...(file ? { title: file.title, kind: file.kind } : {}) }))
     } catch (err) {
       toast(errorMessage(err), true)
     } finally {
@@ -97,29 +94,30 @@ export function ImportScreen() {
     <div className="page">
       <div className="head">
         <h1>Import</h1>
+        <div className="spacer" />
+        <button className="btn" onClick={() => setCopilotOpen(true)}>
+          Copilot Prompt Generator
+        </button>
       </div>
+      {copilotOpen && <CopilotPromptDialog onClose={() => setCopilotOpen(false)} />}
 
       <OutlookImport onFinished={refresh} />
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="row" style={{ gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-          {KINDS.map((k) => (
-            <button key={k} className={`pill ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>
-              {SOURCE_KIND_LABELS[k]}
-            </button>
-          ))}
-        </div>
-        <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) 150px', gap: 8, marginBottom: 8 }}>
-          <input className="inp" placeholder="Title, e.g. Copilot summary, week of Oct 26" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <input className="inp" placeholder="From (optional)" value={fromName} onChange={(e) => setFromName(e.target.value)} />
-          <input className="inp" type="date" value={occurredOn} onChange={(e) => setOccurredOn(e.target.value)} title="When this happened" />
+        <div className="row" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
+          <b style={{ fontWeight: 600 }}>Paste or drop text</b>
+          <div className="spacer" />
+          <input className="inp" style={{ width: 150 }} type="date" aria-label="Date" value={occurredOn} max={today()} onChange={(e) => setOccurredOn(e.target.value || today())} title="When this happened" />
         </div>
         <textarea
           className="inp"
           style={{ minHeight: 220, fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', borderStyle: dragging ? 'dashed' : 'solid', borderColor: dragging ? 'var(--accent)' : undefined }}
-          placeholder="Paste a Copilot weekly summary, Teams chat, email, meeting transcript, or notes. You can also drop a .txt, .vtt, or .md file here."
+          placeholder="Copilot summary, Teams chat, email, transcript or notes"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value)
+            if (!e.target.value) setFile(null)
+          }}
           onDragOver={(e) => {
             e.preventDefault()
             setDragging(true)
@@ -148,7 +146,7 @@ export function ImportScreen() {
           </span>
           <div className="spacer" />
           <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
-            {ai.sendsDataExternally ? `Sent to ${ai.provider === 'claude' ? 'Anthropic' : 'your Ollama server'} (${ai.label}) to find suggestions` : `${ai.label}: nothing leaves this computer`}
+            {ai.label} · {ai.sendsDataExternally ? `sent to ${ai.provider === 'claude' ? 'Anthropic' : 'your Ollama server'}` : 'nothing leaves this computer'}
           </span>
           <button className="btn primary" disabled={busy} onClick={() => void run()}>
             {busy ? 'Reading…' : 'Extract suggestions'}
@@ -228,10 +226,43 @@ function MailRunRow({ run, open, onToggle, busy, rerun }: { run: MailImportRun; 
 function SourceRow({ s, busy, rerun, nested }: { s: SourceItem; busy: boolean; rerun: (id: number) => void; nested?: boolean }) {
   const mailApp = useMailApp()
   const { go, toast, refresh, openAiLog } = useApp()
+  const [renaming, setRenaming] = useState<string | null>(null)
+  const saveName = () => {
+    if (renaming == null) return
+    if (!renaming.trim() || renaming.trim() === s.title) return setRenaming(null)
+    void cos['sources.rename'](s.id, renaming)
+      .then(() => {
+        setRenaming(null)
+        refresh()
+      })
+      .catch((err) => toast(errorMessage(err), true))
+  }
   return (
-    <div className="r" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto auto auto auto', paddingLeft: nested ? 32 : 12, cursor: 'default', background: nested ? 'var(--bg)' : undefined }}>
+    <div className="r src-row" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto auto auto auto auto', paddingLeft: nested ? 32 : 12, cursor: 'default', background: nested ? 'var(--bg)' : undefined }}>
       <div className="ttl">
-        {s.title}
+        {renaming != null ? (
+          <input
+            className="inp"
+            aria-label="Import name"
+            autoFocus
+            value={renaming}
+            onChange={(e) => setRenaming(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveName()
+              else if (e.key === 'Escape') setRenaming(null)
+            }}
+          />
+        ) : (
+          <>
+            {s.title}
+            {!s.fromOutlook && (
+              <button className="rename-btn" title="Rename" aria-label="Rename" onClick={() => setRenaming(s.title)}>
+                ✎
+              </button>
+            )}
+          </>
+        )}
         <span className="why">
           {SOURCE_KIND_LABELS[s.kind]} · {shortDate(s.occurredAt)}
           {s.fromName ? ` · ${s.fromName}` : ''}

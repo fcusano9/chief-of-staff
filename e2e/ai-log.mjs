@@ -22,8 +22,6 @@ const SUMMARY = `Action items:
 const app = await launch({ appDir, dataDir })
 try {
   await app.clickText('Import', '.tab')
-  await app.click('main input[placeholder^="Title"]')
-  await app.type('Weekly summary')
   await app.click('main textarea')
   await app.type(SUMMARY)
   await app.key('Enter', { ctrl: true })
@@ -32,7 +30,7 @@ try {
   // From Review
   await app.clickText('AI log', 'main button')
   await app.waitFor('[data-call]')
-  check('opens from Review', (await h1(app)) === 'Weekly summary')
+  check('opens from Review', (await h1(app)) === 'Action items:')
   check('Review tab stays highlighted', (await app.eval(`return document.querySelector('.tab.on')?.textContent`))?.startsWith('Review'))
   check('demo AI shows its parts', JSON.stringify(await tabs(app)) === JSON.stringify(['Instructions', 'Message', 'Response', 'Full request']), JSON.stringify(await tabs(app)))
   check('instructions explain the demo sends no prompt', (await pane(app)).includes('sends no prompt'))

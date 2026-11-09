@@ -121,6 +121,14 @@ The app should keep itself up to date (requested 2026-11-05; not to be built yet
 - **Signing:** unsigned updates may trigger Windows SmartScreen. On Mac, automatic updates generally require a signed, notarized app. Signing certificates cost money, which needs the owner's approval.
 - **Data safety:** an update that changes the database already gets the automatic safety copy before upgrading.
 
+## Text import and Copilot prompts (built 2026-11-09)
+
+- ✅ **Simpler text import:** paste or drop text, the date at the top right, Extract. No type, title or sender to fill in; the AI names each import (Claude or Ollama), and Recent imports has rename.
+- ✅ **Relative dates count from the item's date**, not today.
+- ✅ **Copilot Prompt Generator** (Import, top right): Teams chats or meetings prompts for an exact time span, starting where the last imported answer ended (see `docs/COPILOT-PROMPTS.md`).
+- ✅ **Light-grey main button in dark mode**, on every screen.
+- **Not yet checked:** the AI's names and the item-date calendar with real Claude or Ollama runs (the extraction benchmark wasn't rerun); a real Copilot answer keeping the marker line.
+
 ## Smaller backlog
 
 - An app icon (it still uses the default Electron icon).

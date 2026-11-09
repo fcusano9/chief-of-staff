@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import type { AiRun, ImportRequest, ImportResult, SourceItem, SourceKind } from '@shared/types'
+import { SOURCE_KIND_LABELS, type AiRun, type ImportRequest, type ImportResult, type SourceItem, type SourceKind } from '@shared/types'
 import { buildExtractionContext } from '../ai/context'
 import type { AiProvider } from '../ai/provider'
 import { validateSuggestions, type DroppedSuggestion, type SuggestionDraft } from '../ai/schema'
@@ -8,6 +8,7 @@ import { nowIso, transaction } from '../db'
 import { AiLogService } from './ai-log'
 import { cleanNextActions, NextActionService } from './next-actions'
 import { cleanAdjustments, PriorityAdjustmentService } from './priority-adjustments'
+import { CopilotService, parseMarker } from './copilot'
 
 /** Removes WEBVTT/SRT timing lines and cue numbers so transcripts read as plain text. */
 export function cleanTranscript(text: string): string {
@@ -75,8 +76,10 @@ export class SourceService {
     this.aiLog = new AiLogService(db)
     this.nextActions = new NextActionService(db)
     this.adjustments = new PriorityAdjustmentService(db)
+    this.copilot = new CopilotService(db)
   }
 
+  private readonly copilot: CopilotService
   private readonly aiLog: AiLogService
   private readonly nextActions: NextActionService
   private readonly adjustments: PriorityAdjustmentService
@@ -118,18 +121,39 @@ export class SourceService {
     const existing = this.db.prepare('SELECT id FROM source_items WHERE content_hash = ?').get(hash) as { id: number } | undefined
     if (existing) return { source: this.get(Number(existing.id))!, duplicate: true, suggestionsCreated: 0, error: null }
 
-    const occurredAt = req.occurredOn ? new Date(`${req.occurredOn}T12:00:00`).toISOString() : nowIso()
-    const id = Number(
-      this.db
-        .prepare('INSERT INTO source_items (kind, title, from_name, occurred_at, content, content_hash, imported_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(req.kind, req.title.trim() || defaultTitle(content), req.fromName?.trim() || null, occurredAt, content, hash, nowIso()).lastInsertRowid,
-    )
+    // An answer to a Copilot Prompt Generator prompt names and dates itself, and records what it covered.
+    const marker = parseMarker(content)
+    const given = req.title?.trim() ?? ''
+    const kind: SourceKind = req.kind ?? (marker ? 'copilot_summary' : detectKind(content))
+    const title = given || marker?.title || defaultTitle(content)
+    // Not named by the user or the marker: the AI's name for it replaces the first line (see extract).
+    const autoNamed = !given && !marker ? 1 : 0
+    const occurredAt = marker ? marker.to.toISOString() : req.occurredOn ? new Date(`${req.occurredOn}T12:00:00`).toISOString() : nowIso()
+    const id = transaction(this.db, () => {
+      const id = Number(
+        this.db
+          .prepare('INSERT INTO source_items (kind, title, from_name, occurred_at, content, content_hash, imported_at, auto_named) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+          .run(kind, title, req.fromName?.trim() || null, occurredAt, content, hash, nowIso(), autoNamed).lastInsertRowid,
+      )
+      if (marker) this.copilot.record(marker, id)
+      return id
+    })
     return this.extract(id)
+  }
+
+  /** Renames an import. The AI won't rename it after this. */
+  rename(id: number, title: string): SourceItem {
+    const name = title.trim().replace(/\s+/g, ' ').slice(0, 200)
+    if (!name) throw new Error('Give the import a name.')
+    this.db.prepare('UPDATE source_items SET title = ?, auto_named = 0 WHERE id = ?').run(name, id)
+    const item = this.get(id)
+    if (!item) throw new Error(`Import ${id} not found`)
+    return item
   }
 
   /** Runs (or re-runs) extraction for a source. Pending suggestions from an earlier run are replaced. */
   async extract(sourceId: number): Promise<ImportResult> {
-    const row = this.db.prepare('SELECT kind, title, from_name, occurred_at, content FROM source_items WHERE id = ?').get(sourceId) as Record<string, unknown> | undefined
+    const row = this.db.prepare('SELECT kind, title, from_name, occurred_at, content, auto_named, mail_meta FROM source_items WHERE id = ?').get(sourceId) as Record<string, unknown> | undefined
     if (!row) throw new Error(`Source ${sourceId} not found`)
     const ctx = buildExtractionContext(this.db, this.userName())
     let runId: number | null = null
@@ -178,6 +202,12 @@ export class SourceService {
           if (d.kind === 'new_project' || d.kind === 'new_person') created.set(`${d.kind}|${d.payload.title.toLowerCase()}`, id)
         }
         this.db.prepare('UPDATE source_items SET extracted_at = ?, extracted_by = ?, extract_error = NULL WHERE id = ?').run(now, provider.label, sourceId)
+        // A text import the user didn't name takes the AI's name and type for it (not mail: it has a subject).
+        const aiTitle = raw.item_title?.trim().replace(/\s+/g, ' ').slice(0, 80)
+        if (Number(row.auto_named) === 1 && row.mail_meta == null && aiTitle) {
+          const aiKind = raw.item_kind && raw.item_kind in SOURCE_KIND_LABELS ? raw.item_kind : (row.kind as SourceKind)
+          this.db.prepare('UPDATE source_items SET title = ?, kind = ? WHERE id = ?').run(aiTitle, aiKind, sourceId)
+        }
       })
       return { source: this.get(sourceId)!, duplicate: false, suggestionsCreated: drafts.length, error: null }
     } catch (err) {
@@ -207,6 +237,14 @@ export function applyMailRules(drafts: SuggestionDraft[], meta: MailMeta | null,
     }
     return d.kind === 'waiting_on' && meta.lastSentByMeAt ? [{ ...d, payload: { ...d.payload, waitingSince: meta.lastSentByMeAt } }] : [d]
   })
+}
+
+/** A first guess at what pasted text is, before the AI looks: a transcript, an email, or notes. */
+export function detectKind(content: string): SourceKind {
+  const head = content.slice(0, 4000)
+  if (/^WEBVTT/i.test(head) || (head.match(/^\s*\d{1,2}:\d{2}(:\d{2})?\b/gm)?.length ?? 0) >= 3) return 'meeting_transcript'
+  if (/^From:\s/im.test(head) && /^(Subject|Sent|To):\s/im.test(head)) return 'email'
+  return 'note'
 }
 
 function defaultTitle(content: string): string {

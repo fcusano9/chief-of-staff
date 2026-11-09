@@ -2,6 +2,14 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-09 · Simpler text import, AI-named imports, Copilot Prompt Generator, light-grey buttons (Frank)
+Frank's choices (mockup `design/import-text.html`, approved after five rounds):
+- **Type pills, Title and From are gone** from the text import: they only labeled the item for the AI and the lists. The date stays, at the top right, because it's the one detail with an effect.
+- **The AI names each import** (and corrects its type) with Claude or Ollama; Basic keeps the first line; a file keeps its file name; the user can rename from Recent imports (the AI never renames it after that).
+- **Relative dates count from the item's date** (found while answering Frank's question: the item's date was sent but "Friday" was always counted from today).
+- **Copilot Prompt Generator:** a button at the top right of Import opening a pop-up (Frank chose this over a section of its own and over a panel inside the text card). It builds the Teams chats or meetings prompt for an exact time span, starting where the last imported answer ended, so imports don't overlap. Copilot is asked to start its answer with a marker line; importing it records the span (`copilot_coverage`), names and dates the import. A copied but unused prompt records nothing, so nothing is skipped. The prompt text moved from `docs/COPILOT-PROMPTS.md` into `src/main/services/copilot.ts`.
+- **Light-grey main button in dark mode** (`--primary-bg: #c9c9d1`, dark text), on every screen. Frank found white too bright, a dark grey too dark, and preferred light grey to a pale accent. Light mode is unchanged.
+
 ### 2026-11-07 · Top bar: Import and Review in their own group; arrow keys switch tabs (Frank)
 **Why:** the old order (Today, Weekly, Tasks, Review, Waiting, Projects, People, Prep, Archive, Import) didn't follow how the day goes, and Import and Review are a separate daily step. The tabs are now Today, Tasks, Waiting, Weekly | Projects, People, with a boxed Import / Review group next to the search box. Import is tinted with the accent so it stands out. Review shows only while it has items (or while it's open, so it doesn't vanish when the last item is accepted). Prep and Archive are hidden until they're built. ← and → step through the tabs and stop at the ends; they do nothing while typing, with a window open, or while the list/details divider has focus (it resizes with ← →). G then I goes to Import. Chosen from the options in `design/top-bar-tabs.html`.
 

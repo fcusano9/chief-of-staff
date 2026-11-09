@@ -5,7 +5,7 @@ import { buildReplyPrompt, ReplySchema, type RawReply, type ReplyInput } from '.
 import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } from './status'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
-import { ALL_KINDS, asksForNextActions, buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
+import { ALL_KINDS, asksForNextActions, buildSystemPrompt, buildUserPrompt, itemDateOf, type ExtractionContext, type SourceForExtraction } from './context'
 import { LOCAL_CONTEXT, LOCAL_OUTPUT_HEADROOM, LOCAL_TIMEOUT_MS } from './limits'
 import { IMPORT_LINK_ASK, IMPORT_LINK_SYSTEM } from './prompts'
 import { AiError, logged, type AiCallLog, type AiProvider } from './provider'
@@ -71,13 +71,13 @@ export function extractionJsonSchema(kinds: SuggestionKind[] = ALL_KINDS): Recor
     for (const [k, v] of Object.entries(node)) if (k !== 'minimum' && k !== 'maximum' && k !== '$schema') out[k] = strip(v)
     return out
   }
-  const schema = strip(z.toJSONSchema(ExtractionSchema)) as { properties: { suggestions: { items: { properties: { kind: { enum: string[] } } } }; next_actions?: unknown; priority_changes?: unknown }; required: string[] }
+  const schema = strip(z.toJSONSchema(ExtractionSchema)) as { properties: { suggestions: { items: { properties: { kind: { enum: string[] } } } }; next_actions?: unknown; priority_changes?: unknown; item_title?: unknown; item_kind?: unknown }; required: string[] }
   schema.properties.suggestions.items.properties.kind.enum = kinds
-  // Next actions and priority changes are asked for only with the task kinds (pass 1 of the split passes).
+  // Next actions, priority changes and the item's name are asked for only with the task kinds (pass 1 of the split passes).
   if (!asksForNextActions(kinds)) {
-    delete schema.properties.next_actions
-    delete schema.properties.priority_changes
-    schema.required = schema.required.filter((k) => k !== 'next_actions' && k !== 'priority_changes')
+    const only = ['next_actions', 'priority_changes', 'item_title', 'item_kind']
+    for (const k of only) delete schema.properties[k as keyof typeof schema.properties]
+    schema.required = schema.required.filter((k) => !only.includes(k))
   }
   return schema
 }
@@ -110,7 +110,7 @@ function chatRequest(model: string, system: string, user: string, format: Record
 
 /** The request for one extraction pass. Exported so tests can check it without a running server. */
 export function buildOllamaRequest(model: string, ctx: ExtractionContext, source: SourceForExtraction, reasoning: Reasoning = 'low', kinds: SuggestionKind[] = ALL_KINDS) {
-  return chatRequest(model, buildSystemPrompt(ctx, kinds), buildUserPrompt(ctx, source), extractionJsonSchema(kinds), reasoning)
+  return chatRequest(model, buildSystemPrompt(ctx, kinds, itemDateOf(source)), buildUserPrompt(ctx, source), extractionJsonSchema(kinds), reasoning)
 }
 
 const LinkSchema = z.object({
@@ -223,7 +223,7 @@ export class OllamaProvider implements AiProvider {
     this.lastStats = { requests: 0, promptTokens: 0, outputTokens: 0, promptSeconds: 0, outputSeconds: 0 }
     if (passes === 'single') return this.suggest(buildOllamaRequest(this.model, ctx, source, reasoning), 'Find suggestions', log)
 
-    const { suggestions: tasks, next_actions, priority_changes } = await this.suggest(
+    const { suggestions: tasks, next_actions, priority_changes, item_title, item_kind } = await this.suggest(
       buildOllamaRequest(this.model, ctx, source, reasoning, TASK_KINDS),
       'Pass 1 of 3: tasks, updates, done, waiting on, next actions, priorities',
       log,
@@ -243,7 +243,7 @@ export class OllamaProvider implements AiProvider {
         if (!task.requester_name && link.requester_name && people.includes(link.requester_name)) task.requester_name = link.requester_name
       }
     }
-    return { suggestions: [...directory, ...tasks], next_actions, priority_changes }
+    return { suggestions: [...directory, ...tasks], next_actions, priority_changes, item_title, item_kind }
   }
 
   async writePersonBrief(input: PersonBriefInput): Promise<string> {
@@ -282,8 +282,8 @@ export class OllamaProvider implements AiProvider {
 
   private async suggest(request: ReturnType<typeof chatRequest>, purpose: string, log?: AiCallLog): Promise<RawExtraction> {
     const json = this.parseJson(await this.chat(request, purpose, log))
-    // A pass that wasn't asked for next actions or priority changes has none in its answer.
-    const parsed = ExtractionSchema.safeParse(json && typeof json === 'object' ? { next_actions: [], priority_changes: [], ...json } : json)
+    // A pass that wasn't asked for next actions, priority changes or the item's name has none in its answer.
+    const parsed = ExtractionSchema.safeParse(json && typeof json === 'object' ? { next_actions: [], priority_changes: [], item_title: '', item_kind: null, ...json } : json)
     if (!parsed.success) throw new AiError(`${this.model}'s response couldn't be read. Try again, or try a different model.`)
     return parsed.data
   }

@@ -99,7 +99,7 @@ describe('next actions: checking what the AI wrote', () => {
     const pass2 = extractionJsonSchema(['new_project', 'new_person', 'brief_update']) as { properties: object; required: string[] }
     expect(Object.keys(pass2.properties)).toEqual(['suggestions'])
     expect(pass2.required).toEqual(['suggestions'])
-    expect(Object.keys((extractionJsonSchema() as { properties: object }).properties)).toEqual(['suggestions', 'next_actions', 'priority_changes'])
+    expect(Object.keys((extractionJsonSchema() as { properties: object }).properties)).toEqual(['suggestions', 'next_actions', 'priority_changes', 'item_title', 'item_kind'])
   })
 })
 

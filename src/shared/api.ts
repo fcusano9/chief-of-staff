@@ -18,6 +18,9 @@ import type {
   ImportResult,
   MailCheck,
   MailImportRun,
+  CopilotCoverage,
+  CopilotPrompt,
+  CopilotPromptKind,
   MailAccount,
   MailInfo,
   MailJobStatus,
@@ -105,6 +108,12 @@ export interface Api {
   'sources.extract': (sourceId: number) => ImportResult
   'sources.list': () => SourceItem[]
   'sources.delete': (id: number) => void
+  /** Renames an import; the AI won't rename it after this. */
+  'sources.rename': (id: number, title: string) => SourceItem
+  /** Where each Copilot Prompt Generator prompt's last imported answer ended. */
+  'copilot.coverage': () => CopilotCoverage
+  /** A Copilot prompt from `from` (local "YYYY-MM-DD HH:MM"; default: where the last imported answer ended, or 7 days ago) to now. */
+  'copilot.prompt': (kind: CopilotPromptKind, from: string | null) => CopilotPrompt
   /** Every time the AI read this import: the exact requests sent and responses received. */
   'sources.aiRuns': (sourceId: number) => AiRun[]
   'mail.info': () => MailInfo
@@ -225,6 +234,9 @@ export const API_CHANNELS: ApiChannel[] = [
   'sources.extract',
   'sources.list',
   'sources.delete',
+  'sources.rename',
+  'copilot.coverage',
+  'copilot.prompt',
   'sources.aiRuns',
   'mail.info',
   'mail.check',

@@ -19,6 +19,7 @@ import { BriefingService } from './services/briefings'
 import { WeeklyService } from './services/weekly'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { MailService } from './services/mail'
+import { CopilotService } from './services/copilot'
 import { NextActionService, ProjectCardService } from './services/next-actions'
 import { ReplyService } from './services/replies'
 import { PriorityAdjustmentService } from './services/priority-adjustments'
@@ -134,6 +135,7 @@ const sources = new SourceService(db, currentProvider, () => settings.current.us
 const briefings = new BriefingService(db, tasks, currentProvider, () => settings.current.userName)
 const weekly = new WeeklyService(db, tasks, currentProvider, () => settings.current.userName)
 const usage = new UsageService(db)
+const copilot = new CopilotService(db)
 // Test data folders can read mail from a fixture file instead of Outlook (see e2e/README.md).
 const outlookFixture = isSeparateData ? process.env.COS_OUTLOOK_FIXTURE : undefined
 // COS_MAIL_APP=apple-mail makes the fixture behave as Apple Mail, for the Mac's words and Settings.
@@ -318,6 +320,9 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'sources.extract': (sourceId) => sources.extract(sourceId),
   'sources.list': () => sources.list(),
   'sources.delete': (id) => sources.delete(id),
+  'sources.rename': (id, title) => sources.rename(id, title),
+  'copilot.coverage': () => copilot.coverage(),
+  'copilot.prompt': (kind, from) => copilot.prompt(kind, from),
   'sources.aiRuns': (sourceId) => sources.aiRuns(sourceId),
   'mail.info': () => mail.info(),
   'mail.check': (since) => mail.check(since),

@@ -33,7 +33,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | Status card, project (Write) | Status, overview, latest updates, open tasks (title, waiting on, due date) | Updates **1,500 characters** (whole ones), **40** open tasks |
 | Draft reply (task card) | The email thread (every import of the conversation, plus the newest email if the app hasn't read it), the task's title, Notes and latest updates, the style note; on Try again, the user's note and the draft being replaced | Thread **40,000**, Notes **1,000**, updates **1,500 characters** (whole ones) |
 | Email conversations | Each message, plus the older messages quoted in the email (for context) | **8,000** per message, **4,000** of quoted older messages, **40,000** per conversation |
-| Every prompt | A three-week calendar, so "Friday" resolves correctly | 21 days |
+| Every prompt | A three-week calendar, so "Friday" resolves correctly. For an import dated before today, it starts on the item's date | 21 days |
 
 ## Imports (Import screen, Outlook mail)
 
@@ -44,6 +44,8 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ Output | Suggestions go to Review: new task, needs reply, status update, mark done, waiting on, new project, new person, context. |
 | ✅ Status cards | Where it stands and the next step, for each open task the item is about, shown on the task's card. None for tasks it proposes to mark done. |
 | ✅ Priority adjustment | For open tasks the item is about, not ones it proposes to mark done. See Priority adjustment below. |
+| ✅ Relative dates | Count from the item's date (the date on the Import card, an email's date, or a Copilot answer's end), not today. |
+| ✅ Naming | The AI also returns a name (under **60 characters**, kept to **80**) and type for the item. Used only for text imports the user didn't name: not mail, not a file (its file name), not a Copilot answer (named from its marker line), and never after the user renames it. Basic names nothing: the first line is kept. Ollama names it in pass 1. |
 | ✅ Mail rules | No "needs reply" if the user sent the latest message. A waiting-on item starts when the user sent the ask. Follow-up flag after **3 business days**. First Outlook check looks back **7 days**. |
 | ✅ Local model passes | Ollama runs split passes at low reasoning: (1) tasks, updates, done, waiting on and status cards; (2) projects, people and context; (3) linking new tasks to new projects and people. Each request times out after **6 minutes**. |
 | ✅ Claude settings | Medium effort, refusal fallback on (Opus and Sonnet). |

@@ -39,8 +39,8 @@ try {
   await app.clickText('Import', '.tab')
   check('import screen', (await h1(app)) === 'Import')
   check('privacy line for demo AI', (await app.eval(`return document.querySelector('main').textContent`)).includes('nothing leaves this computer'))
-  await app.click('main input[placeholder^="Title"]')
-  await app.type('Copilot summary, week of Oct 26')
+  check('no type pills, Title or From', (await app.eval(`return !document.querySelector('main .pill') && !document.querySelector('main input[placeholder^="Title"]') && !document.querySelector('main input[placeholder^="From"]')`)) === true)
+  check('date at the top right of the text card', (await app.eval(`return !!document.querySelector('main input[type=date][aria-label="Date"]')`)) === true)
   await app.click('main textarea')
   await app.type(SUMMARY)
   await app.screenshot(join(shots, 'm2-01-import.png'))
@@ -85,7 +85,7 @@ try {
   await app.sleep(500)
   const created = await app.eval(`return (await window.cos['tasks.listActive']()).find(t => t.title === 'Send pricing deck to EMEA distributors')`)
   check('edited suggestion accepted as task', !!created && created.projectId === projId && created.dueDate === '2026-11-06', JSON.stringify(created && { p: created.projectId, d: created.dueDate }))
-  check('task linked to its source', created?.linkedSources?.[0]?.title === 'Copilot summary, week of Oct 26')
+  check('task linked to its source', created?.linkedSources?.[0]?.title === 'Copilot summary for the week of Oct 26')
 
   // Accept "Looks done" via button, reject "Waiting on" with R
   await app.clickText('Accept', '[data-suggestion] button')
@@ -114,7 +114,7 @@ try {
   await app.key('k', { ctrl: true }); await app.type('Send pricing'); await app.key('Enter')
   await app.sleep(500)
   const knows = await app.eval(`return document.querySelector('.pane.right').textContent`)
-  check('task editor shows linked source', knows.includes('Linked: copilot summary “Copilot summary, week of Oct 26”'))
+  check('task editor shows linked source', knows.includes('“Copilot summary for the week of Oct 26”'))
 
   // Duplicate import
   await app.clickText('Import', '.tab')
@@ -155,7 +155,7 @@ try {
   check('Settings says imports go to Anthropic', (await app.eval(`return document.querySelector('[data-model-note]').textContent`)).includes('sent to Anthropic'))
   await app.screenshot(join(shots, 'm2-03-settings-claude.png'))
   await app.clickText('Import', '.tab')
-  check('privacy line for Claude', (await app.eval(`return document.querySelector('main').textContent`)).includes('Sent to Anthropic'))
+  check('privacy line for Claude', (await app.eval(`return document.querySelector('main').textContent`)).includes('Claude Opus 5.5 · sent to Anthropic'))
   // Optional: sends the fake key to Anthropic (no work data). Run with E2E_NETWORK=1.
   if (process.env.E2E_NETWORK) {
     await app.click('.iconbtn[title="Settings"]')
@@ -199,7 +199,7 @@ try {
   check('Settings says why', /Ollama isn't (installed|running)/.test(await app.eval(`return document.querySelector('[data-model-note]').textContent`)))
   await app.screenshot(join(shots, 'm2-05-settings-local.png'))
   await app.clickText('Import', '.tab')
-  check('privacy line for local model', (await app.eval(`return document.querySelector('main').textContent`)).includes('Ollama gpt-oss:20b: nothing leaves this computer'))
+  check('privacy line for local model', (await app.eval(`return document.querySelector('main').textContent`)).includes('Ollama gpt-oss:20b · nothing leaves this computer'))
   await app.click('.iconbtn[title="Settings"]')
   await setAddress('http://192.168.1.250:11434')
   await app.sleep(2500)
