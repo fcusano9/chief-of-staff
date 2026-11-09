@@ -58,7 +58,7 @@ function ModelCard() {
                 {ai.label}
                 {ai.available ? '' : ' (unavailable)'}
               </span>
-              <span className="faint">▾</span>
+              <span className="chev" aria-hidden />
             </button>
           </div>
         </div>
