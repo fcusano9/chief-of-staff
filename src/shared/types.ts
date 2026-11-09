@@ -113,6 +113,20 @@ export interface SourceRef {
   fromOutlook?: boolean
 }
 
+/** The Copilot Prompt Generator's prompts. */
+export type CopilotPromptKind = 'chats' | 'meetings'
+
+/** Where each Copilot prompt's last imported answer ended (ISO), or null if none was imported yet. */
+export type CopilotCoverage = Record<CopilotPromptKind, string | null>
+
+/** A prompt made by the Copilot Prompt Generator, for the time span it covers (local "YYYY-MM-DD HH:MM"). */
+export interface CopilotPrompt {
+  kind: CopilotPromptKind
+  from: string
+  to: string
+  text: string
+}
+
 export const SOURCE_KIND_LABELS: Record<SourceKind, string> = {
   copilot_summary: 'Copilot summary',
   email: 'Email',
@@ -136,8 +150,10 @@ export interface SourceItem extends SourceRef {
 }
 
 export interface ImportRequest {
-  kind: SourceKind
-  title: string
+  /** Left out, the app works out the type (and the AI may correct it). */
+  kind?: SourceKind
+  /** Left out, the item is named by the AI (or its first line with Basic, or its file name). */
+  title?: string
   content: string
   fromName?: string | null
   /** 'YYYY-MM-DD' the content is from; defaults to today. */

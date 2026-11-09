@@ -358,6 +358,21 @@ export const MIGRATIONS: Migration[] = [
   // The project brief is replaced by the project's card: each existing brief is kept as a dated
   // update, so nothing is lost, and the brief columns are cleared (they stay, unused).
   (db) => moveProjectBriefsToUpdates(db),
+  // Text imports the user didn't name are named by the AI (auto_named = 1 until the user renames
+  // one). copilot_coverage records the time span each Copilot Prompt Generator answer covered, so the
+  // next prompt starts where the last imported one ended.
+  `
+  ALTER TABLE source_items ADD COLUMN auto_named INTEGER NOT NULL DEFAULT 0;
+  CREATE TABLE copilot_coverage (
+    id INTEGER PRIMARY KEY,
+    prompt TEXT NOT NULL,
+    from_at TEXT NOT NULL,
+    to_at TEXT NOT NULL,
+    source_id INTEGER REFERENCES source_items(id) ON DELETE SET NULL,
+    imported_at TEXT NOT NULL
+  );
+  CREATE INDEX ix_copilot_coverage_prompt ON copilot_coverage(prompt, to_at);
+  `,
 ]
 
 /** Adds each project's status brief to the end of its Updates, dated when it was written, then clears it. */

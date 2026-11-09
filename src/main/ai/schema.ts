@@ -44,13 +44,18 @@ export const ExtractionSchema = z.object({
   suggestions: z.array(RawSuggestionSchema),
   next_actions: z.array(NextActionSchema).describe(F.next_actions),
   priority_changes: z.array(PriorityChangeSchema).describe(F.priority_changes),
+  item_title: z.string().describe(F.item_title),
+  item_kind: z.enum(['email', 'teams_chat', 'meeting_transcript', 'copilot_summary', 'note']).nullable().describe(F.item_kind),
 })
 
 export type RawSuggestion = z.infer<typeof RawSuggestionSchema>
 export type RawNextAction = z.infer<typeof NextActionSchema>
 export type RawPriorityChange = z.infer<typeof PriorityChangeSchema>
-/** Everything an extraction returns: suggestions for Review, and next actions for task cards. */
-export type RawExtraction = z.infer<typeof ExtractionSchema>
+/**
+ * Everything an extraction returns: suggestions for Review, next actions for task cards, and the
+ * item's name and type (optional: Basic and the later local-model passes don't give them).
+ */
+export type RawExtraction = Omit<z.infer<typeof ExtractionSchema>, 'item_title' | 'item_kind'> & Partial<Pick<z.infer<typeof ExtractionSchema>, 'item_title' | 'item_kind'>>
 
 export interface SuggestionDraft {
   kind: SuggestionKind

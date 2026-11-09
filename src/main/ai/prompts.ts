@@ -92,7 +92,7 @@ Rules:
 - Use only task_id, project_id, and brief_owner_id values from the lists below. If nothing matches, use null (or skip the suggestion).
 - When a new task was asked for by, or is waiting on, a person you propose with new_person, use the same name in requester_name or waiting_on.
 - In an email conversation, messages marked "sent by ${name}" are ${name}'s own. Don't propose tasks for things ${name} already did in them.
-- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") against today's date. If no deadline is stated, use null.
+- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") with the calendar below, counting from the item's date. If no deadline is stated, use null.
 - Every suggestion needs a short verbatim quote from the source as evidence.
 - Titles are short and start with a verb, except new_project and new_person titles, which are names. Write details in plain, factual language.
 - If the item contains nothing actionable, return an empty suggestions list.
@@ -113,12 +113,15 @@ ${priorityChangeRule('priority_changes', 'open tasks this item is about')} Use o
 
 /**
  * The calendar at the end of the import instructions. Small local models get "by Friday" wrong
- * without it.
+ * without it. It starts on the item's date, so "Friday" in last week's transcript means that week's Friday.
  * - today: e.g. "Wednesday 2026-11-04".
- * - days: the next three weeks, one "Weekday YYYY-MM-DD" per line.
+ * - itemDate: the item's date when it's earlier than today (e.g. "Monday 2026-11-02"), else null.
+ * - days: three weeks from the item's date (or today), one "Weekday YYYY-MM-DD" per line.
  */
-export const importCalendar = ({ today, days }: { today: string; days: string }) =>
-  `Today is ${today}. Use this calendar for relative dates; "Friday" means the next Friday on it, "next week" means the week after this one:\n${days}`
+export const importCalendar = ({ today, itemDate, days }: { today: string; itemDate: string | null; days: string }) =>
+  itemDate
+    ? `Today is ${today}, but this item is from ${itemDate}. Relative dates in it count from ${itemDate}: "Friday" means the first Friday on this calendar, "next week" means the week after the item's week:\n${days}`
+    : `Today is ${today}. Use this calendar for relative dates; "Friday" means the next Friday on it, "next week" means the week after this one:\n${days}`
 
 /** The last line of the import's user message, after the data. */
 export const importAsk = (name: string) => `Propose suggestions for ${name} based on the imported item.`
@@ -145,6 +148,9 @@ export const IMPORT_FIELDS = {
   /** The lists in the answer, other than the suggestions themselves. */
   next_actions: 'Where it stands and the next step, for each existing open task this item is about; empty if none',
   priority_changes: 'Only for open tasks this item is about whose score clearly misses something; empty if none',
+  /** What the imported item is, so the app can name it when the user didn't. */
+  item_title: 'A short, specific name for the imported item, under 60 characters, e.g. "Dealer pricing sync, Nov 6" or "Partner portal launch: weekly summary"',
+  item_kind: 'What the imported item is: email, teams_chat, meeting_transcript, copilot_summary or note',
 }
 
 /** The answer form for a task's card written by an import: where it stands (STATUS_BULLETS_FIELD) and the next step. */

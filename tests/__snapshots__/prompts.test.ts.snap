@@ -944,6 +944,10 @@ Propose suggestions for Frank Cusano based on the imported item.",
             ],
             "type": "object",
           },
+          "__schema14": {
+            "description": "{enum: ["email","teams_chat","meeting_transcript","copilot_summary","note"]}",
+            "type": "string",
+          },
           "__schema2": {
             "description": "{minimum: -9007199254740991, maximum: 9007199254740991}",
             "type": "integer",
@@ -975,6 +979,21 @@ Propose suggestions for Frank Cusano based on the imported item.",
         "additionalProperties": false,
         "description": "{$schema: "https://json-schema.org/draft/2020-12/schema"}",
         "properties": {
+          "item_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/__schema14",
+              },
+              {
+                "type": "null",
+              },
+            ],
+            "description": "What the imported item is: email, teams_chat, meeting_transcript, copilot_summary or note",
+          },
+          "item_title": {
+            "description": "A short, specific name for the imported item, under 60 characters, e.g. "Dealer pricing sync, Nov 6" or "Partner portal launch: weekly summary"",
+            "type": "string",
+          },
           "next_actions": {
             "description": "Where it stands and the next step, for each existing open task this item is about; empty if none",
             "items": {
@@ -1157,6 +1176,8 @@ Propose suggestions for Frank Cusano based on the imported item.",
           "suggestions",
           "next_actions",
           "priority_changes",
+          "item_title",
+          "item_kind",
         ],
         "type": "object",
       },
@@ -1181,7 +1202,7 @@ Rules:
 - Use only task_id, project_id, and brief_owner_id values from the lists below. If nothing matches, use null (or skip the suggestion).
 - When a new task was asked for by, or is waiting on, a person you propose with new_person, use the same name in requester_name or waiting_on.
 - In an email conversation, messages marked "sent by Frank Cusano" are Frank Cusano's own. Don't propose tasks for things Frank Cusano already did in them.
-- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") against today's date. If no deadline is stated, use null.
+- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") with the calendar below, counting from the item's date. If no deadline is stated, use null.
 - Every suggestion needs a short verbatim quote from the source as evidence.
 - Titles are short and start with a verb, except new_project and new_person titles, which are names. Write details in plain, factual language.
 - If the item contains nothing actionable, return an empty suggestions list.
@@ -1318,6 +1339,10 @@ Propose suggestions for Frank Cusano based on the imported item.",
             ],
             "type": "object",
           },
+          "__schema14": {
+            "description": "{enum: ["email","teams_chat","meeting_transcript","copilot_summary","note"]}",
+            "type": "string",
+          },
           "__schema2": {
             "description": "{minimum: -9007199254740991, maximum: 9007199254740991}",
             "type": "integer",
@@ -1349,6 +1374,21 @@ Propose suggestions for Frank Cusano based on the imported item.",
         "additionalProperties": false,
         "description": "{$schema: "https://json-schema.org/draft/2020-12/schema"}",
         "properties": {
+          "item_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/__schema14",
+              },
+              {
+                "type": "null",
+              },
+            ],
+            "description": "What the imported item is: email, teams_chat, meeting_transcript, copilot_summary or note",
+          },
+          "item_title": {
+            "description": "A short, specific name for the imported item, under 60 characters, e.g. "Dealer pricing sync, Nov 6" or "Partner portal launch: weekly summary"",
+            "type": "string",
+          },
           "next_actions": {
             "description": "Where it stands and the next step, for each existing open task this item is about; empty if none",
             "items": {
@@ -1531,6 +1571,8 @@ Propose suggestions for Frank Cusano based on the imported item.",
           "suggestions",
           "next_actions",
           "priority_changes",
+          "item_title",
+          "item_kind",
         ],
         "type": "object",
       },
@@ -1555,7 +1597,7 @@ Rules:
 - Use only task_id, project_id, and brief_owner_id values from the lists below. If nothing matches, use null (or skip the suggestion).
 - When a new task was asked for by, or is waiting on, a person you propose with new_person, use the same name in requester_name or waiting_on.
 - In an email conversation, messages marked "sent by Frank Cusano" are Frank Cusano's own. Don't propose tasks for things Frank Cusano already did in them.
-- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") against today's date. If no deadline is stated, use null.
+- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") with the calendar below, counting from the item's date. If no deadline is stated, use null.
 - Every suggestion needs a short verbatim quote from the source as evidence.
 - Titles are short and start with a verb, except new_project and new_person titles, which are names. Write details in plain, factual language.
 - If the item contains nothing actionable, return an empty suggestions list.
@@ -1594,6 +1636,28 @@ exports[`every AI request matches the saved snapshot > import, Ollama pass 1 (ta
   "format": {
     "additionalProperties": false,
     "properties": {
+      "item_kind": {
+        "anyOf": [
+          {
+            "enum": [
+              "email",
+              "teams_chat",
+              "meeting_transcript",
+              "copilot_summary",
+              "note",
+            ],
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+        "description": "What the imported item is: email, teams_chat, meeting_transcript, copilot_summary or note",
+      },
+      "item_title": {
+        "description": "A short, specific name for the imported item, under 60 characters, e.g. "Dealer pricing sync, Nov 6" or "Partner portal launch: weekly summary"",
+        "type": "string",
+      },
       "next_actions": {
         "description": "Where it stands and the next step, for each existing open task this item is about; empty if none",
         "items": {
@@ -1802,6 +1866,8 @@ exports[`every AI request matches the saved snapshot > import, Ollama pass 1 (ta
       "suggestions",
       "next_actions",
       "priority_changes",
+      "item_title",
+      "item_kind",
     ],
     "type": "object",
   },
@@ -1822,7 +1888,7 @@ Rules:
 - Use only task_id, project_id, and brief_owner_id values from the lists below. If nothing matches, use null (or skip the suggestion).
 - When a new task was asked for by, or is waiting on, a person you propose with new_person, use the same name in requester_name or waiting_on.
 - In an email conversation, messages marked "sent by Frank Cusano" are Frank Cusano's own. Don't propose tasks for things Frank Cusano already did in them.
-- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") against today's date. If no deadline is stated, use null.
+- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") with the calendar below, counting from the item's date. If no deadline is stated, use null.
 - Every suggestion needs a short verbatim quote from the source as evidence.
 - Titles are short and start with a verb, except new_project and new_person titles, which are names. Write details in plain, factual language.
 - If the item contains nothing actionable, return an empty suggestions list.
@@ -2059,7 +2125,7 @@ Rules:
 - Use only task_id, project_id, and brief_owner_id values from the lists below. If nothing matches, use null (or skip the suggestion).
 - When a new task was asked for by, or is waiting on, a person you propose with new_person, use the same name in requester_name or waiting_on.
 - In an email conversation, messages marked "sent by Frank Cusano" are Frank Cusano's own. Don't propose tasks for things Frank Cusano already did in them.
-- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") against today's date. If no deadline is stated, use null.
+- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") with the calendar below, counting from the item's date. If no deadline is stated, use null.
 - Every suggestion needs a short verbatim quote from the source as evidence.
 - Titles are short and start with a verb, except new_project and new_person titles, which are names. Write details in plain, factual language.
 - If the item contains nothing actionable, return an empty suggestions list.
@@ -2200,6 +2266,28 @@ exports[`every AI request matches the saved snapshot > import, Ollama single pas
   "format": {
     "additionalProperties": false,
     "properties": {
+      "item_kind": {
+        "anyOf": [
+          {
+            "enum": [
+              "email",
+              "teams_chat",
+              "meeting_transcript",
+              "copilot_summary",
+              "note",
+            ],
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+        "description": "What the imported item is: email, teams_chat, meeting_transcript, copilot_summary or note",
+      },
+      "item_title": {
+        "description": "A short, specific name for the imported item, under 60 characters, e.g. "Dealer pricing sync, Nov 6" or "Partner portal launch: weekly summary"",
+        "type": "string",
+      },
       "next_actions": {
         "description": "Where it stands and the next step, for each existing open task this item is about; empty if none",
         "items": {
@@ -2411,6 +2499,8 @@ exports[`every AI request matches the saved snapshot > import, Ollama single pas
       "suggestions",
       "next_actions",
       "priority_changes",
+      "item_title",
+      "item_kind",
     ],
     "type": "object",
   },
@@ -2434,7 +2524,7 @@ Rules:
 - Use only task_id, project_id, and brief_owner_id values from the lists below. If nothing matches, use null (or skip the suggestion).
 - When a new task was asked for by, or is waiting on, a person you propose with new_person, use the same name in requester_name or waiting_on.
 - In an email conversation, messages marked "sent by Frank Cusano" are Frank Cusano's own. Don't propose tasks for things Frank Cusano already did in them.
-- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") against today's date. If no deadline is stated, use null.
+- Dates are YYYY-MM-DD. Resolve relative dates ("Friday", "end of next week") with the calendar below, counting from the item's date. If no deadline is stated, use null.
 - Every suggestion needs a short verbatim quote from the source as evidence.
 - Titles are short and start with a verb, except new_project and new_person titles, which are names. Write details in plain, factual language.
 - If the item contains nothing actionable, return an empty suggestions list.

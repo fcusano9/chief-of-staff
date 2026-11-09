@@ -6,7 +6,7 @@ import { buildReplyPrompt, ReplySchema, type RawReply, type ReplyInput } from '.
 import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } from './status'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
-import { buildSystemPrompt, buildUserPrompt, type ExtractionContext, type SourceForExtraction } from './context'
+import { buildSystemPrompt, buildUserPrompt, itemDateOf, type ExtractionContext, type SourceForExtraction } from './context'
 import { CLAUDE_MAX_TOKENS } from './limits'
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawExtraction } from './schema'
@@ -27,7 +27,7 @@ export function buildExtractionRequest(model: string, ctx: ExtractionContext, so
     max_tokens: CLAUDE_MAX_TOKENS.import,
     // Medium effort: extraction is careful reading, not deep reasoning.
     output_config: { effort: 'medium' as const, format: betaZodOutputFormat(ExtractionSchema) },
-    system: buildSystemPrompt(ctx),
+    system: buildSystemPrompt(ctx, undefined, itemDateOf(source)),
     messages: [{ role: 'user' as const, content: buildUserPrompt(ctx, source) }],
     ...fallbackFor(model),
   }

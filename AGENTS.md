@@ -56,7 +56,7 @@ src/renderer/    React UI: App.tsx (shell, shortcuts), screens/, components/
 tests/           Vitest: priority, data services, AI and review queue
 e2e/             Drives the real app over CDP against a throwaway data folder
 design/          Approved clickable prototype (direction B)
-docs/            ROADMAP.md, DECISIONS.md, COPILOT-PROMPTS.md (Teams chat and meeting prompts for import)
+docs/            ROADMAP.md, DECISIONS.md, COPILOT-PROMPTS.md (how the Copilot Prompt Generator's Teams prompts work)
 ```
 
 ## Commands
@@ -105,6 +105,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   - Buttons don't show keys. The bottom bar shows the keys for the current page: each screen calls `useShortcutHints` (`components/hints.ts`), and an open editor registers its own keys at a higher level, which win while it's open.
   - Global shortcuts run in the capture phase and consume their keys.
 - **Project colors:** tasks are themed with their project's color. Tasks with no project get no label and a neutral stripe.
+- **Import screen:** the mail card (Outlook or Apple Mail), then the text card: "Paste or drop text", the date at the top right (today by default; relative dates in the item count from it), Extract. No type, title or sender fields: the AI returns `item_title` and `item_kind` with an import and they replace the first-line title for text the user didn't name (`source_items.auto_named`; rename in Recent imports clears it). **Copilot Prompt Generator** (button at the top right, `components/CopilotPromptDialog.tsx`, `services/copilot.ts`): Teams chats or meetings prompts for an exact span starting at the end of the last imported answer (`copilot_coverage`, recorded when an answer starting with the marker line is imported). The prompt text lives in `services/copilot.ts`.
 - **Copy:** sentence case and plain language, no exclamation marks. Say "Saved", not "Successfully saved!".
 - **No explaining sentences in the app (Frank's preference).** Don't add helper text that explains what the app does or reassures the user, such as "Nothing is read until you do" or "Opens in Mail with this text above the quoted email. You save or send it there." It reads like an AI talking to the user. Labels, buttons, statuses and real errors (with how to fix them) are enough. This applies to mockups too: explanations belong in the mockup's notes box, not in the screen.
 - **Model picker** (`components/ModelMenu.tsx`): one menu, used by Settings → AI and by the AI button at the bottom right. It lists Basic, the Claude models once a key is saved, and every model in Ollama ("Ollama gpt-oss:20b", no "(local)": the group header says where it runs). Up/Down, Enter, Esc. If the chosen model can't be used (no key, Ollama stopped, model not downloaded), the choice is kept and shown as unavailable in red, never switched silently (`AiStatus.available`, `problem`).

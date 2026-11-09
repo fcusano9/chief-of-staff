@@ -2,6 +2,14 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-09 · Simpler text import, AI-named imports, Copilot Prompt Generator, light-grey buttons (Frank)
+Frank's choices (mockup `design/import-text.html`, approved after five rounds):
+- **Type pills, Title and From are gone** from the text import: they only labeled the item for the AI and the lists. The date stays, at the top right, because it's the one detail with an effect.
+- **The AI names each import** (and corrects its type) with Claude or Ollama; Basic keeps the first line; a file keeps its file name; the user can rename from Recent imports (the AI never renames it after that).
+- **Relative dates count from the item's date** (found while answering Frank's question: the item's date was sent but "Friday" was always counted from today).
+- **Copilot Prompt Generator:** a button at the top right of Import opening a pop-up (Frank chose this over a section of its own and over a panel inside the text card). It builds the Teams chats or meetings prompt for an exact time span, starting where the last imported answer ended, so imports don't overlap. Copilot is asked to start its answer with a marker line; importing it records the span (`copilot_coverage`), names and dates the import. A copied but unused prompt records nothing, so nothing is skipped. The prompt text moved from `docs/COPILOT-PROMPTS.md` into `src/main/services/copilot.ts`.
+- **Light-grey main button in dark mode** (`--primary-bg: #c9c9d1`, dark text), on every screen. Frank found white too bright, a dark grey too dark, and preferred light grey to a pale accent. Light mode is unchanged.
+
 ### 2026-11-07 · Mac mail through Apple Mail; Open in and Save to Drafts on both computers (Frank)
 Frank's choices (research in ROADMAP.md "Mac mail", mockup `design/apple-mail.html`, approved after two rounds):
 - **Apple Mail first** on the Mac, then Thunderbird, then Airmail and eM Client if it doesn't work out. New Outlook for Mac has no scripting, and Graph needs IT. Apple Mail reaches Microsoft 365 over EWS, which Microsoft is retiring by 2027-04-01, so this may stop working before Apple ships Graph support.

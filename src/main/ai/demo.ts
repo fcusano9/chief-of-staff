@@ -71,7 +71,8 @@ export class DemoProvider implements AiProvider {
       outputTokens: null,
     })
     // Basic follows simple rules and can't judge a next step or a priority, so it suggests neither.
-    return { suggestions: out, next_actions: [], priority_changes: [] }
+    // Nor does it name the item: the app keeps its own title (the first line) and type.
+    return { suggestions: out, next_actions: [], priority_changes: [], item_title: '', item_kind: null }
   }
 
   private applyRules(ctx: ExtractionContext, source: SourceForExtraction): RawSuggestion[] {

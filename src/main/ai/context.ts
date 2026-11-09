@@ -103,14 +103,20 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
  * The system prompt. `kinds` limits which suggestions to ask for: the local model does better
  * with a few kinds per request (see OllamaProvider's split passes); Claude gets them all at once.
  */
-export function buildSystemPrompt(ctx: ExtractionContext, kinds: SuggestionKind[] = ALL_KINDS): string {
+/** The item's local date (YYYY-MM-DD) from its occurredAt, for the calendar. */
+export const itemDateOf = (source: Pick<SourceForExtraction, 'occurredAt'>): string | null => {
+  const d = new Date(source.occurredAt)
+  return Number.isNaN(d.getTime()) ? null : localDate(d)
+}
+
+export function buildSystemPrompt(ctx: ExtractionContext, kinds: SuggestionKind[] = ALL_KINDS, itemDate: string | null = null): string {
   const name = ctx.userName
   const defs = importKindDefinitions(name)
   return importSystem({
     name,
     kindList: kinds.map((k) => `- ${k}: ${defs[k]}`).join('\n'),
     nextActions: asksForNextActions(kinds) ? importNextActionRule(name) : '',
-    calendar: calendar(ctx.today),
+    calendar: calendar(ctx.today, itemDate),
   })
 }
 
@@ -123,18 +129,26 @@ export const aiChangeText = (c: { delta: number; reason: string } | null) => (c 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 /**
- * Today plus the next three weeks with weekday names, so the model looks dates up instead of
- * counting. Small local models get relative dates like "by Friday" wrong without it.
+ * Three weeks of dates with weekday names, so the model looks dates up instead of counting. Small
+ * local models get relative dates like "by Friday" wrong without it. It starts on the item's date
+ * when that's earlier than today (last week's transcript), else today.
  */
-export function calendar(today: string): string {
-  const [y, m, d] = today.split('-').map(Number)
+export function calendar(today: string, itemDate: string | null = null): string {
+  const named = (ymd: string) => {
+    const [y, m, d] = ymd.split('-').map(Number)
+    return new Date(y!, m! - 1, d!)
+  }
+  const older = itemDate && itemDate < today ? itemDate : null
+  const start = named(older ?? today)
   const lines: string[] = []
   for (let i = 0; i < 21; i++) {
-    const day = new Date(y!, m! - 1, d! + i)
-    const note = i === 0 ? ' (today)' : i === 1 ? ' (tomorrow)' : ''
-    lines.push(`${DAY_NAMES[day.getDay()]} ${localDate(day)}${note}`)
+    const day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)
+    const ymd = localDate(day)
+    const note = ymd === today ? ' (today)' : older && i === 0 ? ' (item date)' : !older && i === 1 ? ' (tomorrow)' : ''
+    lines.push(`${DAY_NAMES[day.getDay()]} ${ymd}${note}`)
   }
-  return importCalendar({ today: lines[0]!.replace(' (today)', ''), days: lines.join('\n') })
+  const label = (ymd: string) => `${DAY_NAMES[named(ymd).getDay()]} ${ymd}`
+  return importCalendar({ today: label(today), itemDate: older ? label(older) : null, days: lines.join('\n') })
 }
 
 export function buildUserPrompt(ctx: ExtractionContext, source: SourceForExtraction): string {

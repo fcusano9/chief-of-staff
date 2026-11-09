@@ -68,8 +68,6 @@ try {
   check('local model selected', bar.includes('Ollama fake:1b') && !bar.includes('unavailable'), bar.slice(-60))
 
   await app.clickText('Import', '.tab')
-  await app.click('main input[placeholder^="Title"]')
-  await app.type('Dealer training kickoff')
   await app.click('main textarea')
   await app.type('Transcript of the dealer training kickoff.')
   await app.key('Enter', { ctrl: true })
