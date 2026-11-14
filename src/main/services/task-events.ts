@@ -61,13 +61,7 @@ export class TaskEventService {
   /** A task's recorded changes, newest first; the fields changed in one save keep their order. */
   activity(taskId: number): TaskActivity {
     const rows = this.db.prepare('SELECT * FROM task_events WHERE work_item_id = ? ORDER BY at DESC, id DESC').all(taskId) as Record<string, unknown>[]
-    return { events: rows.map(toEvent), loggedSince: this.loggedSince() }
-  }
-
-  /** When the log started. */
-  loggedSince(): string {
-    const row = this.db.prepare('SELECT started_at FROM task_events_meta LIMIT 1').get() as { started_at: string } | undefined
-    return row?.started_at ?? new Date(0).toISOString()
+    return { events: rows.map(toEvent) }
   }
 
   /** Due dates moved from one date to another (not set or removed) between `from` and `to`, oldest first. */

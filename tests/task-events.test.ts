@@ -144,9 +144,9 @@ describe('task events: recording', () => {
     ])
   })
 
-  it('says when the log started, and is deleted with the task', () => {
+  it('is deleted with the task', () => {
     const t = tasks.save(task({ title: 'Deck' }))
-    expect(Date.parse(tasks.activity(t.id).loggedSince)).not.toBeNaN()
+    expect(tasks.activity(t.id).events.length).toBeGreaterThan(0)
     tasks.delete(t.id)
     expect(Number((db.prepare('SELECT COUNT(*) AS n FROM task_events').get() as { n: number }).n)).toBe(0)
   })

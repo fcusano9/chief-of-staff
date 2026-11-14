@@ -72,7 +72,7 @@ Frank's choices, asked up front (mockup `design/task-activity.html`, approved):
 - **Every line says who:** "by you", 'from “Import”, accepted in Review', or "by the AI, daily briefing" / 'import “X”'.
 - **Weekly Slipping now includes pushed-back tasks** (Frank chose to add it now rather than wait for history): amber "Pushed back N days" with the moves and who; an overdue task that was also pushed says so. The reflection is sent them too.
 - **Proposed in the mockup, approved:** one line per field when a save changes several; the newest 8 lines, then Show all; dates moved earlier or removed don't count as slipping; weeks before the log show overdue only.
-- **Decided while building:** pushed back is net over the week (Nov 6 → Nov 11 → Nov 8 counts as 2 days); a task finished by the week's end isn't slipping; values are stored as they read then (names, not ids), so renaming a project doesn't rewrite history. History starts when this ships; older tasks say "Changes before … weren't recorded."
+- **Decided while building:** pushed back is net over the week (Nov 6 → Nov 11 → Nov 8 counts as 2 days); a task finished by the week's end isn't slipping; values are stored as they read then (names, not ids), so renaming a project doesn't rewrite history. History starts when this ships; older tasks show only when they were created. (They used to say "Changes before … weren't recorded"; Frank had it removed because it also showed on tasks with full logs, such as demo data.)
 
 ### 2026-11-05 · AI priority adjustment: ±15, applied at once, undoable; an AI rules page (Frank)
 Frank's choices, asked up front (mockup `design/priority-adjustment.html`, approved):
