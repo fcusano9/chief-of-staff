@@ -73,6 +73,8 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
   const [showUpdates, setShowUpdates] = useState(false)
   const [adjust, setAdjust] = useState(false)
   const [newSubtask, setNewSubtask] = useState('')
+  // A task with no subtasks shows only "+ Add subtask" until it's clicked.
+  const [addingSubtask, setAddingSubtask] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
 
   const dirty = form != null && JSON.stringify(form) !== snapshot
@@ -200,6 +202,12 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             <StatusCard scope="task" id={isNew ? null : form.input.id} done={form.input.status === 'done'} />
             <ReplyCard taskId={isNew ? null : form.input.id} onSaved={() => setActivityKey((k) => k + 1)} />
 
+            {form.input.subtasks.length === 0 && !addingSubtask ? (
+              <button type="button" className="link-btn" style={{ marginTop: 4 }} onClick={() => setAddingSubtask(true)}>
+                + Add subtask
+              </button>
+            ) : (
+            <>
             <div className="label" style={{ marginBottom: 4 }}>Subtasks</div>
             {form.input.subtasks.map((s, i) => (
               <div className="check" key={s.id || `new-${i}`}>
@@ -217,6 +225,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
               <input
                 type="text"
                 placeholder="Add subtask…"
+                autoFocus={addingSubtask && form.input.subtasks.length === 0}
                 value={newSubtask}
                 onChange={(e) => setNewSubtask(e.target.value)}
                 onKeyDown={(e) => {
@@ -225,9 +234,14 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
                     addSubtask()
                   }
                 }}
-                onBlur={addSubtask}
+                onBlur={() => {
+                  addSubtask()
+                  if (!newSubtask.trim()) setAddingSubtask(false)
+                }}
               />
             </div>
+            </>
+            )}
 
             <div className="label" style={{ margin: '14px 0 4px' }}>Notes</div>
             <textarea
@@ -246,12 +260,10 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
                   <UpdatesButton updates={updates} onOpen={() => setShowUpdates(true)} />
                 </div>
                 <LatestUpdate updates={updates} onOpen={() => setShowUpdates(true)} />
-                {!updates.trim() && <div className="faint" style={{ fontSize: 'var(--fs-sm)' }}>No updates yet. What you accept from imports in Review lands here.</div>}
               </>
             )}
 
-            <div className="label" style={{ margin: '14px 0 4px' }}>Activity</div>
-            <ActivityLog task={task} reloadKey={activityKey} />
+            <ActivityLog task={task} reloadKey={activityKey} folded />
           </div>
 
           <div className="meta">
@@ -318,7 +330,8 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
                   </span>
                 )}
               </div>
-              {ai && (
+              {ai && !adjust && !byHand && <div className="faint" style={{ fontSize: 'var(--fs-xs)', marginTop: 2 }}>✦ Includes an AI change</div>}
+              {ai && adjust && (
                 <div className={`ai-adj ${byHand ? 'off' : ''}`} data-testid="ai-adjustment">
                   <div className="row">
                     <span className="ai-adj-h">

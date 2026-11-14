@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calmer list screens</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  --none: #a1a1aa;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; --none: #5c5c66; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; --none: #5c5c66; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.spacer { flex: 1; }
+.row { display: flex; align-items: center; gap: 8px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+
+/* Mockup controls */
+.mock { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--sel); border-bottom: 1px solid var(--border-strong); font-size: 12.5px; flex-wrap: wrap; }
+.mock b { font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex: none; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.mock .seg button.on { background: var(--text); color: var(--bg); }
+.mock label { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+
+/* App frame */
+.app { height: calc(100vh - 41px); min-height: 640px; display: grid; grid-template-rows: 44px minmax(0, 1fr) 26px; }
+.top { display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.sep { width: 1px; height: 18px; background: var(--border-strong); margin: 0 4px; }
+.tgroup { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 8px; }
+.tgroup .tab { padding: 4px 9px; }
+.tgroup .imp { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+.gsearch { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 4px 10px; color: var(--faint); width: 200px; font-size: 12.5px; }
+.statusbar { display: flex; align-items: center; gap: 14px; padding: 0 14px; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; }
+.kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-radius: 4px; padding: 0 5px; color: var(--muted); background: var(--surface); }
+
+/* Split view */
+.split { display: grid; grid-template-columns: minmax(360px, 50%) 7px minmax(360px, 1fr); min-height: 0; }
+.pane { overflow: auto; min-width: 0; }
+.pane.left { padding: 22px 18px 40px 28px; }
+.divider { background: var(--border); width: 1px; margin: 0 3px; }
+.pane.right { background: var(--surface); container-type: inline-size; }
+@container (max-width: 620px) { .dgrid { grid-template-columns: minmax(0, 1fr) !important; } .dgrid .meta { order: -1; } }
+/* After: more room at the sides of both panes */
+.after .pane.left { padding: 26px 36px 40px 40px; }
+.after .editor { padding: 22px 40px 32px 40px; }
+.after .split { grid-template-columns: minmax(360px, 50%) 9px minmax(360px, 1fr); }
+
+/* List */
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; min-height: 28px; }
+h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; margin: 0; }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.sm { padding: 2px 8px; font-size: 12.5px; }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+.btn.ghost:hover { color: var(--text); background: var(--hover); }
+.btn.danger { color: var(--danger); }
+.link { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.toolbar { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.search-box { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 3px 8px; }
+.search-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; padding: 1px 0; }
+.after .toolbar { margin: 0 0 14px; }
+
+/* Project menu (after) */
+.pmenu { position: relative; flex: none; }
+.pmenu > .btn { min-width: 150px; justify-content: space-between; }
+.pmenu .chev { color: var(--faint); font-size: 10px; }
+.pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 5; min-width: 210px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: 4px; }
+.pop button { display: flex; width: 100%; align-items: center; gap: 8px; border: 0; background: none; padding: 5px 8px; border-radius: 5px; cursor: pointer; text-align: left; }
+.pop button:hover { background: var(--hover); }
+.pop button.on { background: var(--sel); }
+.pop .n { margin-left: auto; font: 11.5px var(--mono); color: var(--faint); }
+.pop hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.r { display: grid; grid-template-columns: 3px 30px minmax(0, 1fr) auto 76px; gap: 10px; align-items: center; padding: 7px 12px 7px 0; border-top: 1px solid var(--border); cursor: pointer; position: relative; }
+.r:first-child { border-top: 0; }
+.r:hover { background: var(--hover); }
+.r.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.stripe { height: 18px; border-radius: 0 2px 2px 0; }
+.score { font: 500 12.5px var(--mono); text-align: right; }
+.s-hi { color: var(--danger); } .s-md { color: var(--warn); } .s-lo { color: var(--muted); }
+.ai-mark { color: var(--accent); font-size: 10px; margin-left: 1px; }
+.pre-mark { margin: 0 2px 0 0; color: var(--faint); }
+.pre-mark.ai-mark { color: var(--accent); }
+.marks .pre-mark.new { outline-offset: 1px; border-radius: 3px; }
+.ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.why { color: var(--faint); font-size: 12.5px; margin-left: 8px; }
+.chip { font-size: 11.5px; padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
+.chip.followup { margin-left: 8px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+.due { color: var(--muted); text-align: right; font-size: 12.5px; white-space: nowrap; }
+.due.over { color: var(--danger); }
+/* After rows: no project chip, a bit taller, reason on hover */
+.after .r { grid-template-columns: 3px 36px minmax(0, 1fr) 76px; padding: 9px 14px 9px 0; }
+.tip { display: none; position: absolute; left: 46px; top: calc(100% - 4px); z-index: 4; background: var(--text); color: var(--bg); font-size: 12px; padding: 4px 9px; border-radius: 6px; white-space: nowrap; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.after .r:hover .tip { display: block; }
+.tip .dot { margin-right: 5px; }
+.sec { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 6px 2px; font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.sec:first-of-type { margin-top: 0; }
+.sec .n { font: 11.5px var(--mono); color: var(--faint); font-weight: 400; }
+.sec.over { color: var(--danger); }
+
+/* Editor */
+.editor-stripe { height: 4px; position: sticky; top: 0; z-index: 1; }
+.editor { padding: 16px 22px 28px; }
+.score.big { font-size: 16px; min-width: 26px; text-align: left; }
+.title-inp { flex: 1; font-size: 16.5px; font-weight: 500; border: 0; background: none; outline: 0; min-width: 0; padding: 4px 0; }
+.iconbtn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: 22px; }
+.after .dgrid { gap: 32px; }
+.label { color: var(--muted); font-size: 12.5px; }
+.lbl { display: flex; align-items: center; gap: 8px; margin: 16px 0 5px; }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 8px; outline: 0; }
+.inp:focus { border-color: var(--accent); }
+textarea.inp { min-height: 120px; resize: vertical; display: block; line-height: 1.5; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 9px 12px; font-size: 12.5px; }
+.status { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 45%, transparent); border-radius: 8px; padding: 9px 12px; font-size: 12.5px; }
+.status ul { margin: 4px 0 6px; padding-left: 18px; }
+.status .h { color: var(--accent); font-weight: 500; }
+.reply { margin-top: 10px; }
+.check { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.box { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--bg); display: grid; place-items: center; font-size: 11px; padding: 0; flex: none; }
+.box.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.check input { flex: 1; border: 0; background: none; outline: 0; padding: 2px 0; min-width: 0; }
+.check .done-ttl { color: var(--faint); text-decoration: line-through; }
+.latest { display: block; width: 100%; text-align: left; cursor: pointer; }
+.act { font-size: 12.5px; color: var(--muted); line-height: 1.9; }
+.act .d { font: 11.5px var(--mono); color: var(--faint); display: inline-block; min-width: 50px; }
+.fold { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 6px 0; margin-top: 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--border); text-align: left; }
+.fold:hover { color: var(--text); }
+.fold .chev { color: var(--faint); transition: transform .15s; display: inline-block; }
+.fold.open .chev { transform: rotate(90deg); }
+.field { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; padding: 4px 0; }
+.field > span { color: var(--muted); }
+.ai-adj { margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: color-mix(in srgb, var(--accent-bg) 55%, transparent); font-size: 12px; }
+.ai-adj .h { color: var(--accent); font-weight: 500; }
+.foot { display: flex; align-items: center; gap: 8px; margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); }
+.blank { height: 100%; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 24px; }
+
+/* Change marks */
+.marks .new { outline: 2px dashed var(--ok); outline-offset: 3px; border-radius: 6px; }
+.marks .gone { outline: 2px dashed var(--danger); outline-offset: 3px; border-radius: 6px; }
+.marks .pad { box-shadow: inset 40px 0 0 color-mix(in srgb, var(--ok) 10%, transparent), inset -36px 0 0 color-mix(in srgb, var(--ok) 10%, transparent); }
+.marks .editor.pad { box-shadow: inset 40px 0 0 color-mix(in srgb, var(--ok) 10%, transparent), inset -40px 0 0 color-mix(in srgb, var(--ok) 10%, transparent); }
+
+/* Notes */
+.notes { max-width: 980px; margin: 22px auto 40px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 18px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+.key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+/* One-row project chips with a More menu (after) */
+.chips { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; margin-bottom: 12px; align-items: center; }
+.chips .pill { flex: none; }
+.chips .pill .n { font: 11px var(--mono); color: var(--faint); }
+.chips .more { position: relative; flex: none; }
+.chips .more > .pill { border-style: dashed; }
+.pop.fixed { position: fixed; }
+.chips.fitting { visibility: hidden; }
+.cscroll { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.cscroll > .pill { flex: none; }
+.cscroll > .pill .n { font: 11px var(--mono); color: var(--faint); }
+.cscroll .pin-sep { width: 1px; height: 16px; background: var(--border-strong); flex: none; }
+.cscroll .scroller { position: relative; flex: 1; min-width: 0; }
+.cscroll .track { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; scroll-behavior: smooth; scrollbar-width: none; padding: 1px 0; }
+.cscroll .track::-webkit-scrollbar { display: none; }
+.cscroll .track .pill { flex: none; }
+.cscroll .track .pill .n { font: 11px var(--mono); color: var(--faint); }
+.cscroll .fade { position: absolute; top: 0; bottom: 0; width: 56px; display: flex; align-items: center; pointer-events: none; opacity: 0; transition: opacity .15s; }
+.cscroll .fade.l { left: 0; background: linear-gradient(to right, var(--bg) 45%, transparent); justify-content: flex-start; }
+.cscroll .fade.r { right: 0; background: linear-gradient(to left, var(--bg) 45%, transparent); justify-content: flex-end; }
+.cscroll .fade.on { opacity: 1; }
+.cscroll .fade.on .arrow { pointer-events: auto; }
+.cscroll .arrow { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--surface); color: var(--muted); cursor: pointer; display: grid; place-items: center; font-size: 13px; line-height: 1; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.cscroll .arrow:hover { color: var(--text); background: var(--hover); }
+.tab { cursor: pointer; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #fff; }
+.stars { font-family: var(--mono); color: var(--warn); letter-spacing: 1px; font-size: 12px; }
+.stars .off { color: var(--faint); }
+.sub { color: var(--faint); font-size: 11.5px; }
+.swatch { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; display: inline-block; }
+.swatch.on { border-color: var(--text); box-shadow: inset 0 0 0 2px var(--surface); }
+.after .pane.left .toolbar .inp { width: auto; padding: 3px 28px 3px 8px; }
+</style>
+</head>
+<body>
+<div class="mock">
+  <b>Calmer lists mockup</b>
+  <div class="seg" id="views"><button data-view="before">Before</button><button data-view="after" class="on">After</button></div>
+  <label>Chips ranked by <select id="rank" class="inp" style="width:auto;padding:1px 6px"><option value="count">Most open tasks</option><option value="urgent">Most urgent task</option></select></label>
+  <label>Chip row <select id="chipmode" class="inp" style="width:auto;padding:1px 6px"><option value="scroll">Scrolls sideways</option><option value="fit">Fits, rest in More</option></select></label>
+  <label><input type="checkbox" id="marks" checked> Show changes</label>
+  <label><input type="checkbox" id="empty"> Nothing selected</label>
+  <div class="spacer"></div>
+  <span class="faint">Switch screens with the tabs below</span>
+  <button class="btn sm ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="app" id="app">
+  <div class="top">
+    <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+    <button class="tab">Today</button><button class="tab" data-screen="tasks">Tasks</button><button class="tab" data-screen="waiting">Waiting</button><button class="tab">Weekly</button>
+    <span class="sep"></span>
+    <button class="tab" data-screen="projects">Projects</button><button class="tab" data-screen="people">People</button>
+    <div class="spacer"></div>
+    <div class="tgroup"><button class="tab imp">Import</button><button class="tab">Review 3</button></div>
+    <div class="gsearch">Search  <span class="kbd">Ctrl K</span></div>
+  </div>
+  <div class="split">
+    <section class="pane left" id="left"></section>
+    <div class="divider"></div>
+    <section class="pane right" id="right"></section>
+  </div>
+  <div class="statusbar" id="hints"></div>
+</div>
+
+<div class="notes" id="notes"></div>
+
+<script>
+const $ = (id) => document.getElementById(id)
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
+
+const projects = [
+  { id: 1, name: 'DM-NVX 3.2', color: '#378ADD', status: 'Active', overview: 'Firmware 3.2 launch for the DM-NVX encoder line.' },
+  { id: 2, name: 'Dealer portal', color: '#D9822B', status: 'Active', overview: 'New login and order tracking for dealers.' },
+  { id: 3, name: 'Q1 roadmap', color: '#7C5BD6', status: 'Active', overview: '' },
+  { id: 4, name: 'Pricing refresh', color: '#2F9E6E', status: 'On hold', overview: '2027 list prices for the AV line.' },
+  { id: 5, name: 'Hiring', color: '#D6457A', status: 'Active', overview: 'Second PM for the control systems team.' },
+  { id: 6, name: 'Partner onboarding', color: '#3BA3A3', status: 'Active', overview: '' },
+  { id: 7, name: 'Support tooling', color: '#8A8F3A', status: 'Active', overview: 'Macros and a firmware rollback guide for support.' },
+  { id: 8, name: 'Trade show 2027', color: '#C0504D', status: 'Active', overview: '' },
+]
+const P = (id) => projects.find((p) => p.id === id) ?? null
+// Today is Fri Nov 13; the week ends Sat Nov 14.
+const tasks = [
+  { id: 1, score: 82, ai: true, title: 'Dealer FAQ for DM-NVX 3.2 firmware', p: 1, due: 'Nov 11', bucket: 'over', why: 'overdue 2 days · asked by Kenji (4★)' },
+  { id: 2, score: 76, title: 'Send revised pricing sheet to finance', p: 4, due: 'Nov 12', bucket: 'over', why: 'overdue 1 day · 2 follow-ups' },
+  { id: 3, score: 71, title: 'Review partner onboarding checklist', p: 6, due: 'Today', bucket: 'week', why: 'due today · asked by Priya (5★)' },
+  { id: 4, score: 64, ai: true, title: 'Prep Q1 roadmap review deck', p: 3, due: 'Sat', bucket: 'week', why: 'due tomorrow · high-impact project' },
+  { id: 5, score: 58, title: 'Reply to Marco about portal login errors', p: 2, due: 'Sat', bucket: 'week', why: 'due tomorrow · from an email' },
+  { id: 6, score: 52, manual: true, title: 'Interview loop feedback for PM candidate', p: 5, due: 'Nov 17', bucket: 'later', why: 'due in 4 days' },
+  { id: 7, score: 47, title: 'Draft support macro for firmware rollback', p: 7, due: 'Nov 19', bucket: 'later', why: 'due in 6 days' },
+  { id: 8, score: 41, title: 'Book dealer webinar recording studio', p: 2, due: 'Nov 24', bucket: 'later', why: 'due in 11 days' },
+  { id: 9, score: 38, title: 'Portal release notes for dealers', p: 2, due: 'Nov 26', bucket: 'later', why: 'due in 13 days' },
+  { id: 10, score: 33, title: 'Clean up Jira epics for 3.3', p: 1, due: '', bucket: 'later', why: 'no due date · 3 weeks old' },
+  { id: 11, score: 30, title: 'Booth layout options', p: 8, due: '', bucket: 'later', why: 'no due date' },
+  { id: 12, score: 28, title: 'Read competitor teardown from Sam', p: null, due: '', bucket: 'later', why: 'no due date' },
+  { id: 13, score: 22, title: 'Expense report for October trip', p: null, due: '', bucket: 'later', why: 'no due date' },
+]
+const waiting = [
+  { id: 101, score: 74, title: 'Final firmware build for 3.2', p: 1, on: 'Kenji Mori', days: 8, follow: true },
+  { id: 102, score: 61, title: 'Legal sign-off on dealer terms', p: 2, on: 'Dana Whitfield', days: 6, follow: true },
+  { id: 103, score: 55, title: 'Budget approval for trade show booth', p: 8, on: 'Raj Patel', days: 4, follow: false },
+  { id: 104, score: 49, title: 'Candidate availability for final round', p: 5, on: 'Lena Fischer', days: 3, follow: false },
+  { id: 105, score: 40, title: 'Partner logo files', p: 6, on: 'Priya Shah', days: 2, follow: false },
+  { id: 106, score: 31, title: 'Support ticket export', p: 7, on: 'Marco Ruiz', days: 1, follow: false },
+  { id: 107, score: 26, title: 'Quote for studio rental', p: null, on: 'Vendor', days: 1, follow: false },
+]
+const people = [
+  { id: 201, name: 'Priya Shah', role: 'VP, Product', company: 'Crestline', stars: 5, open: 3, color: '#7C5BD6', brief: 'Runs product for the AV line; owns the partner program.' },
+  { id: 202, name: 'Kenji Mori', role: 'Firmware lead', company: 'Crestline', stars: 4, open: 4, color: '#378ADD', brief: 'Leads DM-NVX firmware; technical reviewer for dealer docs.' },
+  { id: 203, name: 'Dana Whitfield', role: 'Counsel', company: 'Crestline', stars: 3, open: 1, color: '#D9822B', brief: '' },
+  { id: 204, name: 'Raj Patel', role: 'Finance partner', company: 'Crestline', stars: 3, open: 2, color: '#2F9E6E', brief: 'Approves budgets for events and pricing changes.' },
+  { id: 205, name: 'Marco Ruiz', role: 'Dealer, West region', company: 'AVPro Supply', stars: 2, open: 2, color: '#D6457A', brief: '' },
+  { id: 206, name: 'Lena Fischer', role: 'Recruiter', company: 'Crestline', stars: 2, open: 1, color: '#3BA3A3', brief: '' },
+  { id: 207, name: 'Sam Okafor', role: 'Competitive intel', company: 'Crestline', stars: 1, open: 1, color: '#8A8F3A', brief: '' },
+]
+const editor1 = {
+  status: ['Draft is done except the rollback section, which still describes 3.1.', 'Kenji owns the technical review; he approved the outline on Nov 10.', 'Dealers asked for a one-page PDF rather than a web page.'],
+  next: 'Rewrite the rollback section for 3.1 → 3.2 and send it to Kenji.',
+  subtasks: [{ t: 'Draft rollback section', d: true }, { t: 'Send to Kenji for review', d: false }],
+  notes: 'Fix the rollback section (still says 3.1).\nAsk Priya about the PDF template.',
+  latest: { date: 'Nov 12', src: 'Re: DM-NVX FAQ – draft', text: 'Kenji wants the HDCP issue on older encoders called out near the top.' },
+  nUpd: 5, asked: 'Kenji Mori',
+  adj: { delta: 10, reason: 'Kenji has followed up twice and the webinar is Nov 15.', from: 'Daily briefing · Nov 13' },
+  base: 72, followUps: 2,
+}
+const activity = [
+  ['Nov 12', 'Linked: email “Re: DM-NVX FAQ – draft”'], ['Nov 12', 'AI priority +10 (daily briefing)'],
+  ['Nov 10', 'Due date changed to Nov 11'], ['Nov 10', 'Linked: Teams chat with Kenji Mori'],
+  ['Nov 6', 'Asked by set to Kenji Mori'], ['Nov 4', 'Status: Waiting on Kenji Mori'],
+  ['Nov 4', 'Back to Open'], ['Nov 3', 'Created from meeting “DM-NVX launch sync”'], ['Nov 3', 'Project set to DM-NVX 3.2'],
+]
+
+let screen = 'tasks', view = 'after', group = true, marks = true, emptySel = false, rank = 'count', chipMode = 'scroll'
+let sel = { tasks: 1, waiting: 101, projects: 1, people: 201 }
+let filter = { tasks: 'all', waiting: 'all' }
+let moreOpen = false, actOpen = false, adjustOpen = false
+const sc = (s) => (s >= 70 ? 's-hi' : s >= 45 ? 's-md' : 's-lo')
+const after = () => view === 'after'
+const m = (cls) => (marks ? cls : '')
+const items = () => (screen === 'waiting' ? waiting : tasks)
+const matches = (t, f) => f === 'all' || (f === 'none' ? t.p == null : t.p === f)
+const visible = () => items().filter((t) => matches(t, filter[screen]))
+const stripe = (p) => `<div class="stripe" style="background:${p ? p.color : 'var(--none)'}"></div>`
+const chipHtml = (p) => p ? `<span class="chip ${m('gone')}" style="background:color-mix(in srgb, ${p.color} 16%, transparent);color:color-mix(in srgb, ${p.color} 65%, var(--text))">${esc(p.name)}</span>` : '<span></span>'
+const scoreHtml = (t) => after()
+  ? `<div class="score ${sc(t.score)}">${t.manual ? `<span class="pre-mark ${m('new')}" title="Set by hand">*</span>` : t.ai ? `<span class="ai-mark pre-mark ${m('new')}" title="Includes an AI change">✦</span>` : ''}${t.score}</div>`
+  : `<div class="score ${sc(t.score)}">${t.score}${t.manual ? '*' : t.ai ? '<span class="ai-mark">✦</span>' : ''}</div>`
+
+/* ---------- Task and waiting rows ---------- */
+function taskRow(t, { inProject = false } = {}) {
+  const p = P(t.p), on = t.id === sel[screen] && !inProject
+  const due = `<div class="due ${t.bucket === 'over' ? 'over' : ''}">${esc(t.due)}</div>`
+  if (!after()) return `<div class="r ${on ? 'sel' : ''}" data-id="${t.id}">${stripe(p)}${scoreHtml(t)}<div class="ttl">${esc(t.title)}${inProject ? '' : `<span class="why ${m('gone')}">${esc(t.why)}</span>`}</div>${chipHtml(p)}${due}</div>`
+  const tip = `<div class="tip">${p ? `<span class="dot" style="background:${p.color}"></span>${esc(p.name)} · ` : ''}${esc(t.why)}</div>`
+  return `<div class="r ${on ? 'sel' : ''}" data-id="${t.id}">${stripe(p)}${scoreHtml(t)}<div class="ttl">${esc(t.title)}</div>${due}${tip}</div>`
+}
+function waitRow(t) {
+  const p = P(t.p), on = t.id === sel.waiting
+  const fu = t.follow ? '<span class="chip followup">Follow up</span>' : ''
+  const due = `<div class="due">Wait ${t.days}d</div>`
+  if (!after()) return `<div class="r ${on ? 'sel' : ''}" data-id="${t.id}">${stripe(p)}${scoreHtml(t)}<div class="ttl">${esc(t.title)}<span class="why">waiting on ${esc(t.on)}</span>${fu}</div>${chipHtml(p)}${due}</div>`
+  // Waiting keeps who it's waiting on in the row: that's the point of the list.
+  const tip = `<div class="tip">${p ? `<span class="dot" style="background:${p.color}"></span>${esc(p.name)}` : 'No project'}</div>`
+  return `<div class="r ${on ? 'sel' : ''}" data-id="${t.id}">${stripe(p)}${scoreHtml(t)}<div class="ttl">${esc(t.title)}<span class="why">${esc(t.on)}</span>${group ? '' : fu}</div>${due}${tip}</div>`
+}
+
+/* ---------- Project chips ---------- */
+function rankedProjects() {
+  const list = items()
+  const stats = projects.map((p) => {
+    const mine = list.filter((t) => t.p === p.id)
+    return { p, count: mine.length, top: Math.max(0, ...mine.map((t) => t.score)) }
+  }).filter((s) => s.count > 0)
+  stats.sort((a, b) => rank === 'urgent' ? b.top - a.top || b.count - a.count : b.count - a.count || b.top - a.top)
+  return stats
+}
+function chipsBefore() {
+  const f = filter[screen]
+  return `<div class="pills ${m('new') && ''}"><button class="pill ${f === 'all' ? 'on' : ''}" data-f="all">All</button>${projects.map((p) => `<button class="pill ${f === p.id ? 'on' : ''}" data-f="${p.id}"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</button>`).join('')}<button class="pill ${f === 'none' ? 'on' : ''}" data-f="none">No project</button></div>`
+}
+function chipsScroll() {
+  const f = filter[screen], stats = rankedProjects()
+  const noneCount = items().filter((t) => t.p == null).length
+  const pill = (s) => `<button class="pill ${f === s.p.id ? 'on' : ''}" data-f="${s.p.id}"><span class="dot" style="background:${s.p.color}"></span>${esc(s.p.name)} <span class="n">${s.count}</span></button>`
+  return `<div class="cscroll ${m('new')}" id="cscroll"><button class="pill ${f === 'all' ? 'on' : ''}" data-f="all">All <span class="n">${items().length}</span></button><span class="pin-sep"></span><div class="scroller"><div class="track" id="track">${stats.map(pill).join('')}${noneCount ? `<button class="pill ${f === 'none' ? 'on' : ''}" data-f="none">No project <span class="n">${noneCount}</span></button>` : ''}</div><div class="fade l" id="fadel"><button class="arrow" id="scrl" aria-label="Scroll left">‹</button></div><div class="fade r" id="fader"><button class="arrow" id="scrr" aria-label="Scroll right">›</button></div></div></div>`
+}
+// Fades and arrows show only on the side that has more chips; the wheel scrolls sideways; the selected chip stays in view.
+let trackX = 0
+function setupScroll() {
+  const t = $('track'); if (!t) return
+  const sync = () => { trackX = t.scrollLeft; $('fadel').classList.toggle('on', t.scrollLeft > 2); $('fader').classList.toggle('on', t.scrollLeft + t.clientWidth < t.scrollWidth - 2) }
+  t.style.scrollBehavior = 'auto'; t.scrollLeft = trackX
+  const on = t.querySelector('.pill.on')
+  if (on && (on.offsetLeft < t.scrollLeft || on.offsetLeft + on.offsetWidth > t.scrollLeft + t.clientWidth)) t.scrollLeft = on.offsetLeft - 40
+  t.style.scrollBehavior = ''
+  t.addEventListener('scroll', sync)
+  t.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); t.scrollLeft += e.deltaY } }, { passive: false })
+  sync()
+}
+function chipsAfter() {
+  if (chipMode === 'scroll') return chipsScroll()
+  const f = filter[screen], stats = rankedProjects()
+  const noneCount = items().filter((t) => t.p == null).length
+  const pill = (s) => `<button class="pill ${f === s.p.id ? 'on' : ''}" data-f="${s.p.id}" data-chip="${s.p.id}"><span class="dot" style="background:${s.p.color}"></span>${esc(s.p.name)} <span class="n">${s.count}</span></button>`
+  return `<div class="chips fitting ${m('new')}" id="chips"><button class="pill ${f === 'all' ? 'on' : ''}" data-f="all">All <span class="n">${items().length}</span></button>${stats.map(pill).join('')}<div class="more" id="more"></div></div>`
+}
+// Shows as many chips as fit on one line; the rest (and No project) go in More. A project picked from More takes the last place in the row.
+function fitChips() {
+  document.querySelectorAll('.pop.fixed').forEach((x) => x.remove()); placePop = null
+  const row = $('chips'); if (!row) return
+  const f = filter[screen], stats = rankedProjects()
+  const chips = [...row.querySelectorAll('[data-chip]')]
+  const more = $('more')
+  chips.forEach((c) => (c.style.display = ''))
+  const hidden = new Set()
+  const drawMore = () => {
+    const hid = stats.filter((s) => hidden.has(s.p.id))
+    const noneCount = items().filter((t) => t.p == null).length
+    const label = hid.length ? `More ${hid.length}` : 'More'
+    const pop = moreOpen ? `<div class="pop">${hid.map((s) => `<button data-f="${s.p.id}" class="${f === s.p.id ? 'on' : ''}"><span class="dot" style="background:${s.p.color}"></span>${esc(s.p.name)}<span class="n">${s.count}</span></button>`).join('')}${hid.length ? '<hr>' : ''}<button data-f="none" class="${f === 'none' ? 'on' : ''}">No project<span class="n">${noneCount}</span></button></div>` : ''
+    more.innerHTML = `<button class="pill ${f === 'none' || hid.some((s) => s.p.id === f) ? 'on' : ''}" id="morebtn">${f === 'none' ? 'No project' : label} <span class="chev" style="font-size:9px;color:var(--faint)">▼</span></button>`
+    // The menu sits outside the row (which clips its overflow), under the More button.
+    document.querySelectorAll('.pop.fixed').forEach((x) => x.remove())
+    if (pop) { const holder = document.createElement('div'); holder.innerHTML = pop; const el = holder.firstChild; el.classList.add('fixed'); document.body.append(el); placePop = () => { const r = $('morebtn').getBoundingClientRect(); el.style.top = r.bottom + 4 + 'px'; el.style.left = Math.max(8, r.right - el.offsetWidth) + 'px' } }
+  }
+  drawMore()
+  const order = [...chips].reverse() // hide from the lowest-ranked end
+  for (const c of order) {
+    if (row.scrollWidth <= row.clientWidth) break
+    if (Number(c.dataset.chip) === f) continue
+    c.style.display = 'none'; hidden.add(Number(c.dataset.chip)); drawMore()
+  }
+  row.classList.remove('fitting')
+  if (moreOpen && placePop) placePop()
+}
+let placePop = null
+
+/* ---------- Left panes ---------- */
+function sectionList(groups) {
+  return `<div class="${m('new')}">` + groups.filter(([, rows]) => rows.length).map(([name, rows, cls]) => `<div class="sec ${cls ?? ''}">${name}<span class="n">${rows.length}</span></div><div class="list">${rows.join('')}</div>`).join('') + '</div>'
+}
+function leftTasks() {
+  const w = screen === 'waiting', list = visible()
+  const head = `<div class="head"><h1>${w ? 'Waiting on' : 'Tasks'}</h1><span class="muted">${list.length} ${w ? 'waiting · longest first' : 'open · by priority'}</span><div class="spacer"></div><button class="btn primary">New ${w ? 'waiting item' : 'task'}</button></div>`
+  const toolbar = `<div class="toolbar"><div class="seg"><button class="on">Open</button><button>Done</button></div><label class="search-box"><span class="faint">⌕</span><input placeholder="${w ? 'Search waiting items or people' : 'Search tasks'}"></label></div>`
+  let body
+  const row = w ? waitRow : taskRow
+  if (after() && group) {
+    body = w
+      ? sectionList([['Follow up', list.filter((t) => t.follow).map(row), 'over'], ['Waiting', list.filter((t) => !t.follow).map(row)]])
+      : sectionList([['Overdue', list.filter((t) => t.bucket === 'over').map(row), 'over'], ['This week', list.filter((t) => t.bucket === 'week').map(row)], ['Later', list.filter((t) => t.bucket === 'later').map(row)]])
+  } else body = `<div class="list">${list.map(row).join('') || '<div class="blank">Nothing in this filter.</div>'}</div>`
+  return head + (after() ? chipsAfter() : chipsBefore()) + toolbar + body
+}
+function leftProjects() {
+  const head = `<div class="head"><h1>Projects</h1><span class="muted">${projects.length}</span><div class="spacer"></div><button class="btn primary">New project</button></div>`
+  const toolbar = `<div class="toolbar"><div class="seg"><button class="on">Active</button><button>Archived <span class="mono faint">2</span></button></div><label class="search-box"><span class="faint">⌕</span><input placeholder="Search projects"></label></div>`
+  const rows = projects.map((p) => {
+    const n = tasks.filter((t) => t.p === p.id).length + waiting.filter((t) => t.p === p.id).length
+    return `<div class="r ${sel.projects === p.id ? 'sel' : ''}" data-id="${p.id}" style="grid-template-columns:3px minmax(0,1fr) auto auto">${stripe(p)}<div class="ttl">${esc(p.name)}${p.overview ? `<div class="sub ttl">${esc(p.overview)}</div>` : ''}</div><span class="faint" style="font-size:12.5px">${p.status === 'Active' ? '' : p.status}</span><span class="mono muted">${n}</span></div>`
+  }).join('')
+  return head + toolbar + `<div class="list">${rows}</div>`
+}
+function leftPeople() {
+  const head = `<div class="head"><h1>People</h1><span class="muted">most important first</span><div class="spacer"></div><button class="btn primary">New person</button></div>`
+  const search = `<label class="search-box"><span class="faint">⌕</span><input placeholder="Search name, role, company"></label>`
+  const company = `<select class="inp" style="width:auto;padding:3px 28px 3px 8px"><option>All companies</option><option>Crestline</option><option>AVPro Supply</option><option>No company</option></select>`
+  const openAsks = `<button class="pill">Open asks</button>`
+  const filters = after()
+    ? `<div class="toolbar ${m('new')}">${search}${company}${openAsks}</div>`
+    : `<div class="toolbar">${search}</div><div class="row ${m('gone')}" style="margin-bottom:10px">${company}${openAsks}</div>`
+  const rows = people.map((p) => `<div class="r ${sel.people === p.id ? 'sel' : ''}" data-id="${p.id}" style="grid-template-columns:40px minmax(0,1fr) auto auto;padding-left:10px"><div class="avatar" style="background:${p.color}">${p.name.split(' ').map((x) => x[0]).join('')}</div><div class="ttl">${esc(p.name)}<div class="sub">${esc(p.role)} · ${esc(p.company)}</div></div><span class="stars">${'★'.repeat(p.stars)}<span class="off">${'★'.repeat(5 - p.stars)}</span></span><span class="mono muted" style="width:22px;text-align:right">${p.open}</span></div>`).join('')
+  return head + filters + `<div class="list">${rows}</div>`
+}
+
+/* ---------- Right panes ---------- */
+function blank(what) {
+  return `<div class="blank"><div><div style="font-size:28px;color:var(--faint)">☰</div><div style="color:var(--text);font-weight:500;margin-top:6px">${what}</div></div></div>`
+}
+function rightTask() {
+  const w = screen === 'waiting'
+  if (emptySel) {
+    if (after()) return blank(w ? 'No item selected' : 'No task selected')
+    return `<div class="blank"><div><div style="font-size:28px;color:var(--faint)">☰</div><div style="color:var(--text);font-weight:500;margin-top:6px">Select ${w ? 'an item' : 'a task'} to see it here</div><div class="${m('gone')}" style="margin-top:4px">Use <span class="kbd">↑</span> <span class="kbd">↓</span> to move through the list, or <span class="kbd">N</span> for a new ${w ? 'waiting item' : 'task'}.</div></div></div>`
+  }
+  const t = items().find((x) => x.id === sel[screen])
+  const p = P(t.p)
+  const rich = t.id === 1
+  const e = rich ? editor1 : { status: null, subtasks: [], notes: '', latest: null, nUpd: 0, asked: '', adj: null, base: t.score, followUps: w && t.follow ? 2 : 0 }
+  const why = w ? `waiting ${t.days} days on ${t.on}` : t.why
+  const acts = rich ? activity : [['Nov ' + (13 - (t.days ?? 0)), w ? `Status: Waiting on ${t.on}` : 'Created by you']]
+
+  const statusCard = e.status
+    ? `<div class="status"><div class="row"><span class="h">Where this stands</span><div class="spacer"></div><button class="link">Copy</button><button class="link">↻ Refresh</button></div><ul>${e.status.map((s) => `<li>${esc(s)}</li>`).join('')}</ul><div class="row" style="align-items:flex-start"><span class="h" style="flex:none">Next</span><span>${esc(e.next)}</span></div></div>`
+    : `<div class="status"><div class="row"><span class="h">Where this stands</span><div class="spacer"></div><button class="link">✦ Write</button></div></div>`
+  const subtasks = !after() || e.subtasks.length
+    ? `<div class="lbl"><span class="label">Subtasks</span></div>` + e.subtasks.map((s) => `<div class="check"><span class="box ${s.d ? 'on' : ''}">${s.d ? '✓' : ''}</span><input class="${s.d ? 'done-ttl' : ''}" value="${esc(s.t)}"></div>`).join('') + `<div class="check"><span class="box"></span><input placeholder="Add a subtask"></div>`
+    : `<div class="lbl ${m('new')}" style="margin-top:14px"><button class="link">+ Add subtask</button></div>`
+  const notes = `<div class="lbl"><span class="label">Notes</span></div><textarea class="inp">${esc(e.notes)}</textarea>`
+  const latest = e.latest ? `<button class="card latest"><div class="faint" style="font-size:11.5px">Latest · ${e.latest.date} · from “${esc(e.latest.src)}”</div><div>${esc(e.latest.text)}</div></button>` : ''
+  const updEmpty = !e.latest && !after() ? `<div class="faint ${m('gone')}" style="font-size:12.5px">No updates yet. What you accept from imports in Review lands here.</div>` : ''
+  const updates = `<div class="lbl"><span class="label">Updates</span><div class="spacer"></div><button class="btn sm">Updates <span class="mono muted">${e.nUpd}</span></button></div>${latest}${updEmpty}`
+  const actList = `<div class="act">${acts.slice(0, 8).map(([d, x]) => `<div><span class="d">${d}</span>${esc(x)}</div>`).join('')}</div>${acts.length > 8 ? '<button class="link">Show all</button>' : ''}`
+  const activityHtml = after()
+    ? `<button class="fold ${actOpen ? 'open' : ''} ${m('new')}" id="act"><span class="chev">›</span>Activity <span class="mono faint">${acts.length}</span></button>${actOpen ? actList : ''}`
+    : `<div class="lbl"><span class="label">Activity</span></div>${actList}`
+
+  const selBox = (opts, v) => `<select class="inp">${opts.map((o) => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+  const meta = `
+    <label class="field"><span>Project</span>${selBox(['No project', ...projects.map((x) => x.name)], p ? p.name : 'No project')}</label>
+    <label class="field"><span>Status</span>${selBox(['Open', 'Waiting on', 'Done'], w ? 'Waiting on' : 'Open')}</label>
+    ${w ? `<label class="field"><span>Waiting on</span><input class="inp" value="${esc(t.on)}"></label>` : ''}
+    <label class="field"><span>Due</span><input class="inp" value="${t.due ? (t.due.startsWith('Nov') ? t.due + ', 2026' : t.due) : ''}" placeholder="No date"></label>
+    <label class="field"><span>Asked by</span>${selBox(['Nobody', 'Kenji Mori', 'Priya Shah', 'Marco Ruiz'], e.asked || 'Nobody')}</label>`
+  const adjBox = e.adj ? `<div class="ai-adj"><div class="row"><span class="h">✦ AI <span class="mono">+${e.adj.delta}</span></span><div class="spacer"></div><button class="link">Remove</button></div><div>${esc(e.adj.reason)}</div><div class="faint" style="font-size:11.5px">${esc(e.adj.from)}</div></div>` : ''
+  const setByHand = `<div class="row muted" style="margin-top:8px;font-size:12.5px"><label class="row" style="gap:6px"><input type="checkbox"> Set by hand</label></div>`
+  const followUps = `<div class="row muted" style="margin-top:6px;font-size:12.5px">Follow-ups: <span class="mono" style="color:var(--text)">${e.followUps}</span><button class="btn ghost sm" style="padding:0 6px">+1</button>${e.followUps ? '<button class="btn ghost sm" style="padding:0 6px">Reset</button>' : ''}</div>`
+  const scoreLine = `<span class="mono">${e.adj ? `${e.base} + ${e.adj.delta}` : e.base}</span>`
+  const prio = after()
+    ? `<div class="card" style="margin-top:10px"><div class="row"><span class="label">Priority ${scoreLine}</span><div class="spacer"></div><button class="link" id="adj">${adjustOpen ? 'Done' : 'Adjust'}</button></div><div class="muted">${esc(why)}</div>${adjustOpen ? adjBox + setByHand + `<div class="${m('new')}">${followUps}</div>` : (e.adj ? `<div class="faint ${m('new')}" style="font-size:11.5px;margin-top:2px">✦ Includes an AI change</div>` : '')}</div>`
+    : `<div class="card" style="margin-top:10px"><div class="row"><span class="label">Priority ${scoreLine}</span><div class="spacer"></div><button class="link" id="adj">${adjustOpen ? 'Done' : 'Adjust'}</button></div><div class="muted">${esc(why)}</div>${adjBox}${adjustOpen ? setByHand : ''}<div class="${m('gone')}">${followUps}</div></div>`
+
+  return `<div class="editor-stripe" style="background:${p ? p.color : 'var(--none)'}"></div>
+    <div class="editor ${after() ? m('pad') : ''}">
+      <div class="row" style="gap:10px;margin-bottom:12px"><span class="score big ${sc(t.score)}">${t.score}</span><input class="title-inp" value="${esc(t.title)}"><button class="iconbtn">✕</button></div>
+      <div class="dgrid"><div>${statusCard}${subtasks}${notes}${updates}${activityHtml}</div><div class="meta">${meta}${prio}</div></div>
+      <div class="foot"><button class="btn ghost danger">Delete</button><div class="spacer"></div><button class="btn">Mark done</button></div>
+    </div>`
+}
+function rightProject() {
+  if (emptySel) return blank(after() ? 'No project selected' : 'Select a project, or create one.')
+  const p = P(sel.projects)
+  const mine = tasks.filter((t) => t.p === p.id)
+  const swatches = projects.map((x) => `<span class="swatch ${x.color === p.color ? 'on' : ''}" style="background:${x.color}"></span>`).join(' ')
+  const status = `<div class="status"><div class="row"><span class="h">Where this stands</span><div class="spacer"></div><button class="link">✦ Write</button></div></div>`
+  return `<div class="editor-stripe" style="background:${p.color}"></div>
+    <div class="editor ${after() ? m('pad') : ''}">
+      <input class="title-inp" style="font-size:19px;width:100%" value="${esc(p.name)}">
+      <div class="muted" style="margin:2px 0 12px">${p.overview ? esc(p.overview) : '<span class="faint">Add a one-line overview</span>'} <span class="faint">✎</span></div>
+      <div class="row" style="gap:16px;margin-bottom:14px;flex-wrap:wrap"><label class="row"><span class="muted">Status</span><select class="inp" style="width:auto"><option>${p.status}</option></select></label><span class="row" style="gap:4px">${swatches}</span></div>
+      ${status}
+      <div class="lbl"><span class="label">Updates</span><div class="spacer"></div><button class="btn sm">Updates <span class="mono muted">${p.id === 1 ? 7 : 0}</span></button></div>
+      ${p.id === 1 ? '<button class="card latest"><div class="faint" style="font-size:11.5px">Latest · Nov 12 · from “3.2 launch sync”</div><div>Launch held to Nov 20 so the dealer FAQ can ship first.</div></button>' : ''}
+      <div class="lbl"><span class="label">Standing instructions</span></div><textarea class="inp" style="min-height:48px" placeholder="e.g. Always cc Marcus on engineering dates"></textarea>
+      <div class="row" style="margin:14px 0 18px"><button class="btn ghost danger">Delete project</button><div class="spacer"></div><button class="btn">New task</button><button class="btn primary">Save</button></div>
+      <div class="lbl"><span class="label">Open tasks</span></div>
+      <div class="list">${mine.map((t) => taskRow(t, { inProject: true })).join('') || '<div class="blank" style="padding:14px">No open tasks in this project.</div>'}</div>
+    </div>`
+}
+function rightPerson() {
+  if (emptySel) return blank(after() ? 'No person selected' : 'Select a person, or add one.')
+  const p = people.find((x) => x.id === sel.people)
+  const asks = tasks.filter((t) => (t.why.includes(p.name.split(' ')[0]))).concat(waiting.filter((t) => t.on === p.name))
+  const brief = p.brief
+    ? `<div>${esc(p.brief)}</div><div class="row" style="margin-top:4px"><div class="spacer"></div><button class="btn ghost sm">Edit</button><button class="btn sm">✦ Regenerate</button></div>`
+    : `<div class="faint">No brief yet.${after() ? '' : ` <span class="${m('gone')}">Click Write brief, or Edit to write one yourself.</span>`}</div><div class="row" style="margin-top:4px"><div class="spacer"></div><button class="btn ghost sm">Edit</button><button class="btn sm">✦ Write brief</button></div>`
+  const weightHelp = after() ? '' : `<span class="faint ${m('gone')}" style="font-size:12.5px">Higher weight raises the priority of their requests</span>`
+  return `<div class="editor ${after() ? m('pad') : ''}">
+      <div class="row" style="gap:10px"><div class="avatar" style="background:${p.color}">${p.name.split(' ').map((x) => x[0]).join('')}</div><input class="title-inp" value="${esc(p.name)}"></div>
+      <div style="margin:4px 0 12px;font-size:12.5px">${brief}</div>
+      <label class="field"><span>Company</span><input class="inp" value="${esc(p.company)}"></label>
+      <label class="field"><span>Role</span><input class="inp" value="${esc(p.role)}"></label>
+      <label class="field"><span>Email</span><input class="inp" placeholder="name@company.com"></label>
+      <div class="field"><span>Weight</span><span class="row"><span class="stars">${'★'.repeat(p.stars)}<span class="off">${'★'.repeat(5 - p.stars)}</span></span>${weightHelp}</span></div>
+      <div class="lbl"><span class="label">Standing instructions</span></div><textarea class="inp" style="min-height:44px" placeholder="e.g. Lead with the ask; keep it to three bullets"></textarea>
+      <div class="lbl"><span class="label">Updates</span><div class="spacer"></div><button class="btn sm">Updates <span class="mono muted">${p.brief ? 3 : 0}</span></button></div>
+      <div class="row" style="margin:14px 0 18px"><button class="btn ghost danger">Delete person</button><div class="spacer"></div><button class="btn primary">Save</button></div>
+      <div class="lbl"><span class="label">Their open asks</span></div>
+      <div class="list">${asks.map((t) => (t.on ? waitRowStatic(t) : taskRow(t, { inProject: true }))).join('') || '<div class="blank" style="padding:14px">Nothing open for them.</div>'}</div>
+    </div>`
+}
+function waitRowStatic(t) {
+  const p = P(t.p)
+  return `<div class="r" ${after() ? 'style="grid-template-columns:3px 36px minmax(0,1fr) 76px"' : ''}>${stripe(p)}${scoreHtml(t)}<div class="ttl">${esc(t.title)}</div>${after() ? '' : chipHtml(p)}<div class="due">Wait ${t.days}d</div></div>`
+}
+
+/* ---------- Notes ---------- */
+const NOTES = {
+  common: `<li><span class="key" style="background:var(--ok);opacity:.5"></span><b>Green dashes</b> are new or changed; <span class="key" style="background:var(--danger);opacity:.5"></span><b>red dashes</b> are removed. Light green bands show the extra side space.</li>`,
+  space: `<li><b>More side space</b> on every list-and-editor screen (Tasks, Waiting, Projects, People): list pane 28/18px → 40/36px, editor 22px → 40px each side. It's one shared layout, so all four get it together.</li>`,
+  tasks: `
+    <li><b>Project chips stay, on one line.</b> Two ways to handle the ones that don't fit (try “Chip row” at the top):<br><b>Scrolls sideways:</b> All stays pinned on the left, with a thin divider; every project with open tasks scrolls beside it, then No project. Scroll with the mouse wheel or trackpad, or the ‹ › buttons that appear on whichever side has more. A soft fade shows there's more; no scrollbar. The selected chip scrolls into view.<br><b>Fits, rest in More:</b> All first, then as many projects as fit, then “More N ▾” with the rest and No project. Each chip shows its count. Drag the divider or resize the window and the row refills.</li>
+    <li><b>Order of the chips:</b> try “Chips ranked by” at the top. <b>Most urgent task</b> puts the project with the highest-priority task first, so the chips follow what needs you now. <b>Most open tasks</b> keeps the busiest projects first and moves around less. Projects with nothing open in this list get no chip.</li>
+    <li>Picking a project from More puts it in the row (in the last place) while it's selected, so you can see the filter that's on.</li>
+    <li><b>Score marks sit left of the number</b> so every score lines up on the right: ✦ for an AI change (Dealer FAQ, Q1 roadmap deck) and * for a score set by hand (Interview loop feedback), which had the same problem. The score column is a little wider to fit them.</li>
+    <li><b>Rows show the project once:</b> the stripe stays, the label goes. Hover a row for its project and priority reason.</li>
+    <li><b>Always grouped</b> into Overdue, This week and Later, each sorted by priority.</li>
+    <li><b>Editor:</b> Activity folds to one line, “+ Add subtask” when there are none, a shorter priority card (the AI change, Set by hand and Follow-ups move under Adjust), and the helper sentences are gone.</li>`,
+  waiting: `
+    <li><b>Same chip row</b> as Tasks (either style), counting waiting items.</li>
+    <li><b>Rows keep who you're waiting on</b> (that's the point of this list); the project label goes, like Tasks.</li>
+    <li><b>Always grouped</b> into Follow up (no reply in the usual number of business days) and Waiting, so the Follow up tag moves into the section heading.</li>
+    <li>The editor gets the same changes as Tasks.</li>`,
+  projects: `
+    <li>The list was already simple; it gets the side space only.</li>
+    <li><b>Open tasks</b> in the project editor drop the project label on each row (it's this project).</li>
+    <li>The empty panel says “No project selected” instead of “Select a project, or create one.”</li>`,
+  people: `
+    <li><b>Filters join the search row:</b> the company menu and Open asks sit beside the search box, saving a line.</li>
+    <li><b>Helper sentences removed:</b> “Higher weight raises the priority of their requests”, and the hint after “No brief yet.” (pick a person without a brief, such as Dana).</li>
+    <li><b>Their open asks</b> rows drop the project label, like Tasks.</li>
+    <li>The empty panel says “No person selected”.</li>`,
+}
+function renderNotes() {
+  const title = { tasks: 'Tasks', waiting: 'Waiting', projects: 'Projects', people: 'People' }[screen]
+  $('notes').innerHTML = after()
+    ? `<h3>What changes on ${title}</h3><ul>${NOTES.common}${NOTES[screen]}${NOTES.space}</ul>`
+    : `<h3>Before</h3><ul>${NOTES.common}<li>Today's ${title} screen at Comfortable density. Switch to After to see the changes.</li></ul>`
+}
+
+function render() {
+  $('app').className = `app ${view} ${marks ? 'marks' : ''}`
+  document.querySelectorAll('[data-screen]').forEach((b) => b.classList.toggle('on', b.dataset.screen === screen))
+  const L = { tasks: leftTasks, waiting: leftTasks, projects: leftProjects, people: leftPeople }[screen]
+  const R = { tasks: rightTask, waiting: rightTask, projects: rightProject, people: rightPerson }[screen]
+  const left = $('left')
+  left.className = `pane left ${after() ? m('pad') : ''}`
+  left.innerHTML = L()
+  $('right').innerHTML = R()
+  fitChips()
+  setupScroll()
+  const hints = screen === 'tasks' || screen === 'waiting' ? [['↑ ↓', 'move'], ['↵', 'open'], ['E', 'done'], ['N', 'new'], ['/', 'search']] : [['↑ ↓', 'move'], ['↵', 'edit'], ['/', 'search']]
+  $('hints').innerHTML = hints.map(([k, v]) => `<span><span class="kbd">${k}</span> ${v}</span>`).join('') + '<div class="spacer"></div><span>✦ Claude Opus 5.5</span>'
+  renderNotes()
+}
+
+document.addEventListener('click', (ev) => {
+  const tgt = ev.target.closest('button, .r[data-id]')
+  if (!tgt) { if (moreOpen) { moreOpen = false; render() } return }
+  if (tgt.dataset.view) { view = tgt.dataset.view; document.querySelectorAll('#views button').forEach((b) => b.classList.toggle('on', b === tgt)) }
+  else if (tgt.dataset.screen) { screen = tgt.dataset.screen; actOpen = adjustOpen = false }
+  else if (tgt.id === 'theme') { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme = dark ? 'light' : 'dark' }
+  else if (tgt.id === 'scrl' || tgt.id === 'scrr') { const t = $('track'); t.scrollBy({ left: (tgt.id === 'scrr' ? 1 : -1) * t.clientWidth * 0.7 }); return }
+  else if (tgt.id === 'morebtn') { moreOpen = !moreOpen }
+  else if (tgt.dataset.f) { const f = tgt.dataset.f; filter[screen] = f === 'all' || f === 'none' ? f : Number(f); moreOpen = false; const v = visible(); if (v.length && !v.some((t) => t.id === sel[screen])) sel[screen] = v[0].id }
+  else if (tgt.id === 'act') { actOpen = !actOpen }
+  else if (tgt.id === 'adj') { adjustOpen = !adjustOpen }
+  else if (tgt.dataset.id) { sel[screen] = Number(tgt.dataset.id); emptySel = false; $('empty').checked = false; actOpen = adjustOpen = moreOpen = false }
+  else if (moreOpen) { moreOpen = false }
+  else return
+  render()
+})
+$('marks').onchange = (e) => { marks = e.target.checked; render() }
+$('empty').onchange = (e) => { emptySel = e.target.checked; render() }
+$('chipmode').onchange = (e) => { chipMode = e.target.value; moreOpen = false; render() }
+$('rank').onchange = (e) => { rank = e.target.value; render() }
+new ResizeObserver(() => { if ($('chips')) { $('chips').classList.add('fitting'); render() } else if ($('track')) $('track').dispatchEvent(new Event('scroll')) }).observe($('left'))
+render()
+</script>
+</body>
+</html>

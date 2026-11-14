@@ -2,6 +2,15 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-13 · Calmer list screens (Frank)
+Frank found the Tasks page too busy. His choices (mockup `design/tasks-page-calmer.html`, approved after five rounds):
+- **Project chips stay, on one line.** All is pinned on the left; the other projects scroll sideways (wheel, trackpad, or ‹ › arrows that show on a side with more), busiest first, then No project, each with its count. He chose sideways scrolling over "as many as fit, the rest in a More menu", and most open tasks over most urgent task as the order (it moves around less). The chips filter in the screen rather than the database, so they can count every project.
+- **Lists are always grouped:** Tasks into Overdue, This week (due by Saturday) and Later; Waiting into Follow up and Waiting. He chose always-on over a setting. Done lists aren't grouped.
+- **Rows show the project once** (the stripe, not a label too) on Tasks, Waiting and the project and person editors' task lists. On Tasks and Waiting the project and priority reason show on hover; Spacious keeps the reason line. Waiting rows still name who they wait on. Today keeps its labels.
+- **Score marks go before the number** (✦ for an AI change, * for set by hand) so the scores line up.
+- **Task editor:** Activity folds to one line with its count; a task with no subtasks shows only "+ Add subtask"; the AI change, Set by hand and Follow-ups sit under Adjust, with "✦ Includes an AI change" on the card.
+- **More side space** on every list-and-editor screen, and explaining sentences removed (empty editor panels, empty Updates, the People weight and brief hints). People's Company and Open asks filters joined the search row.
+
 ### 2026-11-09 · Simpler text import, AI-named imports, Copilot Prompt Generator, light-grey buttons (Frank)
 Frank's choices (mockup `design/import-text.html`, approved after five rounds):
 - **Type pills, Title and From are gone** from the text import: they only labeled the item for the AI and the lists. The date stays, at the top right, because it's the one detail with an effect.

@@ -20,10 +20,12 @@ const longDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { y
 /**
  * A task's Activity: every recorded change, newest first, each saying who made it, plus the
  * imports linked to it. Tasks older than the log say what wasn't recorded. Read-only.
+ * `folded` shows it as one "Activity" line with the count, opened by a click.
  */
-export function ActivityLog({ task, reloadKey = 0 }: { task: Task | null; reloadKey?: number }) {
+export function ActivityLog({ task, reloadKey = 0, folded = false }: { task: Task | null; reloadKey?: number; folded?: boolean }) {
   const [activity, setActivity] = useState<TaskActivity | null>(null)
   const [all, setAll] = useState(false)
+  const [open, setOpen] = useState(!folded)
 
   useEffect(() => {
     if (!task) return
@@ -34,7 +36,7 @@ export function ActivityLog({ task, reloadKey = 0 }: { task: Task | null; reload
     }
   }, [task, reloadKey])
 
-  if (!task) return <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>Not saved yet</div>
+  if (!task) return folded ? null : <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>Not saved yet</div>
 
   const events = activity?.events ?? []
   const lines: Line[] = [
@@ -46,7 +48,17 @@ export function ActivityLog({ task, reloadKey = 0 }: { task: Task | null; reload
   if (older) lines.push({ key: 'created', at: task.createdAt, what: 'Created', who: null })
   const shown = all ? lines : lines.slice(0, SHOWN)
 
+  const header = folded && (
+    <button type="button" className={`fold ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => setOpen(!open)}>
+      <span className="chev" />
+      Activity <span className="mono faint">{activity ? lines.length : ''}</span>
+    </button>
+  )
+  if (!open) return header
+
   return (
+    <>
+    {header}
     <div className="activity" data-testid="activity">
       {shown.map((l) => (
         <div className="act-e" key={l.key}>
@@ -68,5 +80,6 @@ export function ActivityLog({ task, reloadKey = 0 }: { task: Task | null; reload
       )}
       {older && (all || lines.length <= SHOWN) && <div className="act-old">Changes before {longDay(activity.loggedSince)} weren’t recorded.</div>}
     </div>
+    </>
   )
 }

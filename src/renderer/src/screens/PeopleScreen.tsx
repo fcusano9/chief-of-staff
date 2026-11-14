@@ -119,12 +119,8 @@ export function PeopleScreen() {
         </button>
       </div>
       {people.length > 0 && (
-        <div className="toolbar">
+        <div className="toolbar" style={{ flexWrap: 'wrap' }}>
           <SearchBox value={search} onChange={setSearch} placeholder="Search name, role, company" />
-        </div>
-      )}
-      {people.length > 0 && (
-        <div className="row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
           <select className="inp" style={{ width: 'auto', paddingTop: 3, paddingBottom: 3 }} aria-label="Company" value={filter.company} onChange={(e) => setFilter({ company: e.target.value })}>
             <option value="">All companies</option>
             {[...companies, ...(filter.company && filter.company !== NO_COMPANY && !companies.includes(filter.company) ? [filter.company] : [])].map((c) => (
@@ -210,7 +206,6 @@ export function PeopleScreen() {
         <span>Weight</span>
         <span className="row">
           <Stars value={draft.priorityWeight} onChange={(v) => setDraft({ ...draft, priorityWeight: v })} />
-          <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>Higher weight raises the priority of their requests</span>
         </span>
       </div>
       <div className="label" style={{ marginTop: 12 }}>Standing instructions</div>
@@ -249,7 +244,7 @@ export function PeopleScreen() {
           <div className="label" style={{ marginBottom: 4 }}>Their open asks</div>
           <div className="list">
             {tasks.map((t) => (
-              <TaskRow key={t.id} task={t} showWhy={false} onClick={() => openTask({ id: t.id, waiting: t.status === 'waiting_on' })} />
+              <TaskRow key={t.id} task={t} showWhy={false} showProject={false} onClick={() => openTask({ id: t.id, waiting: t.status === 'waiting_on' })} />
             ))}
             {tasks.length === 0 && <div className="empty">Nothing open for them.</div>}
           </div>
@@ -271,7 +266,7 @@ export function PeopleScreen() {
       )}
     </div>
   ) : (
-    <div className="empty" style={{ marginTop: 80 }}>Select a person, or add one.</div>
+    <div className="empty" style={{ marginTop: 80 }}>No person selected</div>
   )
 
   return <SplitView left={left} right={right} />
@@ -350,7 +345,7 @@ function PersonBrief({ person, hasContext }: { person: PersonSummary; hasContext
         <>
           <div data-brief style={{ fontSize: 'calc(var(--fs) + 1px)' }}>
             {person.brief ?? (
-              <span className="faint">No brief yet. {hasContext ? 'Click Write brief, or Edit to write one yourself.' : 'Add an update below, or Edit to write one yourself.'}</span>
+              <span className="faint">No brief yet.</span>
             )}
           </div>
           <div className="row" style={{ marginTop: 4, flexWrap: 'wrap' }}>

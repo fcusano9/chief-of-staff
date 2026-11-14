@@ -261,7 +261,7 @@ export function ProjectsScreen() {
             <div className="label" style={{ marginBottom: 4 }}>Open tasks</div>
             <div className="list">
               {tasks.map((t) => (
-                <TaskRow key={t.id} task={t} showWhy={false} onClick={() => openTask({ id: t.id, waiting: t.status === 'waiting_on' })} />
+                <TaskRow key={t.id} task={t} showWhy={false} showProject={false} onClick={() => openTask({ id: t.id, waiting: t.status === 'waiting_on' })} />
               ))}
               {tasks.length === 0 && <div className="empty">No open tasks in this project.</div>}
             </div>
@@ -289,7 +289,7 @@ export function ProjectsScreen() {
       )}
     </div>
   ) : (
-    <div className="empty" style={{ marginTop: 80 }}>Select a project, or create one.</div>
+    <div className="empty" style={{ marginTop: 80 }}>No project selected</div>
   )
 
   return <SplitView left={left} right={right} />
