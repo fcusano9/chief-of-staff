@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI providers separation</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --raised: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --head-bg: #f4f4f6;
+  --font: Inter, system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --raised: #1a1a1f; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; --head-bg: #18181d; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --raised: #1a1a1f; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; --head-bg: #18181d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); }
+button, input { font: inherit; color: inherit; }
+.proto { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 6px 12px; background: var(--accent-bg); font-size: 12px; position: sticky; top: 0; z-index: 2; }
+.proto b { font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 2px 9px; cursor: pointer; }
+.seg button.on { background: var(--text); color: var(--bg); }
+.page { max-width: 1000px; margin: 0 auto; padding: 26px 16px 60px; }
+h1 { font-size: 19px; font-weight: 600; margin: 0 0 14px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); }
+.sm { font-size: 12.5px; } .xs { font-size: 11px; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.spacer { flex: 1; }
+.mono { font-family: var(--mono); font-size: 12.5px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 16px 18px; margin-bottom: 16px; }
+.card-title { font-weight: 500; margin-bottom: 8px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+.field { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px; padding: 5px 0; }
+.field > span:first-child { color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+.btn.sm { padding: 2px 8px; font-size: 12.5px; }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.danger { color: var(--danger); }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--sel); color: var(--muted); }
+.tag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.icon { width: 18px; height: 18px; border-radius: 5px; display: inline-grid; place-items: center; font-size: 10px; font-weight: 700; color: #fff; }
+.icon.claude { background: #d97757; } .icon.ollama { background: #3f3f46; }
+.model-list { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; }
+.model-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--border); }
+.model-row:first-child { border-top: 0; }
+.state { font-size: 12px; color: var(--muted); }
+details summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
+
+/* Before: a thin line between providers inside one card */
+.v-before .provider { border-top: 1px solid var(--border); padding: 14px 0 4px; }
+.v-before .provider:first-of-type { border-top: 0; padding-top: 2px; }
+.v-before .provider-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+
+/* A: each provider is its own box with a shaded header strip */
+.v-boxed .provider { border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; margin-top: 12px; }
+.v-boxed .provider:first-of-type { margin-top: 4px; }
+.v-boxed .provider-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 9px 14px; background: var(--head-bg); border-bottom: 1px solid var(--border); }
+.v-boxed .provider-head .name { font-size: 14.5px; }
+.v-boxed .provider-body { padding: 12px 14px 10px; }
+
+/* B: each provider is its own card under an "AI providers" heading */
+.sec-h { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 26px 0 8px; }
+.v-cards .provider-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.v-cards .provider-head .name { font-size: 14.5px; }
+
+.notes { margin-top: 24px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); font-size: 12.5px; }
+.notes h3 { margin: 0 0 6px; font-size: 12.5px; color: var(--text); } .notes li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<div class="proto">
+  <b>Settings → AI providers</b>
+  <span class="seg" id="view">
+    <button data-v="before" class="on">Before</button>
+    <button data-v="boxed">A · Boxed</button>
+    <button data-v="cards">B · Separate cards</button>
+  </span>
+  <span class="seg" id="theme">
+    <button data-t="light" class="on">Light</button>
+    <button data-t="dark">Dark</button>
+  </span>
+</div>
+<div class="page">
+  <h1>Settings</h1>
+  <div class="card">
+    <div class="card-title">AI</div>
+    <div class="grid2">
+      <div>
+        <div class="field"><span>Your name</span><input class="btn" style="text-align:left" value="Alex Morgan" /></div>
+        <div class="field"><span>Model</span><button class="btn" style="text-align:left"><span class="icon claude">C</span> Claude Opus 5.5</button></div>
+      </div>
+      <div class="sm">
+        <p style="margin:4px 0 6px">Imports, open-task titles, briefs and names are sent to Anthropic.</p>
+        <p class="faint" style="margin:0">The AI only proposes. Every suggestion waits in Review until you accept it, and nothing is ever sent on your behalf.</p>
+      </div>
+    </div>
+  </div>
+  <div id="providers"></div>
+  <div class="notes" id="notes"></div>
+</div>
+<script>
+const head = (icon, name, tag, desc, extra = '') => `
+  <div class="provider-head">
+    <span class="icon ${icon}">${name[0]}</span>
+    <span class="name" style="font-weight:500">${name}</span>
+    <span class="tag ok">${tag}</span>
+    <span class="faint sm">${desc}</span>
+    ${extra}
+  </div>`
+const claudeBody = `
+  <div class="grid2">
+    <div class="field"><span>API key</span>
+      <span class="row"><span style="color:var(--ok)">✓</span><span>Stored, encrypted on this computer</span><span class="spacer"></span><button class="btn ghost danger">Remove</button></span>
+    </div>
+    <div class="row"><button class="btn">Test connection</button></div>
+  </div>`
+const ollamaBody = `
+  <div class="model-list">
+    <div class="model-row"><div><span class="mono">gpt-oss:20b</span> <span class="tag ok">Tested</span><div class="state">Downloaded · 13.8 GB</div></div><button class="btn">Delete</button></div>
+    <div class="model-row"><div><span class="mono">qwen3.8:27b-q4_K_M</span> <span class="tag ok">Tested</span><div class="state">Not downloaded · 17 GB. Slower, more accurate.</div></div><button class="btn">Download</button></div>
+  </div>
+  <div class="row"><button class="btn">Test connection</button></div>
+  <details style="margin-top:8px"><summary>Advanced</summary><div class="field" style="max-width:420px"><span>Ollama address</span><input class="btn mono" style="text-align:left" value="http://127.0.0.1:11434" /></div></details>`
+const claudeHead = head('claude', 'Claude', 'Set up · 3 models', 'Anthropic API. Most accurate. Paid per use.', '<span class="spacer"></span><button class="btn sm">AI spending · $4.12 this month</button>')
+const ollamaHead = head('ollama', 'Ollama', 'Running · 1 model', 'Runs models on this computer. Free and private.')
+
+const views = {
+  before: {
+    html: `<div class="card v-before"><div class="card-title">AI providers</div>
+      <div class="provider">${claudeHead}${claudeBody}</div>
+      <div class="provider">${ollamaHead}${ollamaBody}</div></div>`,
+    notes: ['Today: both providers sit in one card, split only by a thin grey line, so Claude\'s Test connection runs straight into Ollama\'s header.'],
+  },
+  boxed: {
+    html: `<div class="card v-boxed"><div class="card-title">AI providers</div>
+      <div class="provider">${claudeHead}<div class="provider-body">${claudeBody}</div></div>
+      <div class="provider">${ollamaHead}<div class="provider-body">${ollamaBody}</div></div></div>`,
+    notes: [
+      'Each provider gets its own bordered box inside the AI providers card, with a gap between boxes.',
+      'The provider name, status and description sit in a lightly shaded header strip, so each box clearly starts with its name.',
+      'Provider names are slightly larger. Nothing else moves; future providers (e.g. M365 Copilot) become another box.',
+    ],
+  },
+  cards: {
+    html: `<div class="v-cards"><div class="sec-h">AI providers</div>
+      <div class="card">${claudeHead}${claudeBody}</div>
+      <div class="card">${ollamaHead}${ollamaBody}</div></div>`,
+    notes: [
+      'The outer AI providers card goes away; "AI providers" becomes a small section heading.',
+      'Each provider is a full card of its own, like the AI card above, with the page background between them.',
+      'A line under each header separates the name and status from the settings.',
+    ],
+  },
+}
+const render = (v) => {
+  document.getElementById('providers').innerHTML = views[v].html
+  document.getElementById('notes').innerHTML = `<h3>What changes</h3><ul>${views[v].notes.map((n) => `<li>${n}</li>`).join('')}</ul>`
+}
+document.querySelectorAll('#view button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('#view button').forEach((x) => x.classList.toggle('on', x === b)); render(b.dataset.v)
+})
+document.querySelectorAll('#theme button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('#theme button').forEach((x) => x.classList.toggle('on', x === b)); document.documentElement.dataset.theme = b.dataset.t
+})
+render('before')
+</script>
+</body>
+</html>
