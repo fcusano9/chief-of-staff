@@ -129,7 +129,7 @@ function ClaudeProvider() {
     <div className="provider" data-provider="claude">
       <div className="provider-head">
         <ProviderIcon provider="claude" size={18} />
-        <span style={{ fontWeight: 500 }}>Claude</span>
+        <span className="name">Claude</span>
         <span className={`tag ${ai.hasKey ? 'ok' : ''}`}>{ai.hasKey ? `Set up · ${CLAUDE_MODELS.length} models` : 'Not set up'}</span>
         <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>
           Anthropic API. Most accurate. Paid per use.
@@ -143,38 +143,40 @@ function ClaudeProvider() {
           </>
         )}
       </div>
-      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <div className="field">
-          <span>API key</span>
-          {ai.hasKey ? (
-            <span className="row">
-              <span style={{ color: 'var(--ok)' }}>✓</span>
-              <span>Stored, encrypted on this computer</span>
-              <div className="spacer" />
-              <button className="btn ghost danger" onClick={() => void saveKey(null)}>
-                Remove
-              </button>
-            </span>
-          ) : (
-            <span className="row">
-              <input
-                className="inp"
-                type="password"
-                autoComplete="off"
-                placeholder="sk-ant-…"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && key.trim() && void saveKey(key)}
-              />
-              <button className="btn" disabled={!key.trim() || !ai.encryptionAvailable} onClick={() => void saveKey(key)}>
-                Save
-              </button>
-            </span>
-          )}
+      <div className="provider-body">
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="field">
+            <span>API key</span>
+            {ai.hasKey ? (
+              <span className="row">
+                <span style={{ color: 'var(--ok)' }}>✓</span>
+                <span>Stored, encrypted on this computer</span>
+                <div className="spacer" />
+                <button className="btn ghost danger" onClick={() => void saveKey(null)}>
+                  Remove
+                </button>
+              </span>
+            ) : (
+              <span className="row">
+                <input
+                  className="inp"
+                  type="password"
+                  autoComplete="off"
+                  placeholder="sk-ant-…"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && key.trim() && void saveKey(key)}
+                />
+                <button className="btn" disabled={!key.trim() || !ai.encryptionAvailable} onClick={() => void saveKey(key)}>
+                  Save
+                </button>
+              </span>
+            )}
+          </div>
+          <TestButton provider="claude" disabled={!ai.hasKey} />
         </div>
-        <TestButton provider="claude" disabled={!ai.hasKey} />
+        {!ai.encryptionAvailable && <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--danger)' }}>This computer can't encrypt stored secrets, so a key can't be saved.</p>}
       </div>
-      {!ai.encryptionAvailable && <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--danger)' }}>This computer can't encrypt stored secrets, so a key can't be saved.</p>}
     </div>
   )
 }
@@ -355,25 +357,27 @@ function OllamaProvider() {
     <div className="provider" data-provider="ollama">
       <div className="provider-head">
         <ProviderIcon provider="local" size={18} />
-        <span style={{ fontWeight: 500 }}>Ollama</span>
+        <span className="name">Ollama</span>
         {tag}
         <span className="faint" style={{ fontSize: 'var(--fs-sm)' }}>
           Runs models on this computer. Free and private.
         </span>
       </div>
-      {body}
-      <details style={{ marginTop: 8 }}>
-        <summary className="muted" style={{ cursor: 'pointer', fontSize: 'var(--fs-sm)' }}>
-          Advanced
-        </summary>
-        <label className="field" style={{ maxWidth: 420 }}>
-          <span>Ollama address</span>
-          <input className="inp mono" value={url} onChange={(e) => setUrl(e.target.value)} onBlur={() => url.trim() !== settings.localUrl && void saveSettings({ localUrl: url })} />
-        </label>
-        <div className="faint" style={{ fontSize: 'var(--fs-xs)' }}>
-          Change this only if Ollama runs on another machine. Then imports are sent there.
-        </div>
-      </details>
+      <div className="provider-body">
+        {body}
+        <details style={{ marginTop: 8 }}>
+          <summary className="muted" style={{ cursor: 'pointer', fontSize: 'var(--fs-sm)' }}>
+            Advanced
+          </summary>
+          <label className="field" style={{ maxWidth: 420 }}>
+            <span>Ollama address</span>
+            <input className="inp mono" value={url} onChange={(e) => setUrl(e.target.value)} onBlur={() => url.trim() !== settings.localUrl && void saveSettings({ localUrl: url })} />
+          </label>
+          <div className="faint" style={{ fontSize: 'var(--fs-xs)' }}>
+            Change this only if Ollama runs on another machine. Then imports are sent there.
+          </div>
+        </details>
+      </div>
     </div>
   )
 }
