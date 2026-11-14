@@ -526,11 +526,9 @@ export interface TaskEvent {
   byLabel: string | null
 }
 
-/** A task's Activity: its recorded changes, newest first, and when recording started. */
+/** A task's Activity: its recorded changes, newest first. */
 export interface TaskActivity {
   events: TaskEvent[]
-  /** When the event log started; changes to older tasks before this weren't recorded. */
-  loggedSince: string
 }
 
 

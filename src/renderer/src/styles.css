@@ -364,12 +364,11 @@ textarea.notes-inp { min-height: calc(var(--fs) * 1.5 * 6 + var(--inp-py) * 2 + 
 .act-d { font-family: var(--mono); color: var(--faint); font-size: var(--fs-xs); padding-top: 1px; }
 .act-what { color: var(--text); }
 .act-who { color: var(--faint); }
-.act-more, .act-old { padding: 4px 0 0 60px; }
+.act-more { padding: 4px 0 0 60px; }
 .fold { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-top: 1px solid var(--border); background: none; padding: 8px 0 4px; margin-top: 14px; cursor: pointer; color: var(--muted); font-size: var(--fs-sm); text-align: left; }
 .fold:hover { color: var(--text); }
 .fold .chev { transform: rotate(-90deg); transition: transform 0.15s; }
 .fold.open .chev { transform: none; }
-.act-old { color: var(--faint); font-style: italic; }
 .rp { border: 1px solid var(--border); border-radius: 8px; padding: calc(var(--card-py) - 2px) calc(var(--card-px) - 2px); margin-bottom: 12px; }
 .rp-head { gap: 8px; font-size: var(--fs-sm); }
 .rp-head b { font-weight: 600; white-space: nowrap; flex: none; }
