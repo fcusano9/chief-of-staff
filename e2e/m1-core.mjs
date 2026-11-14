@@ -77,6 +77,7 @@ try {
   await app.eval(`const s=[...document.querySelectorAll('.pane.right select')][2]; const o=[...s.options].find(o=>o.text==='Dana Lee'); const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set; set.call(s,o.value); s.dispatchEvent(new Event('change',{bubbles:true}))`)
   const today = new Date(); const ymd = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
   await app.eval(`const d=document.querySelector('.pane.right input[type=date]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(d,'${ymd}'); d.dispatchEvent(new Event('input',{bubbles:true}))`)
+  await app.clickText('+ Add subtask', '.pane.right button')
   await app.click('.pane.right input[placeholder="Add subtask…"]')
   await app.type('Timeline'); await app.key('Enter')
   await app.type('Pricing assumptions'); await app.key('Enter')

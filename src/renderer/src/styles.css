@@ -125,7 +125,7 @@ textarea.inp { resize: vertical; min-height: 64px; line-height: 1.5; }
 
 /* Lists */
 .list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
-.r { display: grid; grid-template-columns: 3px 30px minmax(0, 1fr) auto 76px; gap: var(--row-gap); align-items: center; padding: var(--row-py) 12px var(--row-py) 0; border-top: 1px solid var(--border); cursor: pointer; }
+.r { display: grid; grid-template-columns: 3px 36px minmax(0, 1fr) auto 76px; gap: var(--row-gap); align-items: center; padding: var(--row-py) 12px var(--row-py) 0; border-top: 1px solid var(--border); cursor: pointer; }
 .r:first-child { border-top: 0; }
 .r:hover { background: var(--hover); }
 .r.cur { background: var(--hover); }
@@ -140,6 +140,39 @@ textarea.inp { resize: vertical; min-height: 64px; line-height: 1.5; }
 /* Spacious: the priority reason sits under the title; the project tag stays on the right. */
 [data-density='spacious'] .r .ttl { line-height: 1.35; }
 [data-density='spacious'] .r .why { display: block; margin: 1px 0 0; overflow: hidden; text-overflow: ellipsis; }
+/* Task list rows on Tasks and Waiting: no project label (the stripe shows it); the project and reason show on hover. */
+.r.no-chip { grid-template-columns: 3px 36px minmax(0, 1fr) 76px; position: relative; }
+.r .tip { position: absolute; left: 50px; top: calc(100% - 4px); z-index: 4; max-width: calc(100% - 60px); overflow: hidden; text-overflow: ellipsis; background: var(--text); color: var(--bg); font-size: var(--fs-xs); padding: 3px 9px; border-radius: 6px; white-space: nowrap; pointer-events: none; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); opacity: 0; visibility: hidden; transition: opacity 0.12s, visibility 0.12s; }
+.r .tip .dot { margin-right: 5px; }
+.r:hover .tip { opacity: 1; visibility: visible; transition-delay: 0.45s; }
+.list.tips { overflow: visible; }
+.list.tips > .r:first-child { border-radius: 8px 8px 0 0; }
+.list.tips > .r:last-child { border-radius: 0 0 8px 8px; }
+.list.tips > .r:only-child { border-radius: 8px; }
+/* Marks on a score go before the number, so the numbers line up. */
+.score .pre-mark { margin: 0 2px 0 0; }
+.score .pre-mark.hand { color: var(--faint); }
+/* Sections in a grouped list */
+.sec { display: flex; align-items: baseline; gap: 8px; margin: calc(var(--gap) + 6px) 0 6px 2px; font-size: var(--fs-sm); color: var(--muted); font-weight: 500; }
+section:first-of-type > .sec { margin-top: 0; }
+.sec .n { font: var(--fs-xs) var(--mono); color: var(--faint); font-weight: 400; }
+.sec.alert { color: var(--danger); }
+/* The project chip row above Tasks and Waiting: All pinned, the rest scroll sideways on one line. */
+.chip-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.chip-row > .pill { flex: none; }
+.chip-row .pill .n { font: var(--fs-xs) var(--mono); color: var(--faint); }
+.chip-sep { width: 1px; height: 16px; background: var(--border-strong); flex: none; }
+.chip-scroller { position: relative; flex: 1; min-width: 0; }
+.chip-track { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding: 1px 0; }
+.chip-track::-webkit-scrollbar { display: none; }
+.chip-track .pill { flex: none; white-space: nowrap; }
+.chip-fade { position: absolute; top: 0; bottom: 0; width: 56px; display: flex; align-items: center; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
+.chip-fade.l { left: 0; background: linear-gradient(to right, var(--bg) 45%, transparent); justify-content: flex-start; }
+.chip-fade.r { right: 0; background: linear-gradient(to left, var(--bg) 45%, transparent); justify-content: flex-end; }
+.chip-fade.on { opacity: 1; }
+.chip-fade.on .chip-arrow { pointer-events: auto; }
+.chip-arrow { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--surface); color: var(--muted); cursor: pointer; display: grid; place-items: center; font-size: 13px; line-height: 1; padding: 0; }
+.chip-arrow:hover { color: var(--text); background: var(--hover); }
 .due { color: var(--muted); text-align: right; font-size: var(--fs-sm); white-space: nowrap; }
 .due.over { color: var(--danger); }
 .done-ttl { text-decoration: line-through; color: var(--muted); }
@@ -147,15 +180,15 @@ textarea.inp { resize: vertical; min-height: 64px; line-height: 1.5; }
 /* Split view */
 .split { --min: 360px; display: grid; grid-template-columns: minmax(var(--min), var(--left, 50%)) 7px minmax(var(--min), 1fr); height: 100%; }
 .pane { overflow: auto; min-width: 0; }
-.pane.left { padding: var(--page-py) 18px 40px 28px; }
+.pane.left { padding: var(--page-py) 36px 40px 40px; }
 .pane.right { background: var(--surface); container-type: inline-size; }
 .divider { cursor: col-resize; position: relative; outline: 0; touch-action: none; }
 .divider::before { content: ''; position: absolute; inset: 0 3px; background: var(--border); }
 .divider:hover::before, .divider:focus-visible::before, .divider.drag::before { inset: 0 2px; background: var(--accent); }
 body.resizing { cursor: col-resize; user-select: none; }
-.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: calc(var(--gap) + 8px); }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: calc(var(--gap) + 18px); }
 @container (max-width: 620px) { .dgrid { grid-template-columns: minmax(0, 1fr); } .dgrid .meta { order: -1; } }
-.editor { padding: calc(var(--page-py) - 6px) 22px 28px; }
+.editor { padding: calc(var(--page-py) - 6px) 40px 32px; }
 .editor-stripe { height: 4px; position: sticky; top: 0; z-index: 1; }
 .title-inp.big { font-size: calc(var(--h1) + 2px); font-weight: 600; letter-spacing: -0.015em; }
 .ov-line { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 14px; color: var(--muted); font-size: calc(var(--fs) + 1px); }
@@ -330,6 +363,10 @@ textarea.notes-inp { min-height: calc(var(--fs) * 1.5 * 6 + var(--inp-py) * 2 + 
 .act-what { color: var(--text); }
 .act-who { color: var(--faint); }
 .act-more, .act-old { padding: 4px 0 0 60px; }
+.fold { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-top: 1px solid var(--border); background: none; padding: 8px 0 4px; margin-top: 14px; cursor: pointer; color: var(--muted); font-size: var(--fs-sm); text-align: left; }
+.fold:hover { color: var(--text); }
+.fold .chev { transform: rotate(-90deg); transition: transform 0.15s; }
+.fold.open .chev { transform: none; }
 .act-old { color: var(--faint); font-style: italic; }
 .rp { border: 1px solid var(--border); border-radius: 8px; padding: calc(var(--card-py) - 2px) calc(var(--card-px) - 2px); margin-bottom: 12px; }
 .rp-head { gap: 8px; font-size: var(--fs-sm); }
@@ -398,3 +435,6 @@ textarea.rp-body { margin-top: 8px; min-height: calc(var(--fs) * 1.5 * 9 + var(-
 .rename-btn { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 0 4px; margin-left: 2px; visibility: hidden; font-size: var(--fs-sm); }
 .src-row:hover .rename-btn, .rename-btn:focus-visible { visibility: visible; }
 .rename-btn:hover { color: var(--text); }
+/* In the Tasks list the reason shows on hover, except in Spacious, where it has its own line. */
+.why.spacious-only { display: none; }
+[data-density='spacious'] .r .why.spacious-only { display: block; }

@@ -57,15 +57,39 @@ export function dueLabel(due: string | null, now = new Date()): { text: string; 
 
 export const daysSince = (iso: string | null) => (iso ? Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 86_400_000)) : 0)
 
-/** One task line: project stripe, score, title with priority reason, project chip, due date. */
-export function TaskRow({ task, selected, current, onClick, showWhy = true }: { task: Task; selected?: boolean; current?: boolean; onClick: () => void; showWhy?: boolean }) {
+/**
+ * One task line: project stripe, score, title with priority reason, project label, due date.
+ * `list` is the style for the Tasks and Waiting lists: no project label (the stripe shows it), the
+ * project and reason in a tooltip, and waiting items name who they wait on (their section says
+ * Follow up, so the tag is left off). `showProject={false}` drops the label where every row has the same project.
+ */
+export function TaskRow({
+  task,
+  selected,
+  current,
+  onClick,
+  showWhy = true,
+  showProject = true,
+  list = false,
+}: {
+  task: Task
+  selected?: boolean
+  current?: boolean
+  onClick: () => void
+  showWhy?: boolean
+  showProject?: boolean
+  list?: boolean
+}) {
   const score = effectivePriority(task)
   const waiting = task.status === 'waiting_on'
   const due = waiting ? { text: `Wait ${daysSince(task.waitingSince)}d`, overdue: false } : dueLabel(task.dueDate)
+  const reason = task.priorityRationale === NO_SIGNALS ? null : task.priorityRationale
   // Waiting items say who they wait on; others give the priority reason, unless there's none worth saying.
-  const why = waiting ? (task.waitingOn ? `waiting on ${task.waitingOn}` : null) : task.priorityRationale === NO_SIGNALS ? null : task.priorityRationale
+  const why = waiting ? (task.waitingOn ? (list ? task.waitingOn : `waiting on ${task.waitingOn}`) : null) : reason
+  const tip = [task.project?.name, waiting ? `waiting on ${task.waitingOn ?? 'someone'}` : reason].filter(Boolean).join(' · ')
+  const chip = showProject && !list
   return (
-    <div className={`r ${selected ? 'sel' : ''} ${current ? 'cur' : ''}`} data-id={task.id} onClick={onClick}>
+    <div className={`r ${chip ? '' : 'no-chip'} ${selected ? 'sel' : ''} ${current ? 'cur' : ''}`} data-id={task.id} onClick={onClick}>
       <div className="stripe" style={{ background: task.project?.color ?? NO_PROJECT_COLOR }} />
       <div
         className={`score ${scoreClass(score)}`}
@@ -77,20 +101,27 @@ export function TaskRow({ task, selected, current, onClick, showWhy = true }: { 
               : undefined
         }
       >
+        {task.priorityOverride != null ? <span className="pre-mark hand">*</span> : task.aiAdjustment ? <span className="ai-mark pre-mark">✦</span> : null}
         {score}
-        {task.priorityOverride != null ? '*' : task.aiAdjustment ? <span className="ai-mark">✦</span> : ''}
       </div>
       <div className="ttl">
         {task.title}
-        {showWhy && why && <span className="why">{why}</span>}
-        {waiting && needsFollowUp(task, new Date()) && (
+        {showWhy && why && (!list || waiting) && <span className="why">{why}</span>}
+        {showWhy && list && !waiting && why && <span className="why spacious-only">{why}</span>}
+        {waiting && !list && needsFollowUp(task, new Date()) && (
           <span className="chip followup" title={`No reply in ${FOLLOW_UP_BUSINESS_DAYS} or more business days`}>
             Follow up
           </span>
         )}
       </div>
-      <ProjectChip project={task.project} />
+      {chip && <ProjectChip project={task.project} />}
       <div className={`due ${due.overdue ? 'over' : ''}`}>{due.text}</div>
+      {list && tip && (
+        <div className="tip">
+          {task.project && <span className="dot" style={{ background: task.project.color }} />}
+          {tip}
+        </div>
+      )}
     </div>
   )
 }
