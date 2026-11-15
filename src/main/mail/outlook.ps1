@@ -7,11 +7,16 @@
 #   -Action recipients -EntryId <id> -StoreId <id> -OutFile <path>   who Reply and Reply all would go to (nothing is saved)
 #   -Action reply -EntryId <id> -StoreId <id> -BodyFile <path> [-ReplyAll] [-Open] -OutFile <path>   saves a reply to Drafts, or with -Open shows it in a window instead; never sends
 #   -Action me -OutFile <path>   the mailbox's email addresses
+#   -Action calendar -Since <ISO time> -Until <ISO time> -OutFile <path>   entries in the default calendar overlapping that span, repeats included
+#   -Action openevent -EntryId <id> -StoreId <id> -Start <ISO time> -OutFile <path>   shows that calendar entry (the occurrence at -Start, for a repeating one)
+# The calendar actions only read; they never create, change, delete or answer a meeting.
 # The result is always JSON in -OutFile: { ok: true, ... } or { ok: false, error, code }.
 param(
-  [Parameter(Mandatory = $true)][ValidateSet('list', 'open', 'latest', 'recipients', 'reply', 'me')][string]$Action,
+  [Parameter(Mandatory = $true)][ValidateSet('list', 'open', 'latest', 'recipients', 'reply', 'me', 'calendar', 'openevent')][string]$Action,
   [Parameter(Mandatory = $true)][string]$OutFile,
   [string]$Since,
+  [string]$Until,
+  [string]$Start,
   [string]$EntryId,
   [string]$StoreId,
   [string]$BodyFile,
@@ -208,6 +213,87 @@ try {
     Write-Result ([ordered]@{ ok = $true; entryId = [string]$draft.EntryID; storeId = [string]$draft.Parent.StoreID })
     exit 0
   }
+
+  if ($Action -eq 'calendar') {
+    $parse = { param($s) [DateTime]::Parse($s, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime() }
+    $from = & $parse $Since
+    $to = & $parse $Until
+    $calendar = $ns.GetDefaultFolder(9)
+    $items = $calendar.Items
+    # Sort, then IncludeRecurrences, then Restrict: the order Outlook needs to list each occurrence of a repeating meeting.
+    $items.Sort('[Start]')
+    $items.IncludeRecurrences = $true
+    # Restrict uses Outlook's own date format (the user's locale) and ignores seconds; calendar.ts filters exactly.
+    $found = $items.Restrict("[Start] < '$($to.AddMinutes(1).ToString('g'))' AND [End] > '$($from.AddMinutes(-1).ToString('g'))'")
+    $myAddresses = @(Get-MyAddresses $ns | ForEach-Object { ([string]$_).ToLower() })
+    $myName = [string]$ns.CurrentUser.Name
+    $responses = @{ 0 = 'none'; 1 = 'organizer'; 2 = 'tentative'; 3 = 'accepted'; 4 = 'declined'; 5 = 'none' }
+    $busyNames = @{ 0 = 'free'; 1 = 'tentative'; 2 = 'busy'; 3 = 'away'; 4 = 'busy' }
+    $events = New-Object System.Collections.ArrayList
+    $item = $found.GetFirst()
+    $guard = 0
+    while ($item -ne $null -and $guard -lt 2000) {
+      $guard++
+      try {
+        if ($item.Start -ge $to) { break }
+        $attendees = New-Object System.Collections.ArrayList
+        $count = 0
+        $recipients = $item.Recipients
+        foreach ($r in $recipients) {
+          # Type 3 is a room or other resource, not a person.
+          if ($r.Type -eq 3) { continue }
+          $count++
+          $address = Get-Prop $r 'http://schemas.microsoft.com/mapi/proptag/0x39FE001F'
+          if (-not $address) { try { $address = [string]$r.Address } catch { $address = '' } }
+          $isMe = ($address -and ($myAddresses -contains $address.ToLower())) -or ([string]$r.Name -eq $myName)
+          if ($attendees.Count -lt 50 -or $isMe) {
+            [void]$attendees.Add([ordered]@{ name = [string]$r.Name; email = $(if ($address -like '*@*') { $address } else { '' }); response = $responses[[int]$r.MeetingResponseStatus]; isMe = [bool]$isMe })
+          }
+        }
+        $organizerName = [string]$item.Organizer
+        $myResponse = $responses[[int]$item.ResponseStatus]
+        if (-not $myResponse) { $myResponse = 'none' }
+        # MeetingStatus 0 is an appointment with no one invited: the user's own entry.
+        if ($item.MeetingStatus -eq 0) { $myResponse = 'organizer' }
+        $body = ''
+        try { $body = [string]$item.Body } catch {}
+        if ($body.Length -gt 8000) { $body = $body.Substring(0, 8000) }
+        [void]$events.Add([ordered]@{
+          id            = "$([string]$item.EntryID)|$($item.Start.ToUniversalTime().ToString('o'))"
+          entryId       = [string]$item.EntryID
+          storeId       = [string]$calendar.StoreID
+          title         = [string]$item.Subject
+          start         = $item.Start.ToUniversalTime().ToString('o')
+          end           = $item.End.ToUniversalTime().ToString('o')
+          location      = [string]$item.Location
+          allDay        = [bool]$item.AllDayEvent
+          busy          = $(if ($busyNames.ContainsKey([int]$item.BusyStatus)) { $busyNames[[int]$item.BusyStatus] } else { 'unknown' })
+          private       = ([int]$item.Sensitivity -ge 2)
+          cancelled     = ([int]$item.MeetingStatus -eq 5 -or [int]$item.MeetingStatus -eq 7)
+          myResponse    = $myResponse
+          organizer     = [ordered]@{ name = $organizerName; email = ''; isMe = ($organizerName -eq $myName -or $myResponse -eq 'organizer') }
+          attendees     = @($attendees)
+          attendeeCount = $count
+          invite        = $body
+        })
+      } catch {}
+      $item = $found.GetNext()
+    }
+    Write-Result ([ordered]@{ ok = $true; events = @($events) })
+    exit 0
+  }
+
+  if ($Action -eq 'openevent') {
+    $item = $ns.GetItemFromID($EntryId, $StoreId)
+    if ($item.IsRecurring -and $Start) {
+      $when = [DateTime]::Parse($Start, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()
+      try { $item = $item.GetRecurrencePattern().GetOccurrence($when) } catch {}
+    }
+    $item.Display()
+    Write-Result ([ordered]@{ ok = $true })
+    exit 0
+  }
+
 
   $sinceLocal = [DateTime]::Parse($Since, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()
   # Restrict uses Outlook's own date format (the user's locale) and ignores seconds; outlook.ts filters exactly.

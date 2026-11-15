@@ -8,6 +8,7 @@ import { ActivityLog } from './ActivityLog'
 import { ReplyCard } from './ReplyCard'
 import { StatusCard } from './StatusCard'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from './UpdatesWindow'
+import { idsFor, NextMeeting } from './NextMeeting'
 
 const EDITABLE_STATUSES: TaskStatus[] = ['open', 'waiting_on', 'done']
 
@@ -199,6 +200,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
 
         <div className="dgrid">
           <div>
+            {!isNew && form.input.status !== 'done' && <NextMeeting personIds={idsFor(form.input.requesterId, form.input.waitingOn, people)} />}
             <StatusCard scope="task" id={isNew ? null : form.input.id} done={form.input.status === 'done'} />
             <ReplyCard taskId={isNew ? null : form.input.id} onSaved={() => setActivityKey((k) => k + 1)} />
 

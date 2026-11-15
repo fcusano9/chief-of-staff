@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calendar on Today</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; overflow-x: clip; }
+body { font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.pill { white-space: nowrap; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 28px; border-bottom: 1px dashed var(--border-strong); }
+.controls .grp { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.controls .grp > span { font-size: 11px; color: var(--faint); margin-right: 2px; text-transform: uppercase; letter-spacing: .04em; }
+.page { max-width: 1140px; margin: 0 auto; padding: 24px 28px 60px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+h2 { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
+.label { font-size: 12.5px; color: var(--muted); }
+.cards4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 14px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px 16px; }
+.stat { font: 600 22px var(--mono); }
+.brief { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 45%, transparent); border-radius: 8px; padding: 12px 18px; margin-bottom: 14px; color: var(--muted); }
+.cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
+.list { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.trow { display: grid; grid-template-columns: 3px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 12px 7px 0; border-top: 1px solid var(--border); }
+.trow:first-child { border-top: 0; }
+.trow .stripe { align-self: stretch; }
+.trow .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trow .score { font: 500 12px var(--mono); color: var(--muted); width: 26px; text-align: right; }
+.plabel { font-size: 11.5px; color: var(--muted); display: inline-flex; gap: 5px; align-items: center; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.side { display: grid; gap: 16px; align-content: start; }
+.wrow { display: flex; gap: 8px; padding: 3px 0; }
+.wrow .t { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Meetings */
+.mt { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 5px 6px; margin: 0 -6px; border-radius: 5px; cursor: pointer; }
+.mt:hover { background: var(--hover); }
+.mt.sel { background: var(--sel); }
+.mt .tm { font: 500 12px var(--mono); color: var(--muted); }
+.mt .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt .who { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt.past .t, .mt.past .tm { color: var(--faint); }
+.mt.now { box-shadow: inset 2px 0 0 var(--accent); border-radius: 0 5px 5px 0; }
+.mt .badge { font: 500 11px var(--mono); color: var(--accent); background: var(--accent-bg); border-radius: 4px; padding: 0 5px; }
+.dayh { font-size: 11.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; margin: 10px 0 2px; display: flex; gap: 8px; }
+.dayh .n { font-family: var(--mono); }
+.fold { border: 0; background: none; color: var(--muted); padding: 6px 0 0; cursor: pointer; font-size: 12.5px; }
+.fold:hover { color: var(--text); }
+.empty { color: var(--faint); }
+.err { color: var(--danger); }
+
+/* B: strip */
+.strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(180px, 1fr); gap: 10px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 2px; }
+.chip { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 8px 12px; cursor: pointer; text-align: left; min-width: 0; }
+.chip:hover { border-color: var(--border-strong); }
+.chip.sel { border-color: var(--accent); }
+.chip.past { opacity: .55; }
+.chip.now { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.chip .tm { font: 500 12px var(--mono); color: var(--muted); }
+.chip .t { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip .who { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.striphead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+
+/* Meeting panel */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.18); display: none; }
+.scrim.on { display: block; }
+.panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100vw); background: var(--surface); border-left: 1px solid var(--border); box-shadow: -8px 0 24px rgba(0,0,0,.08); padding: 18px 20px; overflow-y: auto; transform: translateX(105%); transition: transform .18s; }
+.panel.on { transform: none; }
+.panel h3 { font-size: 16px; margin: 0; font-weight: 600; }
+.panel .sec { margin-top: 16px; }
+.panel .sec > .label { margin-bottom: 4px; display: flex; gap: 6px; }
+.panel .sec > .label .n { font: 500 11px var(--mono); color: var(--faint); }
+.att { display: flex; gap: 8px; align-items: center; padding: 2px 0; }
+.att .nm { flex: 1; }
+.att a { color: var(--text); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; cursor: pointer; }
+.att .st { font-size: 12px; color: var(--muted); }
+.ptask { display: flex; gap: 8px; align-items: center; padding: 3px 0; cursor: pointer; }
+.ptask:hover .t { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.ptask .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag { display: inline-block; font-size: 11px; font-weight: 500; border-radius: 4px; padding: 0 6px; white-space: nowrap; line-height: 18px; }
+.tag.over { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.tag.due { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.tag.wait { color: var(--muted); background: var(--sel); }
+.invite { white-space: pre-wrap; color: var(--muted); font-size: 12.5px; border-left: 2px solid var(--border-strong); padding-left: 10px; max-height: 120px; overflow: hidden; position: relative; }
+.invite.open { max-height: none; }
+
+/* Editors */
+.editor { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 16px 20px; max-width: 640px; }
+.ed-title { font-size: 17px; font-weight: 600; }
+.field { display: grid; grid-template-columns: 110px 1fr; gap: 8px; padding: 4px 0; align-items: baseline; }
+.field .label { margin: 0; }
+.nextmt { display: flex; gap: 8px; align-items: baseline; border: 1px solid var(--border); border-radius: 7px; padding: 8px 12px; margin: 12px 0; cursor: pointer; }
+.nextmt:hover { border-color: var(--border-strong); }
+.nextmt .tm { font: 500 12px var(--mono); color: var(--muted); white-space: nowrap; }
+.nextmt .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl { outline: 2px dashed var(--accent); outline-offset: 3px; border-radius: 7px; }
+
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 12.5px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } .cards4 { grid-template-columns: repeat(2, 1fr); } .page { padding: 16px; } .controls { padding: 8px 16px; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab" data-screen="today">Today</button><button class="tab">Tasks</button><button class="tab">Waiting</button><button class="tab">Weekly</button>
+  <span class="faint" style="margin:0 4px">|</span>
+  <button class="tab">Projects</button><button class="tab" data-screen="person">People</button>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="controls">
+  <div class="grp"><span>Screen</span>
+    <button class="pill" data-s="today">Today</button>
+    <button class="pill" data-s="task">Task editor</button>
+    <button class="pill" data-s="person">Person editor</button>
+  </div>
+  <div class="grp" id="layoutGrp"><span>Today</span>
+    <button class="pill" data-v="before">Before</button>
+    <button class="pill" data-v="a">A · Card on the right</button>
+    <button class="pill" data-v="b">B · Strip under the numbers</button>
+  </div>
+  <div class="grp" id="stateGrp"><span>Calendar</span>
+    <button class="pill" data-c="busy">Busy day</button>
+    <button class="pill" data-c="none">No meetings today</button>
+    <button class="pill" data-c="error">Can't read</button>
+  </div>
+</div>
+
+<div class="page" id="page"></div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel"></aside>
+<div class="toast" id="toast"></div>
+
+<script>
+const PROJ = { pricing: ['Spring pricing', '#7F77DD'], training: ['Dealer training', '#1D9E75'], portal: ['Partner portal', '#D85A30'], roadmap: ['2027 roadmap', '#378ADD'] }
+const PEOPLE = { priya: 'Priya Natarajan', dana: 'Dana Kim', marco: 'Marco Ruiz', lena: 'Lena Fischer', sam: 'Sam Okafor' }
+const TASKS = [
+  { id: 1, t: 'Review margin model with Priya', p: 'pricing', s: 82, tag: ['over', 'Overdue 1 day'], asked: 'priya' },
+  { id: 2, t: 'Roadmap slides for VP review', p: 'roadmap', s: 76, tag: ['due', 'Due today'], asked: 'dana' },
+  { id: 3, t: 'Send dealer training dates to regions', p: 'training', s: 64, tag: ['due', 'Due Thu'], asked: 'lena' },
+  { id: 4, t: 'Partner portal login copy', p: 'portal', s: 58, wait: 'marco', tag: ['wait', 'Waiting 6 days'] },
+  { id: 5, t: 'Pricing FAQ for sales', p: 'pricing', s: 51, asked: 'priya' },
+  { id: 6, t: 'Q1 capacity numbers', p: 'roadmap', s: 47, wait: 'sam', tag: ['wait', 'Waiting 3 days'] },
+]
+// The current week, Sunday to Saturday. "Today" is Tuesday, November 17, 11:10.
+const WEEK = [
+  { day: 'Tue', date: 'Nov 17', today: true, ms: [
+    { id: 'm1', s: '09:00', e: '09:30', t: 'Pricing standup', who: ['priya', 'sam'], past: true, loc: 'Teams' },
+    { id: 'm2', s: '11:00', e: '11:45', t: 'Partner portal design review', who: ['marco', 'lena', 'x:Jordan Blake'], now: true, loc: 'Teams',
+      inv: 'Agenda\n1. Login page copy (Marco)\n2. Dealer onboarding flow\n3. Launch date\n\nPlease review the Figma link before the meeting.' },
+    { id: 'm3', s: '13:30', e: '14:00', t: '1:1 Dana / Frank', who: ['dana'], loc: 'Room 4B', inv: 'Weekly 1:1.' },
+    { id: 'm4', s: '15:00', e: '16:00', t: 'Margin model walkthrough', who: ['priya', 'x:Alex Chen (Finance)'], loc: 'Teams',
+      inv: 'Walk through the three margin scenarios and agree the floor price before the EMEA deck goes out.' },
+  ] },
+  { day: 'Wed', date: 'Nov 18', ms: [
+    { id: 'm5', s: '10:00', e: '10:30', t: 'Dealer training planning', who: ['lena'], loc: 'Teams' },
+  ] },
+  { day: 'Thu', date: 'Nov 19', ms: [
+    { id: 'm6', s: '09:30', e: '10:30', t: 'VP roadmap review', who: ['dana', 'sam', 'x:Riley Park'], loc: 'Boardroom' },
+    { id: 'm7', s: '14:00', e: '14:30', t: 'Capacity check-in', who: ['sam'], loc: 'Teams' },
+  ] },
+  { day: 'Fri', date: 'Nov 20', ms: [] },
+  { day: 'Sat', date: 'Nov 21', ms: [] },
+]
+const ALLM = WEEK.flatMap((d) => d.ms.map((m) => ({ ...m, day: d.day, date: d.date, today: !!d.today })))
+
+let screen = 'today', layout = 'a', cal = 'busy', foldOpen = false, selM = null
+const $ = (s) => document.querySelector(s)
+const proj = (k) => `<span class="plabel"><span class="dot" style="background:${PROJ[k][1]}"></span>${PROJ[k][0]}</span>`
+const nm = (w) => w.startsWith('x:') ? w.slice(2) : PEOPLE[w].split(' ')[0]
+const whoLine = (m) => m.who.map(nm).join(', ')
+const linked = (m) => TASKS.filter((t) => m.who.includes(t.asked) || m.who.includes(t.wait))
+function toast(s) { const t = $('#toast'); t.textContent = s; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 1400) }
+
+function todayMs() { return cal === 'busy' ? WEEK[0].ms : [] }
+function laterDays() { return WEEK.slice(1) }
+
+function meetingRow(m, showDay) {
+  const n = linked(m).length
+  return `<div class="mt ${m.past ? 'past' : ''} ${m.now ? 'now' : ''} ${selM === m.id ? 'sel' : ''}" data-m="${m.id}">
+    <span class="tm">${m.s}</span>
+    <span style="min-width:0"><div class="t">${m.t}</div><div class="who">${whoLine(m)}</div></span>
+    ${n ? `<span class="badge" title="Open tasks with attendees">${n}</span>` : '<span></span>'}
+  </div>`
+}
+
+function meetingsCard() {
+  if (cal === 'error') return `<div class="card"><div class="row" style="margin-bottom:4px"><span class="label">Meetings</span></div>
+    <div class="err">Couldn't read the Outlook calendar. Open Outlook, then try again.</div>
+    <button class="btn sm" style="margin-top:8px" onclick="toast('Reading the calendar…')">Try again</button></div>`
+  const tm = todayMs()
+  const rest = laterDays().filter((d) => d.ms.length)
+  const restCount = rest.reduce((a, d) => a + d.ms.length, 0)
+  return `<div class="card">
+    <div class="row" style="margin-bottom:4px"><span class="label">Meetings today</span><span class="faint mono" style="font-size:11px">${tm.length || ''}</span><div class="spacer"></div><span class="faint" style="font-size:11.5px">Read 11:05</span></div>
+    ${tm.length ? tm.map((m) => meetingRow(m)).join('') : '<div class="empty">No meetings today</div>'}
+    <button class="fold" id="fold">${foldOpen ? '▾' : '▸'} Rest of the week <span class="mono faint">${restCount}</span></button>
+    ${foldOpen ? laterDays().map((d) => `<div class="dayh">${d.day} <span class="n">${d.date}</span></div>${d.ms.length ? d.ms.map((m) => meetingRow(m)).join('') : '<div class="empty" style="font-size:12.5px">No meetings</div>'}`).join('') : ''}
+  </div>`
+}
+
+function strip() {
+  if (cal === 'error') return `<div class="card" style="margin-bottom:14px"><span class="err">Couldn't read the Outlook calendar. Open Outlook, then try again.</span> <button class="btn sm" onclick="toast('Reading the calendar…')">Try again</button></div>`
+  const tm = todayMs()
+  const head = `<div class="striphead"><h2 style="margin:0">Meetings today</h2><span class="faint mono" style="font-size:11px">${tm.length || ''}</span><div class="spacer"></div><button class="btn ghost sm" id="weekBtn">${foldOpen ? 'Today only' : 'This week'}</button></div>`
+  const list = foldOpen ? ALLM.filter((m) => cal === 'busy' || !m.today) : tm
+  if (!list.length) return head + '<div class="card empty" style="margin-bottom:14px">No meetings today</div>'
+  return head + `<div class="strip">${list.map((m) => `<button class="chip ${m.past ? 'past' : ''} ${m.now ? 'now' : ''} ${selM === m.id ? 'sel' : ''}" data-m="${m.id}">
+    <div class="tm">${foldOpen ? m.day + ' ' : ''}${m.s}–${m.e}</div><div class="t">${m.t}</div><div class="who">${whoLine(m)}</div></button>`).join('')}</div>`
+}
+
+function focusList() {
+  return `<div><h2>Focus · highest priority first</h2><div class="list">${TASKS.map((t) => `<div class="trow"><span class="stripe" style="background:${PROJ[t.p][1]}"></span><span class="t">${t.t}</span>${proj(t.p)}<span class="score">${t.s}</span></div>`).join('')}</div></div>`
+}
+function waitingCard() {
+  return `<div class="card"><div class="row" style="margin-bottom:6px"><span class="label">Waiting on others</span></div>
+    ${TASKS.filter((t) => t.wait).map((t) => `<div class="wrow"><span class="t">${t.t}</span><span class="muted">${nm(t.wait)}</span><span class="mono muted">${t.tag[1].match(/\d+/)[0]}d</span></div>`).join('')}</div>`
+}
+
+function today() {
+  const head = `<div class="head"><h1>Good morning</h1><span class="muted">Tuesday, November 17</span><div class="spacer"></div><button class="btn primary">New task</button></div>
+  <div class="cards4">
+    <div class="card"><div class="label">Urgent</div><div class="stat" style="color:var(--danger)">2</div></div>
+    <div class="card"><div class="label">Overdue</div><div class="stat" style="color:var(--warn)">1</div></div>
+    <div class="card"><div class="label">Waiting on</div><div class="stat">2</div></div>
+    <div class="card"><div class="label">Open</div><div class="stat">17</div></div>
+  </div>`
+  const brief = `<div class="brief">Daily briefing (unchanged in this step)</div>`
+  if (layout === 'before') return head + brief + `<div class="cols">${focusList()}<div class="side">${waitingCard()}<div class="card"><div class="label" style="margin-bottom:4px">Meetings today</div><div class="muted">Your Outlook calendar shows up here in milestone 4.</div></div></div></div>`
+  if (layout === 'a') return head + brief + `<div class="cols">${focusList()}<div class="side">${meetingsCard()}${waitingCard()}</div></div>`
+  return head + strip() + brief + `<div class="cols">${focusList()}<div class="side">${waitingCard()}</div></div>`
+}
+
+function nextMeetingFor(personKey) { return ALLM.find((m) => m.who.includes(personKey) && !m.past) }
+function nextMtLine(m, label) {
+  return `<div class="nextmt hl" data-m="${m.id}"><span class="label" style="white-space:nowrap">${label}</span><span class="tm">${m.today ? 'Today' : m.day} ${m.s}</span><span class="t">${m.t}</span></div>`
+}
+
+function taskEditor() {
+  const t = TASKS[0], m = nextMeetingFor(t.asked)
+  return `<div class="editor">
+    <div class="row"><span class="dot" style="background:${PROJ[t.p][1]}"></span><span class="ed-title">${t.t}</span></div>
+    <div class="field"><span class="label">Project</span><span>${PROJ[t.p][0]}</span></div>
+    <div class="field"><span class="label">Asked by</span><span>${PEOPLE[t.asked]}</span></div>
+    <div class="field"><span class="label">Due</span><span>Mon, Nov 16 <span class="tag over">Overdue 1 day</span></span></div>
+    ${m ? nextMtLine(m, 'Next meeting with Priya') : ''}
+    <div class="card" style="margin-top:4px"><div class="label">Where this stands</div><div class="faint">(unchanged)</div></div>
+    <div class="label" style="margin-top:12px">Notes</div><div class="card faint" style="height:90px">(unchanged)</div>
+  </div>`
+}
+
+function personEditor() {
+  const k = 'dana'
+  const ms = ALLM.filter((m) => m.who.includes(k) && !m.past)
+  return `<div class="editor">
+    <div class="ed-title">${PEOPLE[k]}</div>
+    <div class="muted">VP Product · runs the 2027 roadmap review</div>
+    <div class="field" style="margin-top:8px"><span class="label">Email</span><span>dana.kim@example.com</span></div>
+    <div class="hl" style="margin:12px 0;padding:8px 12px;border:1px solid var(--border);border-radius:7px">
+      <div class="label" style="margin-bottom:2px">Meetings this week <span class="mono faint">${ms.length}</span></div>
+      ${ms.map((m) => meetingRow(m)).join('')}
+    </div>
+    <div class="label">Open asks · 1</div><div class="faint">(unchanged)</div>
+  </div>`
+}
+
+function panel() {
+  const m = ALLM.find((x) => x.id === selM)
+  if (!m) return ''
+  const tasks = linked(m)
+  return `<div class="row"><span class="muted mono" style="font-size:12px">${m.today ? 'Today' : m.day + ' ' + m.date} · ${m.s}–${m.e}</span><div class="spacer"></div><button class="btn ghost sm" id="close">Esc</button></div>
+    <h3>${m.t}</h3>
+    <div class="muted">${m.loc}</div>
+    <div class="sec"><div class="label">Attendees <span class="n">${m.who.length + 1}</span></div>
+      ${m.who.map((w) => w.startsWith('x:')
+        ? `<div class="att"><span class="nm">${w.slice(2)}</span><button class="btn ghost sm" onclick="toast('Opens New person with name and email filled in')">+ Add to People</button></div>`
+        : `<div class="att"><span class="nm"><a onclick="toast('Opens ${PEOPLE[w]} in People')">${PEOPLE[w]}</a></span><span class="st">${w === 'marco' ? 'Tentative' : 'Accepted'}</span></div>`).join('')}
+      <div class="att"><span class="nm muted">You</span><span class="st">Organizer</span></div>
+    </div>
+    <div class="sec"><div class="label">Open with attendees <span class="n">${tasks.length}</span></div>
+      ${tasks.length ? tasks.map((t) => `<div class="ptask" onclick="toast('Opens the task')"><span class="dot" style="background:${PROJ[t.p][1]}"></span><span class="t">${t.t}</span>${t.tag ? `<span class="tag ${t.tag[0]}">${t.tag[1]}</span>` : ''}<span class="muted" style="font-size:12px">${t.wait ? 'waiting on ' + nm(t.wait) : nm(t.asked)}</span></div>`).join('') : '<div class="empty">Nothing open</div>'}
+    </div>
+    ${m.inv ? `<div class="sec"><div class="label">Invite</div><div class="invite">${m.inv}</div></div>` : ''}
+    <div class="sec row"><button class="btn" onclick="toast('Opens the meeting in Outlook')">Open in Outlook</button></div>`
+}
+
+function render() {
+  document.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', b.dataset.s === screen))
+  document.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === layout))
+  document.querySelectorAll('[data-c]').forEach((b) => b.classList.toggle('on', b.dataset.c === cal))
+  $('#layoutGrp').style.display = $('#stateGrp').style.display = screen === 'today' ? '' : 'none'
+  document.querySelectorAll('.tab[data-screen]').forEach((b) => b.classList.toggle('on', b.dataset.screen === (screen === 'person' ? 'person' : screen === 'today' ? 'today' : '')))
+  $('#page').innerHTML = (screen === 'today' ? today() : screen === 'task' ? taskEditor() : personEditor()) + notes()
+  $('#panel').innerHTML = panel()
+  $('#panel').classList.toggle('on', !!selM)
+  $('#scrim').classList.toggle('on', !!selM)
+  const f = $('#fold') || $('#weekBtn'); if (f) f.onclick = () => { foldOpen = !foldOpen; render() }
+  document.querySelectorAll('[data-m]').forEach((el) => el.onclick = () => { selM = el.dataset.m; render() })
+  const c = $('#close'); if (c) c.onclick = () => { selM = null; render() }
+}
+
+function notes() {
+  return `<div class="notes"><h3>Notes (not part of the screen)</h3><ul>
+  <li><b>Step 1 of 3.</b> This PR reads the calendar and shows it. The daily briefing using meetings (step 2) and ✦ Prep on a meeting (step 3) come in later PRs, with their own mockups.</li>
+  <li><b>What's read:</b> the current week, Sunday to Saturday, from classic Outlook on Windows and Apple Calendar on the Mac (the same accounts ticked for Apple Mail). Read at startup and on the 30-minute timer; "Read 11:05" shows when. Nothing is sent anywhere; no AI runs.</li>
+  <li><b>Left out:</b> declined, all-day, shown as Free, and private entries.</li>
+  <li><b>A vs B on Today:</b> A replaces the "Meetings today" placeholder in the right column, above Waiting on, with the rest of the week folded under it. B puts today's meetings in a row of cards under the numbers, with a This week switch. The one happening now has an accent edge; past ones are greyed.</li>
+  <li><b>The number on a meeting</b> (A only) is how many open tasks and waiting-on items involve its attendees.</li>
+  <li><b>Clicking a meeting</b> opens a side panel: time, place, attendees (linked to People by email, then name; others get "+ Add to People"), the open tasks and waiting-on items with them, the invite text, and Open in Outlook / Open in Calendar. Esc closes. Nothing is saved from it.</li>
+  <li><b>Task editor:</b> "Next meeting with Priya" when the task's Asked by or Waiting on person is in an upcoming meeting this week. Click opens the panel. Hidden when there's none.</li>
+  <li><b>Person editor:</b> "Meetings this week" with them, hidden when there are none.</li>
+  <li><b>Links are by people only.</b> Meetings aren't matched to projects (that would mean guessing from titles). Should they be, for example a project picker on the meeting?</li>
+  <li><b>Saturday:</b> the current week has nothing left on a Saturday. Should Saturday show next week instead?</li>
+  <li><b>Not tried yet:</b> whether Apple Calendar can be read quickly enough by script, and whether reading Outlook's calendar triggers its security prompt. I'll check both before building.</li>
+  </ul></div>`
+}
+
+document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { screen = b.dataset.s; selM = null; render() })
+document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { layout = b.dataset.v; render() })
+document.querySelectorAll('[data-c]').forEach((b) => b.onclick = () => { cal = b.dataset.c; render() })
+$('#scrim').onclick = () => { selM = null; render() }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selM) { selM = null; render() } })
+$('#theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+render()
+</script>
+</body>
+</html>

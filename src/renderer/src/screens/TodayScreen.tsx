@@ -4,6 +4,7 @@ import { cos } from '../api'
 import { daysSince, TaskRow } from '../components/bits'
 import { BriefingCard } from '../components/Briefing'
 import { useShortcutHints } from '../components/hints'
+import { MeetingsCard } from '../components/MeetingsCard'
 import { useApp } from '../context'
 
 const greeting = (h: number) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
@@ -66,6 +67,7 @@ export function TodayScreen() {
           </div>
         </div>
         <div className="grid" style={{ alignContent: 'start' }}>
+          <MeetingsCard />
           <div className="card">
             <div className="row" style={{ marginBottom: 6 }}>
               <span className="label">Waiting on others</span>
@@ -85,10 +87,6 @@ export function TodayScreen() {
               )
             })}
             {waiting.length === 0 && <div className="muted">Nothing is waiting on anyone.</div>}
-          </div>
-          <div className="card">
-            <div className="label" style={{ marginBottom: 4 }}>Meetings today</div>
-            <div className="muted">Your Outlook calendar shows up here in milestone 4.</div>
           </div>
         </div>
       </div>

@@ -15,6 +15,10 @@ import { chooseDataLocation, findRedirectingPackage } from './paths'
 import { applyPendingRestore, createBackup, listBackups, requestRestore, snapshotNow } from './services/backup'
 import { FixtureOutlook, PowerShellOutlook } from './mail/outlook'
 import { AppleMailReader } from './mail/applemail'
+import { AppleCalendarReader } from './calendar/applecalendar'
+import { OutlookCalendar } from './calendar/outlook'
+import { FixtureCalendar } from './calendar/reader'
+import { CalendarService } from './services/calendar'
 import { BriefingService } from './services/briefings'
 import { WeeklyService } from './services/weekly'
 import { BriefService, PersonService, ProjectService } from './services/directory'
@@ -146,6 +150,14 @@ const outlook = outlookFixture
   : null
 const mail = new MailService(db, sources, outlook, () => settings.current.userName, () => aiLabel(), undefined, () => settings.current.mailAccounts)
 const replies = new ReplyService(db, outlook, currentProvider, () => settings.current, () => usage.logFor('reply'))
+// Test data folders can read meetings from a fixture file instead of the calendar (COS_CALENDAR_FIXTURE, a JSON list of RawMeeting).
+const calendarFixture = isSeparateData ? process.env.COS_CALENDAR_FIXTURE : undefined
+const calendarReader = calendarFixture
+  ? new FixtureCalendar(calendarFixture, process.env.COS_MAIL_APP === 'apple-mail' ? 'apple-calendar' : 'outlook')
+  : process.platform === 'win32' ? new OutlookCalendar()
+  : process.platform === 'darwin' ? new AppleCalendarReader(() => settings.current.calendarIds)
+  : null
+const calendar = new CalendarService(calendarReader, () => people.list(), () => calendarReader?.app === 'apple-calendar' && settings.current.calendarIds.length === 0)
 const ollama = new OllamaManager(() => settings.current.localUrl, nodeHost(app.getPath('temp')))
 
 /** The chosen model's name, e.g. "Basic", "Claude Opus 5.5" or "Ollama gpt-oss:20b". */
@@ -333,6 +345,10 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'mail.open': (sourceId) => mail.open(sourceId),
   'mail.addresses': () => mail.addresses(),
   'mail.accounts': (refresh) => mail.accounts(refresh),
+  'calendar.week': () => calendar.week(),
+  'calendar.refresh': () => calendar.refresh(),
+  'calendar.open': (id) => calendar.open(id),
+  'calendar.calendars': () => calendar.calendars(),
   'replies.target': (taskId) => replies.target(taskId),
   'replies.draft': (taskId, revision) => replies.draft(taskId, revision),
   'replies.save': (taskId, reply) => replies.save(taskId, reply),
@@ -435,10 +451,12 @@ void app.whenReady().then(() => {
   registerIpc()
   createWindow()
   backupIfDue()
+  void calendar.refresh()
   setInterval(() => {
     tasks.recomputeAll() // due dates and staleness change as time passes
     saveEndedWeeks() // a week that ended while the app was open is saved soon after Saturday midnight
     backupIfDue()
+    void calendar.refresh() // meetings change, and a new week starts on Sunday
   }, 30 * 60_000)
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
