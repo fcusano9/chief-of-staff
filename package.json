@@ -16,6 +16,7 @@
     "e2e": "electron-vite build && node e2e/run.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
+    "docs": "vitest run tests/docs.test.ts -u",
     "bench:ai": "vitest run --config bench/vitest.config.ts",
     "install:win": "electron-vite build && electron-builder --win --dir \"-c.directories.output=%LOCALAPPDATA%/Programs/Chief of Staff (build)\"",
     "package:win": "electron-vite build && electron-builder --win",

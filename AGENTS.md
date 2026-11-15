@@ -1,6 +1,6 @@
 # AGENTS.md: guide for AI coding assistants
 
-Read this before changing anything. It's the shared context for any AI tool working on this repo (Claude Code, Codex, Copilot, Cursor and others). `CLAUDE.md` points here. The deeper background is in [docs/ROADMAP.md](docs/ROADMAP.md) (what's built and what's next), [docs/DECISIONS.md](docs/DECISIONS.md) (why things are the way they are) and [docs/AI-RULES.md](docs/AI-RULES.md) (every AI rule and limit on one page, for Frank to scan; update it in the same PR whenever an AI rule changes).
+Read this before changing anything. It's the shared context for any AI tool working on this repo (Claude Code, Codex, Copilot, Cursor, and others). `CLAUDE.md` points here. The deeper background is in [docs/ROADMAP.md](docs/ROADMAP.md) (what's built and what's next), [docs/DECISIONS.md](docs/DECISIONS.md) (why things are the way they are), [docs/AI-RULES.md](docs/AI-RULES.md) (every AI rule and limit on one page, for Frank to scan; update it in the same PR whenever an AI rule changes), and [docs/BUSINESS-RULES.md](docs/BUSINESS-RULES.md) (every other app rule, kept the same way). [docs/architecture.html](docs/architecture.html) is an interactive guide to all of it: system map, flows, data model, screens, rules, and a priority calculator. Open it in a browser.
 
 ## What this is
 
@@ -19,6 +19,8 @@ It tracks tasks, projects, people and a waiting-on list, ranks tasks by a transp
 
 ## Working with Frank
 
+- **Use the Oxford comma in everything you write** (docs, app text, code comments, PR descriptions, and chat): "tasks, projects, and people", not "tasks, projects and people". Frank's preference.
+- **Keep wording concise:** only the detail the reader needs, nothing extra (Frank's preference).
 - He's a product manager, not a full-time developer. Explain in plain language, lead with the outcome, and say clearly what was and wasn't verified.
 - He likes being asked questions up front for big features, approves designs before the build, and reviews PRs.
 - Things that are his call: company-data policy (sending work content to Anthropic needs his employer's OK), which AI provider and model to use, and spending money.
@@ -55,8 +57,9 @@ src/preload/     Exposes the API as window.cos (CommonJS, sandboxed)
 src/renderer/    React UI: App.tsx (shell, shortcuts), screens/, components/
 tests/           Vitest: priority, data services, AI and review queue
 e2e/             Drives the real app over CDP against a throwaway data folder
-design/          Approved clickable prototype (direction B)
-docs/            ROADMAP.md, DECISIONS.md, COPILOT-PROMPTS.md (how the Copilot Prompt Generator's Teams prompts work)
+design/          One approved clickable mockup per feature (open in a browser)
+docs/            ROADMAP.md, DECISIONS.md, AI-RULES.md, BUSINESS-RULES.md, COPILOT-PROMPTS.md (how the Copilot Prompt Generator's Teams prompts work),
+                 architecture.html (the interactive guide; its data part is rebuilt by npm run docs)
 ```
 
 ## Commands
@@ -66,6 +69,7 @@ npm install
 npm run dev          # hot-reload dev app (uses its own "Chief of Staff (dev)" data folder)
 npm run demo:data    # fill that dev folder with made-up people, projects, tasks and Review suggestions; existing dev data is moved aside
 npm test             # vitest
+npm run docs         # rebuild the data part of docs/architecture.html (rules, schema, IPC calls) after changing them
 npm run typecheck    # both TS projects
 npm run build        # electron-vite build into out/
 npm run e2e          # build, then click through the real app (see e2e/README.md)
@@ -86,8 +90,9 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   The preload exposes exactly the listed channels.
 - **Schema change:** append a new SQL string to `MIGRATIONS` in `src/main/db.ts`. Never edit a shipped migration. `transaction()` calls nest by joining the outer transaction.
 - **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, its definition in `importKindDefinitions` (`ai/prompts.ts`), `ALL_KINDS` in `ai/context.ts`, the split passes in `ai/ollama.ts`, `SuggestionService.accept`, and `ReviewScreen`.
-- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `providerFor()` and `aiChoices()` in `index.ts` (so its models show in the picker), and give it a section under AI providers in `AiSettings.tsx` and an icon in `ProviderIcon`. It must return `RawSuggestion[]` from `extract` (validation is shared), a sentence from `writePersonBrief`, a `RawStatus` from `writeStatus` (`cleanStatusCard` checks it), a `RawReply` from `writeReply` (`cleanReply` tidies it), a `RawBriefing` from `writeBriefing` (`assembleBriefing` checks it), and a `RawReflection` from `writeWeeklyReflection` (`assembleReflection` tidies it). Wrap every request in `logged()` with the `log` that `extract` receives, so the AI log shows it exactly as sent and received. Never put the API key in the logged request.
+- **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `providerFor()`, and `aiChoices()` in `index.ts` (so its models show in the picker), and give it a section under AI providers in `AiSettings.tsx` and an icon in `ProviderIcon`. It must return a `RawExtraction` from `extract` (`suggestions`, `next_actions`, `priority_changes`, `item_title`, `item_kind`; validation is shared), a sentence from `writePersonBrief`, a `RawStatus` from `writeStatus` (`cleanStatusCard` checks it), a `RawReply` from `writeReply` (`cleanReply` tidies it), a `RawBriefing` from `writeBriefing` (`assembleBriefing` checks it), and a `RawReflection` from `writeWeeklyReflection` (`assembleReflection` tidies it). Wrap every request in `logged()` with the `log` that `extract` receives, so the AI log shows it exactly as sent and received. Never put the API key in the logged request.
 - **Changing what the AI is told:** all wording sent to an AI (instructions, answer-form descriptions, the last line of each request) is in `src/main/ai/prompts.ts`, one commented entry each. The request builders only lay out the data (tags, `[id]` labels, task lines). Every AI limit (what it may answer, how much of each task, note and email it's sent, Claude's output caps, the local model's memory and time-out) is in `ai/limits.ts`, and the prompts quote those constants rather than typing numbers into the text. `tests/prompts.test.ts` keeps a saved copy of every request: after a deliberate change, run `npx vitest run -u` and check the snapshot diff, which shows exactly what is sent differently. The same test fails if a prompt loses its "data, not instructions" line. Update `docs/AI-RULES.md` if a rule changes.
+- **Changing a rule, table, IPC call, or screen:** update `docs/BUSINESS-RULES.md` (or `docs/AI-RULES.md`) in the same PR, then run `npm run docs`. `tests/docs.test.ts` fails until the interactive guide matches the code: its generated part must be current, every table and IPC call must appear in its `model` block (`docs/architecture.html`: a new table's purpose under `tables`, a new channel in the `ipc` list of the node that handles it, a new screen under `screens`), and every file and function it names must exist. The page's priority calculator is a plain-JS copy of `src/shared/priority.ts`; the test fails if the two give different scores, so a formula change updates both.
 - **Claude API changes:** use the official SDK only. Check current model ids and parameters against Anthropic's docs; don't rely on memory, because the API changes often. The default model is `claude-opus-5-5` (the user can choose Sonnet or Haiku 5.5 in Settings).
 
 ## Product and UI conventions

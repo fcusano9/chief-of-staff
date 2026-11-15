@@ -1,6 +1,6 @@
 # AI rules at a glance
 
-Every rule that decides what the AI sees, when it runs and what it may change, on one page. Use it to check how the AI features are working and to spot a rule worth tuning. The reasons behind each rule are in [DECISIONS.md](DECISIONS.md); this file only says what the rule is.
+Every rule that decides what the AI sees, when it runs, and what it may change, on one page. Use it to check how the AI features are working and to spot a rule worth tuning. The reasons behind each rule are in [DECISIONS.md](DECISIONS.md); this file only says what the rule is.
 
 **Keep this file current.** Any change to a rule below (a limit, a trigger, what's sent) updates this page in the same PR.
 
@@ -31,7 +31,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | Person (imports) | One-line brief; without one, their latest updates | **300 characters** |
 | Status card, task (Write) | Status, due date, project, who asked, subtasks, Notes, latest updates, newest Activity lines | Notes **1,000**, updates **1,500 characters** (whole ones), Activity **20 lines** |
 | Status card, project (Write) | Status, overview, latest updates, open tasks (title, waiting on, due date) | Updates **1,500 characters** (whole ones), **40** open tasks |
-| Draft reply (task card) | The email thread (every import of the conversation, plus the newest email if the app hasn't read it), the task's title, Notes and latest updates, the style note; on Try again, the user's note and the draft being replaced | Thread **40,000**, Notes **1,000**, updates **1,500 characters** (whole ones) |
+| Draft reply (task card) | The email thread (every import of the conversation, plus the newest email if the app hasn't read it), the task's title, Notes, latest updates, and the style note; on Try again, the user's note and the draft being replaced | Thread **40,000**, Notes **1,000**, updates **1,500 characters** (whole ones) |
 | Email conversations | Each message, plus the older messages quoted in the email (for context) | **8,000** per message, **4,000** of quoted older messages, **40,000** per conversation |
 | Every prompt | A three-week calendar, so "Friday" resolves correctly. For an import dated before today, it starts on the item's date | 21 days |
 
@@ -40,14 +40,14 @@ Status: ✅ built · 🟡 approved, not built yet
 | Rule | Detail |
 |---|---|
 | ✅ When | When the user imports or re-runs an item, or clicks Read for Outlook mail. Mail is never read on a schedule. |
-| ✅ Sent | The item, plus all open tasks (title, status, due date, project, who asked, waiting on, score and any AI change, updates), active projects and all people. |
+| ✅ Sent | The item, plus all open tasks (title, status, due date, project, who asked, waiting on, score and any AI change, and updates), active projects, and all people. |
 | ✅ Output | Suggestions go to Review: new task, needs reply, status update, mark done, waiting on, new project, new person, context. |
 | ✅ Status cards | Where it stands and the next step, for each open task the item is about, shown on the task's card. None for tasks it proposes to mark done. |
 | ✅ Priority adjustment | For open tasks the item is about, not ones it proposes to mark done. See Priority adjustment below. |
 | ✅ Relative dates | Count from the item's date (the date on the Import card, an email's date, or a Copilot answer's end), not today. |
 | ✅ Naming | The AI also returns a name (under **60 characters**, kept to **80**) and type for the item. Used only for text imports the user didn't name: not mail, not a file (its file name), not a Copilot answer (named from its marker line), and never after the user renames it. Basic names nothing: the first line is kept. Ollama names it in pass 1. |
 | ✅ Mail rules | No "needs reply" if the user sent the latest message. A waiting-on item starts when the user sent the ask. Follow-up flag after **3 business days**. First Outlook check looks back **7 days**. |
-| ✅ Local model passes | Ollama runs split passes at low reasoning: (1) tasks, updates, done, waiting on and status cards; (2) projects, people and context; (3) linking new tasks to new projects and people. Each request times out after **6 minutes**. |
+| ✅ Local model passes | Ollama runs split passes at low reasoning: (1) tasks, updates, done, waiting on, status cards, priority changes, and the item's name and type; (2) projects, people, and context; (3) linking new tasks to new projects and people. Each request times out after **6 minutes**. |
 | ✅ Claude settings | Medium effort, refusal fallback on (Opus and Sonnet). |
 | ✅ AI log | The last **5 runs** per import, deleted with the import. |
 
@@ -68,8 +68,8 @@ Status: ✅ built · 🟡 approved, not built yet
 | Rule | Detail |
 |---|---|
 | ✅ When | The reflection is written only when the user clicks, and only for the current week. The lists need no AI. |
-| ✅ Sent | The week's Completed, New, Slipping and Waiting on lists, up to **40 items** each. Slipping includes tasks whose due date was pushed back that week, with how far and the moves. |
-| ✅ Output | A summary, then up to **3** points each for Went well, Slipped and Focus next. Text only. |
+| ✅ Sent | The week's Completed, New, Slipping, and Waiting on lists, up to **40 items** each. Slipping includes tasks whose due date was pushed back that week, with how far and the moves. |
+| ✅ Output | A summary, then up to **3** points each for Went well, Slipped, and Focus next. Text only. |
 | ✅ Out of date | Says so when tasks have changed since it was written. |
 | ✅ Kept | The AI log for the newest **5** weeks. |
 
@@ -80,13 +80,13 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ Always together | "Where this stands" and the suggested next action are always written in one go, whatever writes them. |
 | ✅ When, tasks | When the user clicks Write or Refresh on the card, and as part of a daily briefing (its top priorities) or an import (open tasks it's about). Never on its own. Not on done tasks. |
 | ✅ When, projects | Only when the user clicks Write or Refresh. Briefings and imports don't write project cards (for now). |
-| ✅ Where this stands | **2 or 3** short bullets (at most **3** kept, **240** characters each), written so the user could paste them to a manager or stakeholder: what's done, what's open or blocked, the next date. Only facts given; no guessed dates, owners or decisions. |
+| ✅ Where this stands | **2 or 3** short bullets (at most **3** kept, **240** characters each), written so the user could paste them to a manager or stakeholder: what's done, what's open or blocked, and the next date. Only facts given; no guessed dates, owners, or decisions. |
 | ✅ Next action | One sentence starting with a verb, **200** characters at most. No "why" (the bullets cover it). For a project, one step for the project as a whole. |
 | ✅ Where | The card only: Copy on each part. It never goes to Review, isn't saved to Updates, and changes nothing. One per task or project; the newest replaces the whole card. |
-| ✅ Write refuses | When there's nothing to go on (no notes, updates or changes; for a project, no updates or open tasks), or the answer has no bullets or no step. |
+| ✅ Write refuses | When there's nothing to go on (no notes, updates, or changes; for a project, no updates or open tasks), or the answer has no bullets or no step. |
 | ✅ Imports | Written when the import runs, even if the user later rejects that import's suggestions. |
 | ✅ Dismiss | Folds to one line with Show. A new card shows again. |
-| ✅ Out of date | Marked in amber when the item has an update dated a later day than the card. Nothing else is shown (no date, model or source). |
+| ✅ Out of date | Marked in amber when the item has an update dated a later day than the card. Nothing else is shown (no date, model, or source). |
 | ✅ Claude settings | Write: low effort, refusal fallback on (Opus and Sonnet). Counted in AI spending as "Where this stands". |
 | ✅ Older cards | Next actions written before this feature keep their step and show no bullets until rewritten. |
 
@@ -97,8 +97,8 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ Base score | Deterministic 0–100 from due date (counts from **14 days** out), who asked (their stars), and staleness (maxes at **14 days** idle, or follow-ups). A waiting item with no reply after **3 business days** climbs. |
 | ✅ When | Only as part of a daily briefing or an import, like task status cards. Never on its own, and Basic makes none. |
 | ✅ Limit | The AI may move a task's score by at most **±15**; larger answers are held to 15. The result stays within 0 to 100. |
-| ✅ What it sees | The computed score and its own current change, kept apart so a change is never counted twice. It's asked to change a score only when the item, notes or updates show something the score misses. |
-| ✅ Applied | Right away, so list order changes too. The priority card shows "54 + 10", the reason and where it came from. Tasks with a change show ✦ next to their score. |
+| ✅ What it sees | The computed score and its own current change, kept apart so a change is never counted twice. It's asked to change a score only when the item, notes, or updates show something the score misses. |
+| ✅ Applied | Right away, so list order changes too. The priority card shows "54 + 10", the reason, and where it came from. Tasks with a change show ✦ next to their score. |
 | ✅ Replaced | A later briefing or import can give a new change, or 0 to remove it. One that skips the task keeps it. Reason: **200 characters** at most. |
 | ✅ Remove | Takes it off at once. A later briefing or import can suggest a new one. |
 | ✅ Override | A score the user sets by hand always wins; the AI's change stays on the card, greyed, marked "Not used". |
@@ -107,13 +107,13 @@ Status: ✅ built · 🟡 approved, not built yet
 
 | Rule | Detail |
 |---|---|
-| ✅ When | Only when the user clicks Draft reply, or Try again then Rewrite, on a task linked to an Outlook email. Never on its own, and Basic writes none. Classic Outlook on Windows only. |
+| ✅ When | Only when the user clicks Draft reply, or Try again then Rewrite, on a task linked to an email. Never on its own, and Basic writes none. Classic Outlook on Windows, or Apple Mail on the Mac. |
 | ✅ First draft | Written by the AI alone, with no note from the user. Try again takes an optional note on what should change, and sends the draft it replaces. |
-| ✅ Rules in the prompt | Writes as the user, in the first person. Only facts from the thread, task, notes, updates and the user's note; never an invented date, figure, decision, commitment or name. A missing fact becomes a placeholder in square brackets, like [date]. Usually 2 to 6 sentences, with a greeting and a sign-off. No subject, quoted email or signature block. Follows the style note. |
-| ✅ Which email | Always a reply to the newest email in the conversation, sent or received, so every follow-up the user sent stays in the chain. Outlook is asked for it when drafting and saving, so a follow-up sent since the last Check Outlook counts; if the app hasn't read it, its text is added to the thread sent to the AI. |
+| ✅ Rules in the prompt | Writes as the user, in the first person. Only facts from the thread, task, notes, updates, and the user's note; never an invented date, figure, decision, commitment, or name. A missing fact becomes a placeholder in square brackets, like [date]. Usually 2 to 6 sentences, with a greeting and a sign-off. No subject, quoted email, or signature block. Follows the style note. |
+| ✅ Which email | Always a reply to the newest email in the conversation, sent or received, so every follow-up the user sent stays in the chain. The mail app is asked for it when drafting and saving, so a follow-up sent since the last Check counts; if the app hasn't read it, its text is added to the thread sent to the AI. |
 | ✅ Follow-ups | When that newest email is the user's own, the AI writes a short, polite check-in (usually 1 to 3 sentences) on what the user is still waiting for, instead of an answer, and doesn't repeat the earlier email. Same rules on facts and placeholders. |
-| ✅ Recipients | The AI picks Reply all (when the others need the answer) or Reply; the card marks it "AI pick" and the user can switch. Who each goes to comes from Outlook, not the AI. |
-| ✅ Never sent | Nothing reaches Outlook until the user clicks Save to Outlook Drafts, and then it's only saved as a draft. The user sends it from Outlook. The task isn't changed; Activity notes the saved draft. |
+| ✅ Recipients | The AI picks Reply all (when the others need the answer) or Reply; the card marks it "AI pick" and the user can switch. Who each goes to comes from Outlook (on the Mac, worked out from the email), not the AI. |
+| ✅ Never sent | Nothing reaches the mail app until the user clicks Save to Outlook / Mail Drafts (saved as a draft) or Open in Outlook / Mail (a reply window to finish). The user sends it from there. The task isn't changed; Activity notes either one. |
 | ✅ Kept | Drafts aren't kept in the app. Each request is counted in AI spending as "Draft replies". |
 | ✅ Claude settings | Low effort, refusal fallback on (Opus and Sonnet). Draft text: **8,000 characters** at most. |
 
