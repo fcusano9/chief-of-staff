@@ -181,13 +181,13 @@ function generated() {
   }
 }
 
-/** The page with its generated region rebuilt. `<` is escaped so the JSON can't end the script early. */
+/** The page with its generated region rebuilt. `<` is escaped so the data can't end the script early. */
 function rebuild(page: string): string {
   const start = page.indexOf(START)
   const end = page.indexOf(END)
   if (start < 0 || end < start) throw new Error(`docs/architecture.html must contain ${START} and ${END}`)
   const json = JSON.stringify(generated(), null, 1).replace(/</g, '\\u003c')
-  return `${page.slice(0, start + START.length)}\n<script type="application/json" id="generated">\n${json}\n</script>\n${page.slice(end)}`
+  return `${page.slice(0, start + START.length)}\n<script id="generated">\nwindow.COS_GENERATED = ${json}\n</script>\n${page.slice(end)}`
 }
 
 // ---------- The hand-written model ----------
@@ -212,7 +212,7 @@ interface Model {
 }
 
 function model(): Model {
-  const m = /<script type="application\/json" id="model">([\s\S]*?)<\/script>/.exec(page())
+  const m = /<script id="model">\s*window\.COS_MODEL = ([\s\S]*?)<\/script>/.exec(page())
   if (!m) throw new Error('docs/architecture.html has no model block')
   return JSON.parse(m[1]!) as Model
 }

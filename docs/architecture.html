@@ -421,8 +421,8 @@ footer .hints { display: flex; flex-wrap: wrap; gap: 4px 14px; }
   </div>
 </footer>
 
-<script type="application/json" id="model">
-{
+<script id="model">
+window.COS_MODEL = {
   "overview": {
     "lead": "A desktop app for Windows and Mac that tracks tasks, projects, people, and waiting-on items, ranked by a priority score. An AI turns emails, chats, and meeting notes into proposed changes. **Nothing changes until the user accepts it.**",
     "pipeline": [
@@ -1023,8 +1023,8 @@ footer .hints { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 </script>
 
 <!-- generated:start -->
-<script type="application/json" id="generated">
-{
+<script id="generated">
+window.COS_GENERATED = {
  "facts": {
   "version": "1.0.0",
   "schemaVersion": 19,
@@ -4352,9 +4352,9 @@ var PriorityCalc = (function () {
 (function () {
   'use strict'
   var $ = function (s, el) { return (el || document).querySelector(s) }
-  var M = JSON.parse(document.getElementById('model').textContent)
-  var G = JSON.parse(document.getElementById('generated').textContent)
-  if (!G.facts) { document.querySelector('main').innerHTML = '<p class="empty">The generated part of this page is missing. Run <code>npm run docs</code>.</p>'; return }
+  var M = window.COS_MODEL
+  var G = window.COS_GENERATED
+  if (!G || !G.facts) { document.querySelector('main').innerHTML = '<p class="empty">The generated part of this page is missing. Run <code>npm run docs</code>.</p>'; return }
   var F = G.facts
   var REPO = 'https://github.com/fcusano9/chief-of-staff/blob/main/'
   var SVGNS = 'http://www.w3.org/2000/svg'
@@ -5236,7 +5236,8 @@ var PriorityCalc = (function () {
     var h = decodeURIComponent((here !== null ? here : location.hash).replace(/^#/, ''))
     var i = h.indexOf('-')
     var tab = i < 0 ? h : h.slice(0, i), item = i < 0 ? '' : h.slice(i + 1)
-    return TABS.some(function (t) { return t[0] === tab }) ? { tab: tab, item: item } : { tab: 'overview', item: '' }
+    var known = TABS.filter(function (t) { return t[0] === tab })[0]
+    return known ? { tab: known[0], item: item } : { tab: 'overview', item: '' }
   }
   function go(tab, item) {
     var h = '#' + tab + (item ? '-' + item : '')
