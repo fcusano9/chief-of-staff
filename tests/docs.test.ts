@@ -13,8 +13,8 @@ import { DEFAULT_SETTINGS, effectivePriority, type PriorityWeights } from '../sr
  * The interactive guide, docs/architecture.html, is one file. Most of it is written by hand: the
  * system map, flows, table purposes, screens and glossary (its "model" block). One region is built
  * from the code here: the business and AI rules (parsed from docs/BUSINESS-RULES.md and
- * docs/AI-RULES.md), the database schema (from the real migrations), the IPC channels and a few
- * facts. After changing a rule, a table, an IPC call or a price, run `npm run docs` to rebuild it.
+ * docs/AI-RULES.md), the database schema (from the real migrations), the IPC channels, and a few
+ * facts. After changing a rule, a table, or an IPC call, run `npm run docs` to rebuild it.
  * The other checks make sure the hand-written part still matches the code.
  */
 
@@ -228,7 +228,10 @@ function brokenRefs(text: string): string[] {
     }
     if (!name) continue
     const source = read(path!)
-    for (const part of name.split('.')) if (!new RegExp(`\\b${part.replace(/\$/g, '\\$')}\\b`).test(source)) broken.push(`${path} has no "${part}"`)
+    for (const part of name.split('.')) {
+      const escaped = part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      if (!new RegExp(`\\b${escaped}\\b`).test(source)) broken.push(`${path} has no "${part}"`)
+    }
   }
   return broken
 }
@@ -236,7 +239,7 @@ function brokenRefs(text: string): string[] {
 // ---------- The tests ----------
 
 describe('docs/architecture.html', () => {
-  it('has its generated region up to date (run `npm run docs` after changing a rule, table, IPC call or price)', async () => {
+  it('has its generated region up to date (run `npm run docs` after changing a rule, table, or IPC call)', async () => {
     await expect(rebuild(page())).toMatchFileSnapshot('../docs/architecture.html')
   })
 
