@@ -4,7 +4,7 @@ import { cos, errorMessage } from './api'
 import { CommandPalette, DAILY_TABS, MAIN_TABS, TABS } from './components/CommandPalette'
 import { ALWAYS_HINTS, DEFAULT_HINTS, type Hint } from './components/hints'
 import { ModelMenu, ProviderIcon } from './components/ModelMenu'
-import { AppContext, type AppContextValue, type TaskSelection, type View } from './context'
+import { AppContext, type AppContextValue, type PersonRequest, type TaskSelection, type View } from './context'
 import { ComingSoonScreen } from './screens/ComingSoonScreen'
 import { AiLogScreen } from './screens/AiLogScreen'
 import { AiSpendingScreen } from './screens/AiSpendingScreen'
@@ -43,6 +43,7 @@ export function App() {
   const tabsRef = useRef({ tabView, visibleTabs })
   tabsRef.current = { tabView, visibleTabs }
   const [selection, setSelection] = useState<TaskSelection>(null)
+  const [personRequest, setPersonRequest] = useState<PersonRequest | null>(null)
   const [version, setVersion] = useState(0)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [modelMenuFor, setModelMenuFor] = useState<HTMLElement | null>(null)
@@ -121,6 +122,11 @@ export function App() {
     setSelection(s)
     if (s) setView((v) => (s.waiting != null ? (s.waiting ? 'waiting' : 'tasks') : v === 'waiting' ? 'waiting' : 'tasks'))
   }, [])
+  const openPerson = useCallback((r: PersonRequest) => {
+    setPersonRequest(r)
+    setView('people')
+  }, [])
+  const clearPersonRequest = useCallback(() => setPersonRequest(null), [])
   const toggleTheme = useCallback(() => void saveSettings({ theme: document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark' }), [saveSettings])
 
   // Global shortcuts run in the capture phase so screen-level shortcuts (E, A, R) never see a consumed key.
@@ -176,9 +182,9 @@ export function App() {
   const ctx = useMemo<AppContextValue | null>(
     () =>
       settings && info
-        ? { view, go, selection, openTask, version, refresh, toast, settings, saveSettings, info, projects, people, dark, toggleTheme, ai: ai ?? FALLBACK_AI, setAi, reviewCount, openAiLog, aiLog, setHints }
+        ? { view, go, selection, openTask, openPerson, personRequest, clearPersonRequest, version, refresh, toast, settings, saveSettings, info, projects, people, dark, toggleTheme, ai: ai ?? FALLBACK_AI, setAi, reviewCount, openAiLog, aiLog, setHints }
         : null,
-    [view, selection, version, settings, info, projects, people, dark, go, openTask, refresh, toast, saveSettings, toggleTheme, ai, reviewCount, openAiLog, aiLog, setHints],
+    [view, selection, personRequest, openPerson, clearPersonRequest, version, settings, info, projects, people, dark, go, openTask, refresh, toast, saveSettings, toggleTheme, ai, reviewCount, openAiLog, aiLog, setHints],
   )
   if (!ctx) return null
 

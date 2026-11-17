@@ -1,0 +1,139 @@
+// Reads Apple Calendar for Chief of Staff on the Mac (see applecalendar.ts), as JavaScript for Automation.
+// Plain JavaScript; the .jxa name keeps bundlers from loading it as a module.
+// Run: osascript -l JavaScript applecalendar.jxa <request.json>. Prints JSON: { ok: true, ... } or { ok: false, code, error }.
+// Reads through EventKit, which lists every occurrence of a repeating meeting. Read-only except "show",
+// which brings Calendar forward on a day. Never creates, changes or deletes an event, and never answers an invite.
+//   { action: 'calendars' }                          every calendar: id, title, account
+//   { action: 'list', calendars: [id], from, to }    events overlapping [from, to) in those calendars (ISO times)
+//   { action: 'show', calendar, start }              Calendar's day view on that day (ISO time)
+ObjC.import('Foundation')
+ObjC.import('EventKit')
+
+const MAX_ATTENDEES = 50
+const MAX_INVITE = 8000
+const NOT_ALLOWED = "Chief of Staff isn't allowed to read your calendars. Open System Settings → Privacy & Security → Calendars, turn on Chief of Staff, then try again."
+
+function run(argv) {
+  let req
+  try {
+    const text = $.NSString.stringWithContentsOfFileEncodingError(argv[0], $.NSUTF8StringEncoding, null)
+    req = JSON.parse(ObjC.unwrap(text))
+  } catch (e) {
+    return JSON.stringify({ ok: false, code: 'failed', error: 'The Apple Calendar reader got a bad request.' })
+  }
+  try {
+    if (req.action === 'show') {
+      const Cal = Application('Calendar')
+      Cal.activate()
+      Cal.switchView({ to: 'day view' })
+      Cal.viewCalendar({ at: new Date(req.start) })
+      return JSON.stringify({ ok: true })
+    }
+    const store = $.EKEventStore.alloc.init
+    if (!allowed(store)) return JSON.stringify({ ok: false, code: 'not_allowed', error: NOT_ALLOWED })
+    if (req.action === 'calendars') return JSON.stringify({ ok: true, calendars: calendars(store) })
+    if (req.action === 'list') return JSON.stringify({ ok: true, events: list(store, req) })
+    return JSON.stringify({ ok: false, code: 'failed', error: 'The Apple Calendar reader got a bad request.' })
+  } catch (e) {
+    const msg = String((e && e.message) || e)
+    if (/-1743|not allowed|Not authori[sz]ed/i.test(msg)) return JSON.stringify({ ok: false, code: 'not_allowed', error: "Chief of Staff isn't allowed to control Calendar. Open System Settings → Privacy & Security → Automation, turn on Calendar under Chief of Staff, then try again." })
+    return JSON.stringify({ ok: false, code: 'failed', error: "Couldn't read Apple Calendar: " + msg })
+  }
+}
+
+// EKAuthorizationStatus: 0 not asked yet, 1 restricted, 2 denied, 3 full access, 4 write only.
+function allowed(store) {
+  let status = Number($.EKEventStore.authorizationStatusForEntityType($.EKEntityTypeEvent))
+  if (status === 0) {
+    let done = false
+    const finish = () => { done = true }
+    if (store.respondsToSelector('requestFullAccessToEventsWithCompletion:')) store.requestFullAccessToEventsWithCompletion(finish)
+    else store.requestAccessToEntityTypeCompletion($.EKEntityTypeEvent, finish)
+    const until = Date.now() + 60000
+    while (!done && Date.now() < until) $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(0.2))
+    status = Number($.EKEventStore.authorizationStatusForEntityType($.EKEntityTypeEvent))
+  }
+  return status === 3
+}
+
+const str = (v) => (v && !v.isNil() ? String(ObjC.unwrap(v)) : '')
+const iso = (d) => new Date(Number(d.timeIntervalSince1970) * 1000).toISOString()
+const nsDate = (s) => $.NSDate.dateWithTimeIntervalSince1970(Date.parse(s) / 1000)
+
+function calendars(store) {
+  const all = store.calendarsForEntityType($.EKEntityTypeEvent)
+  const out = []
+  for (let i = 0; i < all.count; i++) {
+    const c = all.objectAtIndex(i)
+    out.push({ id: str(c.calendarIdentifier), title: str(c.title), account: str(c.source.title) })
+  }
+  return out
+}
+
+// EKParticipantStatus: 0 unknown, 1 pending, 2 accepted, 3 declined, 4 tentative, 5 delegated, 6 completed, 7 in process.
+function response(status) {
+  const s = Number(status)
+  return s === 2 ? 'accepted' : s === 3 ? 'declined' : s === 4 ? 'tentative' : 'none'
+}
+
+// EKEventAvailability: -1 not supported, 0 busy, 1 free, 2 tentative, 3 unavailable.
+function busy(availability) {
+  const a = Number(availability)
+  return a === 0 ? 'busy' : a === 1 ? 'free' : a === 2 ? 'tentative' : a === 3 ? 'away' : 'unknown'
+}
+
+function email(participant) {
+  const url = str(participant.URL.absoluteString)
+  return /^mailto:/i.test(url) ? decodeURIComponent(url.slice(7)).toLowerCase() : ''
+}
+
+function list(store, req) {
+  const all = store.calendarsForEntityType($.EKEntityTypeEvent)
+  const wanted = $.NSMutableArray.array
+  for (let i = 0; i < all.count; i++) {
+    const c = all.objectAtIndex(i)
+    if (req.calendars.indexOf(str(c.calendarIdentifier)) >= 0) wanted.addObject(c)
+  }
+  if (wanted.count === 0) return []
+  const events = store.eventsMatchingPredicate(store.predicateForEventsWithStartDateEndDateCalendars(nsDate(req.from), nsDate(req.to), wanted))
+  const out = []
+  for (let i = 0; i < events.count; i++) {
+    const e = events.objectAtIndex(i)
+    const start = iso(e.startDate)
+    const people = e.attendees
+    const attendees = []
+    let myResponse = 'none'
+    const count = people.isNil() ? 0 : Number(people.count)
+    for (let j = 0; j < count; j++) {
+      const p = people.objectAtIndex(j)
+      const isMe = !!p.isCurrentUser
+      if (isMe) myResponse = response(p.participantStatus)
+      // Rooms and other resources (EKParticipantType 3 room, 4 resource) aren't people.
+      const type = Number(p.participantType)
+      if (type === 3 || type === 4) continue
+      if (attendees.length < MAX_ATTENDEES || isMe) attendees.push({ name: str(p.name), email: email(p), response: response(p.participantStatus), isMe })
+    }
+    const org = e.organizer
+    const organizer = org.isNil() ? null : { name: str(org.name), email: email(org), isMe: !!org.isCurrentUser }
+    if (organizer && organizer.isMe) myResponse = 'organizer'
+    if (!organizer && count === 0) myResponse = 'organizer' // an entry the user made with no one invited
+    out.push({
+      id: str(e.eventIdentifier) + '|' + start,
+      title: str(e.title),
+      start,
+      end: iso(e.endDate),
+      location: str(e.location),
+      allDay: !!e.allDay,
+      busy: busy(e.availability),
+      private: false, // EventKit doesn't say whether an entry is private
+      cancelled: Number(e.status) === 3,
+      myResponse,
+      organizer,
+      attendees,
+      attendeeCount: count,
+      invite: str(e.notes).slice(0, MAX_INVITE),
+      calendar: str(e.calendar.calendarIdentifier),
+    })
+  }
+  return out
+}

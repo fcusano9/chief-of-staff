@@ -4,6 +4,7 @@ import { NO_COMPANY } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { Avatar, ConfirmButton, SearchBox, Stars, TaskRow } from '../components/bits'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from '../components/UpdatesWindow'
+import { PersonMeetings } from '../components/NextMeeting'
 import { SplitView } from '../components/SplitView'
 import { useAutosave } from '../components/useAutosave'
 import { useShortcutHints } from '../components/hints'
@@ -23,8 +24,10 @@ interface Draft {
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
 export function PeopleScreen() {
-  const { people, openTask, refresh, toast, version, settings, saveSettings } = useApp()
-  const [selected, setSelected] = useState<number | 'new' | null>(people[0]?.id ?? null)
+  const { people, openTask, refresh, toast, version, settings, saveSettings, personRequest, clearPersonRequest } = useApp()
+  const [selected, setSelected] = useState<number | 'new' | null>(personRequest && 'id' in personRequest ? personRequest.id : personRequest ? 'new' : (people[0]?.id ?? null))
+  // A new person started from a meeting attendee ("+ Add to People") gets their name and email filled in.
+  const seed = useRef<{ name: string; email: string } | null>(personRequest && !('id' in personRequest) ? personRequest : null)
   const [draft, setDraft] = useState<Draft | null>(null)
   // Their Updates (their brief's summary). They're edited in the Updates window, not the form.
   const [history, setHistory] = useState('')
@@ -58,7 +61,9 @@ export function PeopleScreen() {
       // New people start at 1 star; raise it for people whose requests matter more.
       const fresh: Draft = { id: 0, name: '', role: '', company: '', email: '', priorityWeight: 1, standingInstructions: '' }
       markClean(fresh)
-      return setDraft(fresh)
+      const s = seed.current
+      seed.current = null
+      return setDraft(s ? { ...fresh, name: s.name, email: s.email } : fresh)
     }
     const p = people.find((x) => x.id === selected)
     if (!p) return setDraft(null) // just created: wait for the refreshed list
@@ -73,6 +78,18 @@ export function PeopleScreen() {
       setDraft(loaded)
     })
   }, [selected, people, version])
+
+  // Opened from elsewhere (a meeting's attendee) while People is already showing.
+  useEffect(() => {
+    if (!personRequest) return
+    clearPersonRequest()
+    if ('id' in personRequest) select(personRequest.id)
+    else {
+      seed.current = personRequest
+      if (selected === 'new') setSelected(null) // run the "new" branch again with the seed
+      setTimeout(() => select('new'))
+    }
+  }, [personRequest])
 
   const save = async () => {
     if (!draft) return
@@ -208,6 +225,11 @@ export function PeopleScreen() {
           <Stars value={draft.priorityWeight} onChange={(v) => setDraft({ ...draft, priorityWeight: v })} />
         </span>
       </div>
+      {draft.id !== 0 && (
+        <div style={{ marginTop: 12 }}>
+          <PersonMeetings personId={draft.id} />
+        </div>
+      )}
       <div className="label" style={{ marginTop: 12 }}>Standing instructions</div>
       <textarea className="inp" style={{ margin: '4px 0 10px', minHeight: 44 }} value={draft.standingInstructions} placeholder="e.g. Lead with the ask; keep it to three bullets" onChange={(e) => setDraft({ ...draft, standingInstructions: e.target.value })} />
       {draft.id !== 0 && (

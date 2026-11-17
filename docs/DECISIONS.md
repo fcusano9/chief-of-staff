@@ -2,6 +2,16 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-14 · Calendar read, step 1: meetings on Today (Frank)
+Frank chose the calendar read as the next roadmap item and how it works (mockup `design/calendar-today.html`, layout A approved):
+- **Four uses, in three PRs:** (1) read the calendar and show it on Today, linked to People and tasks; (2) the daily briefing uses meetings; (3) meeting prep, written only when the user clicks ✦ Prep, on a card, never to Review. Each lands as its own PR with testing in between.
+- **Read automatically:** at startup and on the 30-minute timer, unlike mail. Reading sends nothing anywhere; nothing is kept on disk (the week lives in memory). Only the current week, Sunday to Saturday, matching Weekly.
+- **Both computers:** classic Outlook's default calendar on Windows (`outlook.ps1 -Action calendar`), Apple Calendar on the Mac through EventKit (`calendar/applecalendar.jxa`). EventKit was chosen over scripting Calendar.app: it lists each occurrence of a repeating meeting and read a week of real meetings in about 0.2 seconds, while Calendar.app's scripting took 25 seconds to find one event. Calendar.app is used only to show a meeting's day ("Open in Calendar"), since finding a single event through it is too slow.
+- **Mac calendars are chosen in Settings** (Apple Calendar box, nothing ticked at first), because Calendar's calendars can't be matched to the Apple Mail accounts.
+- **Left out:** declined, cancelled, all-day, shown as Free, and private entries. EventKit doesn't say whether an entry is private, so on the Mac private entries are shown.
+- **Links are by people only:** attendees match People by email, then name; a meeting counts the open tasks and waiting items whose Asked by or Waiting on person is in it. Meetings aren't matched to projects (that would mean guessing from titles).
+- **For step 2 (decided now):** when Claude is selected, meeting titles, times, attendee names and the invite text (shortened) may be sent with the briefing.
+
 ### 2026-11-13 · Calmer list screens (Frank)
 Frank found the Tasks page too busy. His choices (mockup `design/tasks-page-calmer.html`, approved after five rounds):
 - **Project chips stay, on one line.** All is pinned on the left; the other projects scroll sideways (wheel, trackpad, or ‹ › arrows that show on a side with more), busiest first, then No project, each with its count. He chose sideways scrolling over "as many as fit, the rest in a More menu", and most open tasks over most urgent task as the order (it moves around less). The chips filter in the screen rather than the database, so they can count every project.

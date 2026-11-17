@@ -7,11 +7,19 @@ export type View = 'today' | 'tasks' | 'review' | 'waiting' | 'projects' | 'peop
 /** `waiting` picks the tab: Waiting for waiting-on items. Left out, Tasks and Waiting keep their own tab. */
 export type TaskSelection = { id: number; waiting?: boolean } | { id: 'new'; projectId?: number | null; waiting?: boolean } | null
 
+/** A person to show on People: one that exists, or a new one with its name and email filled in. */
+export type PersonRequest = { id: number } | { name: string; email: string }
+
 export interface AppContextValue {
   view: View
   go: (view: View) => void
   selection: TaskSelection
   openTask: (selection: TaskSelection) => void
+  /** Goes to People and shows (or starts) that person. */
+  openPerson: (request: PersonRequest) => void
+  /** The person People should show next; People clears it once shown. */
+  personRequest: PersonRequest | null
+  clearPersonRequest: () => void
   /** Bumped after any change so screens reload their data. */
   version: number
   refresh: () => void

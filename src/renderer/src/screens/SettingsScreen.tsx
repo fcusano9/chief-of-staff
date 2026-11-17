@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DENSITIES, type PriorityWeights, type ThemeSetting } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { AiSettings } from '../components/AiSettings'
+import { AppleCalendarSettings } from '../components/AppleCalendarSettings'
 import { AppleMailSettings } from '../components/AppleMailSettings'
 import { RestoreBackups } from '../components/RestoreBackups'
 import { useApp } from '../context'
@@ -127,6 +128,8 @@ export function SettingsScreen() {
         </div>
 
         <AppleMailSettings />
+
+        <AppleCalendarSettings />
 
         <div className="card">
           <div style={{ fontWeight: 500, marginBottom: 8 }}>Backup</div>
