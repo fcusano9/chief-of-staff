@@ -15,11 +15,10 @@ interface Line {
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 const full = (iso: string) => new Date(iso).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-const longDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
 /**
  * A task's Activity: every recorded change, newest first, each saying who made it, plus the
- * imports linked to it. Tasks older than the log say what wasn't recorded. Read-only.
+ * imports linked to it. Read-only.
  * `folded` shows it as one "Activity" line with the count, opened by a click.
  */
 export function ActivityLog({ task, reloadKey = 0, folded = false }: { task: Task | null; reloadKey?: number; folded?: boolean }) {
@@ -43,7 +42,7 @@ export function ActivityLog({ task, reloadKey = 0, folded = false }: { task: Tas
     ...events.map((e) => ({ key: `e-${e.id}`, at: e.at, what: eventWhat(e), who: eventWho(e) })),
     ...task.linkedSources.map((s) => ({ key: `s-${s.id}`, at: s.occurredAt, what: `Linked: ${SOURCE_KIND_LABELS[s.kind].toLowerCase()} “${s.title}”`, who: 'accepted in Review' })),
   ].sort((a, b) => b.at.localeCompare(a.at))
-  // Tasks from before the log have no Created event: show when they were created, and say what's missing.
+  // Tasks with no Created event (from before the log): show when they were created.
   const older = activity != null && !events.some((e) => e.kind === 'created')
   if (older) lines.push({ key: 'created', at: task.createdAt, what: 'Created', who: null })
   const shown = all ? lines : lines.slice(0, SHOWN)
@@ -78,7 +77,6 @@ export function ActivityLog({ task, reloadKey = 0, folded = false }: { task: Tas
           </button>
         </div>
       )}
-      {older && (all || lines.length <= SHOWN) && <div className="act-old">Changes before {longDay(activity.loggedSince)} weren’t recorded.</div>}
     </div>
     </>
   )
