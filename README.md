@@ -11,14 +11,14 @@ An AI-assisted work manager for Windows and Mac. It replaces Microsoft To Do: ta
 - **Tells you what to work on next.** Tasks are ranked by a transparent priority score based on due dates, who asked, and how long things have waited.
 - **Tracks what you're waiting on.** Items you're waiting on from others stay visible, with how long each has been waiting.
 - **Remembers the context.** Every project and person builds up a running history and a short AI-written brief, so the AI never needs things re-explained.
-- **Reads Outlook on request.** On Windows with classic Outlook, it can read recent mail when you click, and it never sends, moves or flags anything.
+- **Reads your mail on request.** Classic Outlook on Windows or Apple Mail on the Mac: it reads recent mail when you click, and it never sends, moves, or flags anything.
 - **Keeps your data local by default.** Everything is stored on your computer, and AI runs locally unless you choose Claude.
 
 ## AI providers
 
 | Provider | Where your data goes |
 |---|---|
-| Demo AI (default) | Nowhere. Simple rules on this computer, for trying out the flow |
+| Basic (default) | Nowhere. Simple rules on this computer, not actually AI |
 | Local model (Ollama) | Nowhere, unless the Ollama address points at another machine |
 | Claude (Anthropic API) | Each import's text, plus open-task titles, briefs and names, is sent to Anthropic. Needs an API key, which is stored encrypted |
 
@@ -43,7 +43,7 @@ An AI-assisted work manager for Windows and Mac. It replaces Microsoft To Do: ta
 | `bench` | Scores AI providers on made-up sample imports ([bench/README.md](bench/README.md)) |
 | `scripts` | `demo-data.mjs`, which fills the dev copy with made-up data |
 | `design` | Clickable mockups, one per feature, approved before it was built (open in a browser) |
-| `docs` | Roadmap, design decisions, and Copilot prompts |
+| `docs` | Roadmap, design decisions, AI and business rules, Copilot prompts, and the interactive architecture guide (`architecture.html`) |
 
 ## Install
 
@@ -120,6 +120,7 @@ npm install
 npm run dev           # run with hot reload
 npm run demo:data     # fill the dev copy with made-up test data (your dev data is moved aside, not deleted)
 npm test              # unit and data tests
+npm run docs          # rebuild the data part of docs/architecture.html after changing a rule, table, or IPC call
 npm run typecheck
 npm run build         # build into out/
 npm start             # run the built app from out/
@@ -162,6 +163,8 @@ The tag must match the version in `package.json`, or the workflow stops. To try 
 ## For AI assistants and new contributors
 
 Start with [AGENTS.md](AGENTS.md), which covers the rules, architecture, conventions and how to make common changes. Then read [docs/ROADMAP.md](docs/ROADMAP.md) for what's built and what's next, and [docs/DECISIONS.md](docs/DECISIONS.md) for why.
+
+For a visual tour, open [docs/architecture.html](docs/architecture.html) in a browser: a clickable system map, step-by-step flows, the data model, the screens, every business and AI rule, and a priority score calculator.
 
 ## License
 
