@@ -1,6 +1,6 @@
 # Business rules at a glance
 
-Every rule the app follows, on one page: how tasks are scored and listed, what Review does, how mail, the briefing, the weekly review, and backups behave. It says what the code does today. The rules for the AI itself (what it's sent, what it may answer, its limits) are in [AI-RULES.md](AI-RULES.md), and the reasons behind each choice are in [DECISIONS.md](DECISIONS.md).
+Every rule the app follows, on one page: how tasks are scored and listed, what Review does, how mail, meetings, the briefing, the weekly review, and backups behave. It says what the code does today. The rules for the AI itself (what it's sent, what it may answer, its limits) are in [AI-RULES.md](AI-RULES.md), and the reasons behind each choice are in [DECISIONS.md](DECISIONS.md).
 
 **Keep this file current.** Any change to a rule below updates this page in the same PR. Then run `npm run docs`, which rebuilds the interactive guide ([architecture.html](architecture.html)); `tests/docs.test.ts` fails until you do.
 
@@ -10,7 +10,7 @@ Every rule the app follows, on one page: how tasks are scored and listed, what R
 |---|---|---|
 | The AI only proposes | Every suggestion waits in Review and changes nothing until the user accepts it. The only exceptions are small, marked, and undoable: "Where this stands" cards and AI priority changes. | `src/main/services/suggestions.ts` · `accept` |
 | Nothing is sent | The app never sends email, messages, or invites. The mail scripts never send, move, delete, or flag mail. Draft replies are saved as drafts or opened in a window, never sent. | `src/main/mail/outlook.ps1`, `src/main/mail/applemail.jxa` |
-| Runs when the user acts | No AI request runs on a schedule. The only timer recomputes scores, saves ended weeks, and makes the daily backup. | `src/main/index.ts` |
+| Runs when the user acts | No AI request runs on a schedule. The only timer recomputes scores, saves ended weeks, reads the calendar, and makes the daily backup. | `src/main/index.ts` |
 | Data stays on this computer | One SQLite database and a settings file in the app's data folder. The API key is encrypted by the operating system. Only the AI provider the user picks sees any data (see AI choice). | `src/main/db.ts`, `src/main/services/secrets.ts` |
 | No guessing | AI answers that name tasks, projects, or people that don't exist, or put items in the wrong section, are dropped rather than repaired. | `src/main/ai/schema.ts` · `validateSuggestions` |
 
@@ -145,6 +145,22 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Read | Sends each chosen conversation to the AI, one at a time, in the background. Stop finishes the current one and the rest are offered next time; a stopped run doesn't move the start date. | `src/main/services/mail.ts` · `read` |
 | Never read twice | Every message read is recorded by its Internet message id, so going back further only adds older mail. | `src/main/services/mail.ts` · `save` |
 | The user wrote last | No "Needs reply" is proposed. The AI log says why it was dropped. | `src/main/services/sources.ts` · `applyMailRules` |
+
+## Meetings
+
+| Rule | Detail | Where |
+|---|---|---|
+| One source per computer | Windows reads classic Outlook's default calendar; Outlook must be running. The Mac reads only the Apple Calendar calendars ticked in Settings → Apple Calendar (none at first), and macOS asks once for calendar permission. | `src/main/calendar/outlook.ts` · `OutlookCalendar`, `src/main/calendar/applecalendar.ts` · `AppleCalendarReader` |
+| When | At startup, every 30 minutes, when the ticked calendars change, and on Try again after a failed read. | `src/main/services/calendar.ts` · `refresh` |
+| Read only, kept in memory | The current week, Sunday to Saturday. Nothing is saved or sent anywhere, and no meeting is created, changed, or answered. A read from last week shows nothing until this week is read. | `src/main/services/calendar.ts` · `week` |
+| Left out | Declined, cancelled, all-day, Free, and private entries. The Mac can't tell which entries are private. | `src/main/calendar/reader.ts` · `toMeetings` |
+| Attendees | The user is left out, and up to 50 are listed (the count still includes everyone). Each is matched to People by email, then by name ("Lee, Dana" matches "Dana Lee"); a name two people share matches neither. Matching is redone each time, so a person just added is linked at once. Anyone unmatched has "+ Add to People". | `src/main/services/calendar.ts` · `matcher` |
+| Invite | The invite text without the Teams join block, up to 4,000 characters. | `src/main/calendar/reader.ts` · `tidyInvite` |
+| A failed read | The last good read stays on screen, with the problem and Try again. | `src/main/services/calendar.ts` · `read` |
+| Open with attendees | Open tasks and waiting items whose Asked by person, or Waiting on name (when exactly one person has it), is in the meeting. Shown as the number on each meeting and listed in its panel. | `src/shared/calendar.ts` · `tasksForMeeting` |
+| Where meetings show | The Meetings card on Today (today's meetings, with the rest of the week folded), "Next meeting with …" in the task editor, and "Meetings this week" in the person editor. The editors leave out past meetings. | `src/renderer/src/components/MeetingsCard.tsx`, `src/renderer/src/components/NextMeeting.tsx` |
+| Open in Outlook / Calendar | Shows the meeting in Outlook. Apple Calendar opens on the meeting's day. | `src/main/services/calendar.ts` · `open` |
+| Not used yet | The daily briefing doesn't use meetings, there's no meeting prep yet, and meetings aren't linked to projects. | `docs/ROADMAP.md` |
 
 ## Draft replies
 
