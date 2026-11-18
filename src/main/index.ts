@@ -32,6 +32,7 @@ import { KeyStore } from './services/secrets'
 import { SettingsStore } from './services/settings'
 import { SourceService } from './services/sources'
 import { SuggestionService } from './services/suggestions'
+import { TaskMergeService } from './services/task-merge'
 import { TaskService } from './services/tasks'
 import { UsageService } from './services/usage'
 
@@ -121,6 +122,7 @@ const nextActions = new NextActionService(db)
 const projectCards = new ProjectCardService(db)
 const adjustments = new PriorityAdjustmentService(db)
 const suggestions = new SuggestionService(db, tasks, briefs, projects, people)
+const merges = new TaskMergeService(db, tasks)
 
 /** The AI that reads imports. Claude only when chosen in Settings and a key is stored. */
 function currentProvider(): AiProvider {
@@ -252,6 +254,7 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   },
   'tasks.dismissNextAction': (taskId, dismissed) => nextActions.setDismissed(taskId, dismissed),
   'tasks.activity': (taskId) => tasks.activity(taskId),
+  'tasks.merge': (keepId, otherId, choices) => merges.merge(keepId, otherId, choices),
   'tasks.removeAiAdjustment': (taskId) => {
     adjustments.remove(taskId)
     const t = tasks.get(taskId)

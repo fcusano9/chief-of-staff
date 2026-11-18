@@ -95,7 +95,10 @@ describe('upgrading: project briefs become updates', () => {
   it('adds each existing brief to the end of its Updates, dated when it was written, and clears it', () => {
     const db = new DatabaseSync(':memory:')
     db.exec('PRAGMA foreign_keys = ON')
-    migrate(db, { migrations: MIGRATIONS.slice(0, -2) })
+    // The schema just before the migration that moves project briefs into Updates.
+    const briefsMigration = MIGRATIONS.findIndex((m) => typeof m === 'function' && m.toString().includes('moveProjectBriefsToUpdates'))
+    expect(briefsMigration).toBeGreaterThan(0)
+    migrate(db, { migrations: MIGRATIONS.slice(0, briefsMigration) })
     const insert = db.prepare(`INSERT INTO projects (name, color, status, created_at, brief, brief_by, brief_at) VALUES (?, '#7F77DD', 'active', '2026-10-01', ?, 'ai', ?)`)
     const withHistory = Number(insert.run('Alpha', 'Pricing approved.\nNext: pilot.\nOpen: nothing recorded.', '2026-11-02T15:00:00.000Z').lastInsertRowid)
     const noHistory = Number(insert.run('Beta', 'Kickoff done.', '2026-11-03T15:00:00.000Z').lastInsertRowid)

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { eventWhat, eventWho } from '@shared/events'
+import { eventOn, eventWhat, eventWho } from '@shared/events'
 import { SOURCE_KIND_LABELS, type Task, type TaskActivity } from '@shared/types'
 import { cos } from '../api'
 
@@ -12,6 +12,12 @@ interface Line {
   what: string
   who: string | null
 }
+
+/** A task created before the log has no Created line of its own (one that moved over in a merge doesn't count). */
+const hasOwnCreated = (a: TaskActivity) => a.events.some((e) => e.kind === 'created' && !e.mergedFrom)
+
+/** How many lines a task's Activity shows: its recorded changes, linked imports, and the Created line older tasks get. */
+export const activityCount = (task: Task, a: TaskActivity): number => a.events.length + task.linkedSources.length + (hasOwnCreated(a) ? 0 : 1)
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 const full = (iso: string) => new Date(iso).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -39,12 +45,11 @@ export function ActivityLog({ task, reloadKey = 0, folded = false }: { task: Tas
 
   const events = activity?.events ?? []
   const lines: Line[] = [
-    ...events.map((e) => ({ key: `e-${e.id}`, at: e.at, what: eventWhat(e), who: eventWho(e) })),
+    ...events.map((e) => ({ key: `e-${e.id}`, at: e.at, what: eventWhat(e), who: [eventWho(e), eventOn(e)].filter(Boolean).join(' · ') })),
     ...task.linkedSources.map((s) => ({ key: `s-${s.id}`, at: s.occurredAt, what: `Linked: ${SOURCE_KIND_LABELS[s.kind].toLowerCase()} “${s.title}”`, who: 'accepted in Review' })),
   ].sort((a, b) => b.at.localeCompare(a.at))
-  // Tasks with no Created event (from before the log): show when they were created.
-  const older = activity != null && !events.some((e) => e.kind === 'created')
-  if (older) lines.push({ key: 'created', at: task.createdAt, what: 'Created', who: null })
+  // Tasks with no Created event of their own (from before the log): show when they were created.
+  if (activity != null && !hasOwnCreated(activity)) lines.push({ key: 'created', at: task.createdAt, what: 'Created', who: null })
   const shown = all ? lines : lines.slice(0, SHOWN)
 
   const header = folded && (

@@ -89,6 +89,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ Out of date | Marked in amber when the item has an update dated a later day than the card. Nothing else is shown (no date, model, or source). |
 | ✅ Claude settings | Write: low effort, refusal fallback on (Opus and Sonnet). Counted in AI spending as "Where this stands". |
 | ✅ Older cards | Next actions written before this feature keep their step and show no bullets until rewritten. |
+| ✅ Merge | Merging two tasks clears both cards; Write makes a new one. |
 
 ## Priority adjustment (task card)
 
@@ -102,6 +103,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ Replaced | A later briefing or import can give a new change, or 0 to remove it. One that skips the task keeps it. Reason: **200 characters** at most. |
 | ✅ Remove | Takes it off at once. A later briefing or import can suggest a new one. |
 | ✅ Override | A score the user sets by hand always wins; the AI's change stays on the card, greyed, marked "Not used". |
+| ✅ Merge | Merging two tasks clears both changes; the kept task's Activity records the removal. |
 
 ## Draft replies (task card)
 

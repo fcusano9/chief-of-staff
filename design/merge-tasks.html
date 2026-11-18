@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Merge tasks</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --raised: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --scrim: rgba(24, 24, 27, .35); --shadow: 0 16px 48px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.06);
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --raised: #1a1a1f; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+    --scrim: rgba(0,0,0,.55); --shadow: 0 16px 48px rgba(0,0,0,.6); color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --raised: #1a1a1f; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c;
+  --scrim: rgba(0,0,0,.55); --shadow: 0 16px 48px rgba(0,0,0,.6); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 0 16px; height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex: none; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.danger { color: var(--danger); }
+.link { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.page { max-width: 1120px; margin: 0 auto; padding: 20px 16px 60px; }
+
+/* App frame: list on the left, editor on the right, bottom bar. */
+.app { position: relative; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.split { display: grid; grid-template-columns: 380px minmax(0, 1fr); min-height: 700px; }
+.left { border-right: 1px solid var(--border); padding: 14px 0; }
+.head { display: flex; align-items: baseline; gap: 10px; padding: 0 16px 8px; }
+.head h1 { margin: 0; font-size: 17px; }
+.sec { font-size: 11.5px; color: var(--muted); padding: 8px 16px 4px; display: flex; gap: 6px; }
+.sec .n { font-family: var(--mono); color: var(--faint); }
+.r { display: grid; grid-template-columns: 3px 30px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 16px 6px 0; cursor: default; }
+.r .bar { height: 22px; border-radius: 0 2px 2px 0; }
+.r .sc { font: 600 12.5px var(--mono); color: var(--warn); text-align: right; }
+.r .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r .d { font: 11.5px var(--mono); color: var(--faint); }
+.r.sel { background: var(--sel); }
+.r.flash { animation: flash 1.4s ease-out; }
+@keyframes flash { from { background: color-mix(in srgb, var(--ok) 22%, transparent); } }
+.right { min-width: 0; }
+.stripe { height: 3px; }
+.editor { padding: 16px 20px; }
+.score { font: 600 17px var(--mono); color: var(--warn); min-width: 26px; }
+.title-inp { flex: 1; font-size: 16px; font-weight: 600; border: 0; background: none; outline: 0; min-width: 0; }
+.iconbtn { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 20px; margin-top: 12px; }
+.label { color: var(--muted); font-size: 12.5px; margin: 14px 0 4px; }
+.label:first-child { margin-top: 0; }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 5px 8px; outline: 0; }
+textarea.inp { min-height: 110px; resize: vertical; display: block; line-height: 1.5; }
+.check { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.box { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--bg); display: grid; place-items: center; font-size: 11px; flex: none; }
+.box.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.done-ttl { color: var(--faint); text-decoration: line-through; }
+.field { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; padding: 3px 0; }
+.field > span { color: var(--muted); font-size: 12.5px; }
+.card { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-top: 10px; font-size: 12.5px; }
+.status { border: 1px solid var(--accent-bg); background: color-mix(in srgb, var(--accent-bg) 55%, transparent); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; margin-bottom: 10px; }
+.status .h { color: var(--accent); display: flex; gap: 8px; align-items: center; }
+.status ul { margin: 4px 0 0; padding-left: 18px; }
+.fold { border: 0; background: none; padding: 0; color: var(--muted); cursor: pointer; font-size: 12.5px; margin-top: 14px; display: inline-flex; gap: 6px; align-items: center; }
+.act { font-size: 12.5px; line-height: 1.5; margin-top: 4px; }
+.act .e { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 8px; padding: 2px 0; }
+.act .dd { font-family: var(--mono); color: var(--faint); font-size: 11.5px; padding-top: 1px; }
+.act .w { color: var(--faint); }
+.act .on-tag { color: var(--faint); }
+.foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.hints { display: flex; gap: 14px; padding: 5px 14px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--muted); background: var(--bg); }
+.kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-radius: 4px; padding: 0 5px; margin-right: 4px; color: var(--text); background: var(--surface); }
+.new { outline: 2px dashed var(--ok); outline-offset: 3px; border-radius: 6px; }
+
+/* Dialogs, like the app's .scrim / .dialog / .palette. */
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: flex; align-items: flex-start; justify-content: center; padding-top: 28px; z-index: 5; }
+.palette, .dialog { width: 580px; max-width: calc(100% - 32px); background: var(--raised); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.dialog { width: 660px; }
+.palette input { width: 100%; border: 0; border-bottom: 1px solid var(--border); background: none; padding: 13px 16px; font-size: 15px; outline: 0; }
+.pg { font-size: 11px; color: var(--faint); padding: 8px 16px 2px; text-transform: uppercase; letter-spacing: .04em; }
+.pi { display: flex; align-items: center; gap: 10px; padding: 6px 16px; cursor: pointer; }
+.pi.cur { background: var(--sel); }
+.pi .bar { width: 3px; height: 18px; border-radius: 2px; flex: none; }
+.pi .ttl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pi .sub { font-size: 11.5px; color: var(--faint); white-space: nowrap; }
+.dialog-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.dialog-body { padding: 4px 16px 12px; max-height: 560px; overflow: auto; }
+.dialog-foot { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
+.mg { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mg th { text-align: left; font-weight: 500; font-size: 12px; color: var(--muted); padding: 10px 8px 6px 0; vertical-align: bottom; }
+.mg th .who { display: flex; align-items: center; gap: 6px; color: var(--text); font-weight: 600; font-size: 13px; }
+.mg th .who i { width: 3px; height: 16px; border-radius: 2px; flex: none; }
+.mg td { padding: 4px 8px 4px 0; border-top: 1px solid var(--border); vertical-align: top; }
+.mg td.k { color: var(--muted); width: 112px; font-size: 12.5px; padding-top: 7px; }
+.mg td.v { width: 44%; }
+.mg .sub-h td { border-top: 0; padding-top: 14px; color: var(--muted); font-size: 12px; font-weight: 500; }
+.pick { display: flex; align-items: flex-start; gap: 7px; padding: 2px 6px; margin: 0 -6px; border-radius: 6px; cursor: pointer; }
+.pick:hover { background: var(--hover); }
+.pick input { margin: 3px 0 0; accent-color: var(--accent); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.unused { color: var(--faint); }
+.both { color: var(--faint); font-size: 11.5px; margin-left: 6px; }
+.cleared { color: var(--warn); }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 7px 14px; border-radius: 7px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+.toast.on { opacity: 1; }
+.notes { margin-top: 20px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 18px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+.notes .ask { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+@media (max-width: 860px) { .split { grid-template-columns: minmax(0, 1fr); } .left { display: none; } .dgrid { grid-template-columns: minmax(0, 1fr); } .top { height: auto; padding: 8px 16px; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Merge mockup</span></div>
+  <div class="seg" id="ba"><button data-v="before">Before</button><button data-v="after" class="on">After</button></div>
+  <div class="seg" id="kind"><button data-v="tasks" class="on">Tasks</button><button data-v="waiting">Waiting</button></div>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="restart">↺ Start over</button>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+<div class="page"><div class="app" id="app"></div><div class="notes" id="notes"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id)
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+const P = {
+  launch: ['DM-NVX 3.2 launch', '#378ADD'], portal: ['Dealer portal', '#3B9C6E'], q1: ['Q1 planning', '#9B6BD6'], none: [null, '#a1a1aa'],
+}
+
+// Two example pairs: A is the open item (kept), B is the one merged in.
+const DATA = {
+  tasks: {
+    list: [
+      { id: 'a', t: 'Dealer FAQ for DM-NVX 3.2 firmware', s: 72, p: 'launch', due: 'Nov 21' },
+      { id: 'c', t: 'Roadmap slides for Q1 planning', s: 66, p: 'q1', due: 'Nov 19' },
+      { id: 'b', t: 'Firmware FAQ for dealers', s: 64, p: 'portal', due: 'Nov 24' },
+      { id: 'd', t: 'Review SOW from Northside AV', s: 51, p: 'portal', due: 'Nov 28' },
+      { id: 'e', t: 'Submit November expense report', s: 38, p: 'none', due: '' },
+    ],
+    a: {
+      title: 'Dealer FAQ for DM-NVX 3.2 firmware', p: 'launch', due: 'Fri, Nov 21', asked: 'Kenji Mori', override: null, follow: 1,
+      subs: [['Draft the Q&A list', true], ['Legal review', false]],
+      notes: 'Cover the upgrade steps and the two known issues.\nLink the release notes.',
+      updates: 2, latest: 'Nov 12, 2026: Kenji wants it before the dealer webinar (from “DM-NVX launch sync”)',
+      activity: 9, card: true, ai: '+10', created: 'Nov 3',
+    },
+    b: {
+      title: 'Firmware FAQ for dealers', p: 'portal', due: 'Mon, Nov 24', asked: 'Kenji Mori', override: 80, follow: 1,
+      subs: [['Collect the top dealer questions', false]],
+      notes: 'Dana wants a portal version too.',
+      updates: 1, activity: 4, created: 'Oct 29',
+    },
+    links: [1, 1],
+  },
+  waiting: {
+    list: [
+      { id: 'a', t: 'Signed SOW from Northside AV', s: 14, p: 'portal', due: 'Nov 20', who: 'Priya Shah' },
+      { id: 'b', t: 'Northside SOW countersignature', s: 11, p: 'portal', due: 'Nov 25', who: 'Marco Diaz' },
+      { id: 'c', t: 'Pricing sign-off', s: 5, p: 'q1', due: '', who: 'Dana Whitfield' },
+      { id: 'd', t: 'Firmware build 3.2.1', s: 2, p: 'launch', due: 'Nov 22', who: 'Kenji Mori' },
+    ],
+    a: {
+      title: 'Signed SOW from Northside AV', p: 'portal', due: 'Thu, Nov 20', waitingOn: 'Priya Shah', since: 'Nov 3', asked: null, override: null, follow: 1,
+      subs: [], notes: 'Priya said legal has it.', updates: 1, latest: 'Nov 10, 2026: Priya expects it back this week', activity: 5, card: false, ai: null, created: 'Nov 3',
+    },
+    b: {
+      title: 'Northside SOW countersignature', p: 'portal', due: 'Tue, Nov 25', waitingOn: 'Marco Diaz', since: 'Nov 6', asked: 'Marco Diaz', override: null, follow: 2,
+      subs: [], notes: '', updates: 2, activity: 4, created: 'Nov 6',
+    },
+    links: [1, 0],
+  },
+}
+
+let ba = 'after', kind = 'tasks', step = 'editor', cur = 0, query = '', merged = false
+let choice = {}
+
+const proj = (k) => P[k][0] ? `<span class="dot" style="background:${P[k][1]}"></span>${P[k][0]}` : '<span class="faint">No project</span>'
+const d = () => DATA[kind]
+const wait = () => kind === 'waiting'
+const noun = () => (wait() ? 'waiting item' : 'task')
+
+// The fields the dialog shows, and how each is settled.
+function fields() {
+  const { a, b } = d()
+  const f = [['title', 'Title', a.title, b.title, (v) => esc(v)]]
+  if (wait()) f.push(['waitingOn', 'Waiting on', a.waitingOn, b.waitingOn, esc])
+  f.push(['p', 'Project', a.p, b.p, proj], ['due', 'Due', a.due, b.due, esc], ['asked', 'Asked by', a.asked, b.asked, esc], ['override', 'Priority set by hand', a.override, b.override, (v) => `<span class="mono">${v}</span>`])
+  return f
+}
+const conflict = (av, bv) => av != null && av !== '' && bv != null && bv !== '' && av !== bv
+function result() {
+  const { a, b } = d()
+  const out = {}
+  for (const [k, , av, bv] of fields()) out[k] = conflict(av, bv) ? (choice[k] === 'b' ? bv : av) : (av ?? bv)
+  return out
+}
+
+function listPane() {
+  const { list } = d()
+  const rows = list.filter((t) => !(merged && t.id === 'b')).map((t) => {
+    const title = merged && t.id === 'a' ? result().title : t.t
+    const color = P[merged && t.id === 'a' ? result().p : t.p][1]
+    const m = merged && t.id === 'a' ? result() : null
+    const right = wait() ? `${t.s}d` : m ? m.due.slice(5) : t.due
+    const score = m ? (m.override ?? 66) : t.s
+    const who = m ? m.waitingOn : t.who
+    return `<div class="r ${t.id === 'a' ? 'sel' : ''} ${m ? 'flash' : ''}"><span class="bar" style="background:${color}"></span><span class="sc">${wait() ? '' : score}</span><span class="t">${esc(title)}${wait() ? ` <span class="faint">· ${esc(who)}</span>` : ''}</span><span class="d">${right}</span></div>`
+  })
+  const n = rows.length
+  return `<div class="left"><div class="head"><h1>${wait() ? 'Waiting on' : 'Tasks'}</h1><span class="muted" style="font-size:12.5px">${n} ${wait() ? 'waiting · longest first' : 'open · by priority'}</span></div>
+    <div class="sec">${wait() ? 'Waiting' : 'This week'} <span class="n">${n}</span></div>${rows.join('')}</div>`
+}
+
+function activityLines() {
+  const { a, b } = d()
+  const r = result()
+  const bt = esc(b.title)
+  const on = `<span class="on-tag"> · on “${bt}”</span>`
+  const lines = [['Nov 17', `Merged in “${bt}”`, 'by you', '']]
+  if (r.title !== a.title) lines.push(['Nov 17', `Renamed from “${esc(a.title)}”`, 'by you', ''])
+  if (r.p !== a.p) lines.push(['Nov 17', `Project: ${P[r.p][0]} (was ${P[a.p][0]})`, 'by you', ''])
+  if (r.due !== a.due) lines.push(['Nov 17', `Due date moved: ${a.due.slice(5)} → ${r.due.slice(5)}`, 'by you', ''])
+  if (wait() && r.waitingOn !== a.waitingOn) lines.push(['Nov 17', `Status: Waiting on ${r.waitingOn} (was Waiting on ${a.waitingOn})`, 'by you', ''])
+  if (r.override != null && a.override == null) lines.push(['Nov 17', `Priority set by hand: ${r.override}`, 'by you', ''])
+  if (r.asked && !a.asked) lines.push(['Nov 17', `Asked by: ${r.asked}`, 'by you', ''])
+  if (b.follow) lines.push(['Nov 17', `Follow-ups: ${a.follow} → ${a.follow + b.follow}`, 'by you', ''])
+  if (a.ai) lines.push(['Nov 17', `AI priority change removed (was ${a.ai})`, 'by you', ''])
+  if (wait()) {
+    lines.push(['Nov 10', 'Follow-ups: 0 → 1', 'by you', ''], ['Nov 9', 'Follow-ups: 1 → 2', 'by you', on], ['Nov 6', 'Status: Waiting on Marco Diaz', 'from “Re: Northside SOW”, accepted in Review', on], ['Nov 6', 'Created', 'from “Re: Northside SOW”, accepted in Review', on], ['Nov 3', 'Status: Waiting on Priya Shah', 'by you', ''])
+  } else {
+    lines.push(['Nov 12', 'Due date moved: Nov 14 → Nov 21', 'by you', ''], ['Nov 11', 'AI priority change +10: the dealer webinar depends on this', 'by the AI, daily briefing', ''], ['Nov 10', 'Linked: Teams chat “Kenji Mori”', 'accepted in Review', ''], ['Nov 7', 'Priority set by hand: 80', 'by you', on], ['Nov 5', 'Project: Dealer portal (was none)', 'by you', on], ['Nov 4', 'Due date set: Nov 24', 'by you', on], ['Nov 3', 'Created', 'from meeting “DM-NVX launch sync”, accepted in Review', ''])
+  }
+  return lines.map(([dd, what, who, tag]) => `<div class="e"><span class="dd">${dd}</span><span>${what} <span class="w">· ${who}</span>${tag}</span></div>`).join('')
+}
+
+function editorPane() {
+  const { a, b } = d()
+  const r = merged ? result() : { title: a.title, p: a.p, due: a.due, asked: a.asked, override: a.override, waitingOn: a.waitingOn }
+  const subs = merged ? [...a.subs, ...b.subs] : a.subs
+  const notes = merged ? [a.notes, b.notes].filter(Boolean).join('\n\n') : a.notes
+  const updates = merged ? a.updates + b.updates : a.updates
+  const score = wait() ? (r.override ?? 61) : merged ? (r.override ?? 66) : 72
+  const card = !merged && a.card
+  const statusCard = card
+    ? `<div class="status"><div class="h">✦ Where this stands<span class="spacer"></span><button class="link">Refresh</button></div><ul><li>Draft Q&amp;A list done; legal review next</li><li>Needed before the dealer webinar</li></ul><div style="margin-top:4px"><b style="font-weight:500">Next:</b> Send the draft to legal.</div></div>`
+    : `<div class="status ${merged ? 'new' : ''}"><div class="h">✦ Where this stands<span class="spacer"></span><button class="link">Write</button></div></div>`
+  const due = r.due ? `2026-11-${r.due.slice(-2)}` : ''
+  const footer = ba === 'before'
+    ? `<button class="btn ghost danger">Delete</button><span class="spacer"></span><button class="btn">Mark done</button><button class="btn primary">Save</button>`
+    : `<button class="btn ghost danger">Delete</button><button class="btn ghost ${merged ? '' : 'new'}" id="merge">Merge</button><span class="spacer"></span><button class="btn">Mark done</button><button class="btn primary">Save</button>`
+  return `<div class="right"><div class="stripe" style="background:${P[r.p][1]}"></div><div class="editor">
+    <div class="row"><span class="score">${score}</span><input class="title-inp ${merged ? 'new' : ''}" value="${esc(r.title)}"><button class="iconbtn">✕</button></div>
+    <div class="dgrid"><div>
+      ${statusCard}
+      ${subs.length ? `<div class="label">Subtasks</div><div class="${merged && b.subs.length ? 'new' : ''}">${subs.map(([t, done]) => `<div class="check"><span class="box ${done ? 'on' : ''}">${done ? '✓' : ''}</span><span class="${done ? 'done-ttl' : ''}">${esc(t)}</span></div>`).join('')}</div>` : `<button class="link" style="margin-top:2px">+ Add subtask</button>`}
+      <div class="label">Notes</div><textarea class="inp ${merged && b.notes ? 'new' : ''}">${esc(notes)}</textarea>
+      <div class="row" style="margin:14px 0 4px"><span class="label" style="margin:0">Updates</span><span class="spacer"></span><button class="btn ghost ${merged ? 'new' : ''}" style="padding:0 6px;font-size:12.5px">Updates <span class="mono">${updates}</span></button></div>
+      <div class="card" style="margin-top:0">${esc(a.latest)}</div>
+      ${merged ? `<div class="fold" style="color:var(--text)">▾ Activity <span class="mono faint">${a.activity + b.activity + 4}</span></div><div class="act new">${activityLines()}</div>` : `<button class="fold">▸ Activity <span class="mono faint">${a.activity}</span></button>`}
+    </div><div>
+      <label class="field"><span>Project</span><select class="inp"><option>${P[r.p][0] ?? 'No project'}</option></select></label>
+      <label class="field"><span>Status</span><select class="inp"><option>${wait() ? 'Waiting on' : 'Open'}</option></select></label>
+      ${wait() ? `<label class="field"><span>Waiting on</span><input class="inp" value="${esc(r.waitingOn)}"></label>` : ''}
+      <label class="field"><span>Due</span><input class="inp" type="date" value="${due}"></label>
+      <label class="field"><span>Asked by</span><select class="inp"><option>${esc(r.asked ?? 'Nobody')}</option></select></label>
+      <div class="card"><div class="row"><span class="muted">Priority ${score}${r.override != null ? ' (set by you)' : ''}</span><span class="spacer"></span><button class="link">Adjust</button></div>
+        <div>${r.override != null ? 'Set by hand' : wait() ? 'Waiting 14 days · due in 3 days' : 'Due in 4 days · asked by Kenji (4★)'}</div>
+        ${!merged && a.ai ? '<div class="faint" style="font-size:11.5px">✦ Includes an AI change</div>' : ''}</div>
+    </div></div>
+    <div class="foot">${footer}</div>
+  </div></div>`
+}
+
+function pickerItems() {
+  const q = query.trim().toLowerCase()
+  return d().list.filter((t) => t.id !== 'a' && (!q || t.t.toLowerCase().includes(q)))
+}
+function picker() {
+  const items = pickerItems()
+  cur = Math.min(cur, Math.max(0, items.length - 1))
+  return `<div class="scrim" data-close><div class="palette" role="dialog" aria-label="Merge with">
+    <input id="pq" value="${esc(query)}" placeholder="Merge “${esc(d().a.title)}” with…" autocomplete="off">
+    <div style="max-height:340px;overflow:auto;padding-bottom:6px">
+      <div class="pg">${wait() ? 'Waiting' : 'Tasks'}</div>
+      ${items.map((t, i) => `<div class="pi ${i === cur ? 'cur' : ''}" data-pick="${t.id}" data-i="${i}"><span class="bar" style="background:${P[t.p][1]}"></span><span class="ttl">${esc(t.t)}</span><span class="sub">${wait() ? `${esc(t.who)} · ${t.s}d` : `${P[t.p][0] ?? ''}${t.due ? ` · ${t.due}` : ''}`}</span></div>`).join('') || '<div class="pi faint">No matches</div>'}
+    </div></div></div>`
+}
+
+function dialog() {
+  const { a, b, links } = d()
+  const rows = fields().map(([k, label, av, bv, fmt]) => {
+    const empty = (v) => v == null || v === ''
+    if (empty(av) && empty(bv)) return ''
+    if (conflict(av, bv)) {
+      const c = choice[k] ?? 'a'
+      const cell = (side, v) => `<td class="v"><label class="pick"><input type="radio" name="${k}" value="${side}" ${c === side ? 'checked' : ''}><span>${fmt(v)}</span></label></td>`
+      return `<tr><td class="k">${label}</td>${cell('a', av)}${cell('b', bv)}</tr>`
+    }
+    if (av === bv) return `<tr><td class="k">${label}</td><td colspan="2">${fmt(av)}<span class="both">both</span></td></tr>`
+    return `<tr><td class="k">${label}</td><td class="v">${empty(av) ? '<span class="faint">—</span>' : fmt(av)}</td><td class="v">${empty(bv) ? '<span class="faint">—</span>' : fmt(bv)}</td></tr>`
+  })
+  const pair = (x, y) => `<span class="mono">${x}</span> <span class="faint">+</span> <span class="mono">${y}</span>`
+  const ruled = wait() ? `<tr><td class="k">Waiting since</td><td class="v">${a.since}</td><td class="v unused">${b.since}</td></tr>` : ''
+  // A row only when the item merged in has some of it.
+  const combined = [
+    b.notes && ['Notes', a.notes ? 'Both' : 'Moved over'],
+    b.subs.length && ['Subtasks', pair(a.subs.length, b.subs.length)],
+    b.updates && ['Updates', pair(a.updates, b.updates)],
+    b.activity && ['Activity', pair(a.activity, b.activity)],
+    links[1] && ['Linked imports', pair(links[0], links[1])],
+    b.follow && ['Follow-ups', `${pair(a.follow, b.follow)} <span class="faint">=</span> <span class="mono">${a.follow + b.follow}</span>`],
+  ].filter(Boolean)
+  const cleared = [a.card && 'Status card', a.ai && `AI priority change (${a.ai})`].filter(Boolean)
+  return `<div class="scrim" data-close><div class="dialog" role="dialog" aria-label="Merge">
+    <div class="dialog-head"><b style="font-weight:600">Merge ${noun()}s</b><span class="spacer"></span><button class="btn ghost" id="cancel">Cancel</button></div>
+    <div class="dialog-body"><table class="mg">
+      <tr><th></th><th><span class="muted">Keep</span><div class="who"><i style="background:${P[a.p][1]}"></i>${esc(a.title)}</div></th><th><span class="muted">Merge in</span><div class="who"><i style="background:${P[b.p][1]}"></i>${esc(b.title)}</div></th></tr>
+      ${rows.join('')}${ruled}
+      <tr class="sub-h"><td colspan="3">Combined</td></tr>
+      ${combined.map(([k, v]) => `<tr><td class="k">${k}</td><td colspan="2">${v}</td></tr>`).join('')}
+      ${cleared.length ? `<tr><td class="k">Cleared</td><td colspan="2" class="cleared">${cleared.join(', ')}</td></tr>` : ''}
+    </table></div>
+    <div class="dialog-foot"><button class="btn ghost" id="back">Back</button><span class="spacer"></span><button class="btn primary" id="go">Merge</button></div>
+  </div></div>`
+}
+
+function palette() {
+  const cmds = [['Actions', 'New task', 'N'], ['Actions', `Merge with…`, '', true], ['Actions', 'Write briefing'], ['Actions', 'Write weekly reflection'], ['Go to', 'Today'], ['Go to', 'Tasks']]
+  let last = ''
+  return `<div class="scrim" data-close><div class="palette"><input placeholder="Type a command, task, project, or person…">
+    <div style="padding-bottom:6px">${cmds.map(([g, l, k, isNew], i) => {
+      const h = g !== last ? `<div class="pg">${(last = g)}</div>` : ''
+      return `${h}<div class="pi ${i === 1 ? 'cur' : ''} ${isNew ? 'new' : ''}" ${isNew ? 'id="pmerge"' : ''}><span class="ttl">${l}</span>${k ? `<span class="kbd">${k}</span>` : ''}</div>`
+    }).join('')}</div></div></div>`
+}
+
+const HINTS = {
+  editor: [['Ctrl ↵', 'save'], ['E', 'done'], ['Esc', 'close']],
+  picker: [['↑ ↓', 'move'], ['↵', 'pick'], ['Esc', 'cancel']],
+  dialog: [['Ctrl ↵', 'merge'], ['Esc', 'back']],
+  palette: [['↑ ↓', 'move'], ['↵', 'run'], ['Esc', 'close']],
+}
+
+const NOTES = {
+  before: ['Before', ['The task editor’s bottom row today: Delete, then Mark done and Save. There’s no way to combine two items.']],
+  editor: ['After: the Merge button', [
+    '<b>Merge</b> sits next to Delete in the editor’s bottom row, on open tasks and waiting items (not on Done items or a new one). Pending edits are saved first, as Mark done does.',
+    '<b>Ctrl+K</b> has <b>Merge with…</b> while an item is open (<button class="link" id="openPal">show it</button>).',
+    'Click Merge to try it.',
+  ]],
+  picker: ['After: pick the other item', [
+    'Lists only the <b>same list</b>: tasks with tasks, waiting items with waiting items (your call). Done items aren’t offered.',
+    'Same order as the list (by priority, or longest waiting). Type to filter by title. ↑ ↓, ↵ to pick, Esc to cancel.',
+  ]],
+  dialog: ['After: settle conflicts', [
+    '<b>The item you started from is kept</b>; the other is removed once everything has moved in (your call). Merge confirms it; there’s no undo.',
+    '<b>A choice only where both have a different value</b>: title, project, due date, asked by, waiting on, and priority set by hand. The kept item’s value is picked first. A value always wins over an empty one, and matching values show once with “both”.',
+    '<b>Combined</b>: Notes (this item’s first, a blank line, then the other’s), subtasks (this item’s first), Updates (merged in date order), Activity (every line moves over), linked imports, and follow-ups added together. The earlier created date, and for waiting items the earlier waiting-since date, are kept. A Combined row shows only when the item merged in has some of it.',
+    '<b>Cleared</b>: both items’ status cards and AI priority changes (your call). The row shows only when there’s something to clear.',
+    'Review suggestions still waiting that point at the removed item are pointed at the kept one, so accepting them still works.',
+    'Ctrl+Enter merges; Esc goes back to the picker.',
+  ]],
+  done: ['After: the merged item', [
+    'The other item is gone from the list; the toast says “Merged into “…””. Green outlines mark what changed.',
+    '<b>Activity</b> adds “Merged in “…” · by you”, then one line per field that changed, as any save does. Lines that moved over from the other item end with <b>· on “its old title”</b>.',
+    'The status card is empty, ready for ✦ Write. The other item’s due-date moves don’t count as “pushed back” in the weekly review (they were about a different task).',
+  ]],
+  palette: ['After: Ctrl+K', ['<b>Merge with…</b> appears under Actions only while a task or waiting item is open in the editor. It opens the same picker. Click it to try.']],
+}
+
+function render() {
+  document.querySelectorAll('#ba button').forEach((b) => b.classList.toggle('on', b.dataset.v === ba))
+  document.querySelectorAll('#kind button').forEach((b) => b.classList.toggle('on', b.dataset.v === kind))
+  const s = ba === 'before' ? 'editor' : step
+  const overlay = ba === 'after' ? (step === 'picker' ? picker() : step === 'dialog' ? dialog() : step === 'palette' ? palette() : '') : ''
+  const hints = HINTS[s === 'done' ? 'editor' : s]
+  $('app').innerHTML = `<div class="split">${listPane()}${editorPane()}</div>
+    <div class="hints">${hints.map(([k, l]) => `<span><span class="kbd">${k}</span>${l}</span>`).join('')}</div>${overlay}`
+  const key = ba === 'before' ? 'before' : step
+  const [h, items] = NOTES[key]
+  $('notes').innerHTML = `<h3>${h}</h3><ul>${items.map((x) => `<li>${x}</li>`).join('')}</ul>`
+  wire()
+}
+
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 2200) }
+
+function wire() {
+  const m = $('merge'); if (m) m.onclick = () => { step = 'picker'; query = ''; cur = 0; render(); $('pq')?.focus() }
+  const op = $('openPal'); if (op) op.onclick = () => { step = 'palette'; render() }
+  const pm = $('pmerge'); if (pm) pm.onclick = () => { step = 'picker'; query = ''; cur = 0; render(); $('pq')?.focus() }
+  document.querySelectorAll('[data-close]').forEach((s) => s.addEventListener('mousedown', (e) => { if (e.target === s) { step = 'editor'; render() } }))
+  document.querySelectorAll('[data-pick]').forEach((el) => {
+    el.onmouseenter = () => { cur = Number(el.dataset.i); document.querySelectorAll('.pi[data-i]').forEach((p) => p.classList.toggle('cur', p === el)) }
+    el.onclick = () => choose(el.dataset.pick)
+  })
+  const pq = $('pq')
+  if (pq) {
+    pq.oninput = () => { query = pq.value; cur = 0; render(); const n = $('pq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length) }
+    pq.onkeydown = (e) => {
+      const items = pickerItems()
+      if (e.key === 'ArrowDown') { e.preventDefault(); cur = Math.min(cur + 1, items.length - 1); render(); $('pq').focus() }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); cur = Math.max(cur - 1, 0); render(); $('pq').focus() }
+      else if (e.key === 'Enter') { e.preventDefault(); if (items[cur]) choose(items[cur].id) }
+      else if (e.key === 'Escape') { step = 'editor'; render() }
+    }
+  }
+  document.querySelectorAll('.mg input[type=radio]').forEach((r) => (r.onchange = () => { choice[r.name] = r.value }))
+  const c = $('cancel'); if (c) c.onclick = () => { step = 'editor'; render() }
+  const bk = $('back'); if (bk) bk.onclick = () => { step = 'picker'; render(); $('pq')?.focus() }
+  const go = $('go'); if (go) go.onclick = doMerge
+}
+
+function choose(id) {
+  if (id !== 'b') { toast('In this mockup, pick the highlighted pair: “' + d().b.title + '”'); return }
+  step = 'dialog'; render()
+}
+function doMerge() { merged = true; step = 'done'; render(); toast(`Merged into “${result().title}”`) }
+
+document.addEventListener('keydown', (e) => {
+  if (ba !== 'after') return
+  if (step === 'dialog' && (e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doMerge() }
+  else if (step === 'dialog' && e.key === 'Escape') { step = 'picker'; render(); $('pq')?.focus() }
+  else if (step === 'palette' && e.key === 'Escape') { step = 'editor'; render() }
+})
+function reset() { step = 'editor'; merged = false; choice = {}; query = ''; cur = 0 }
+document.querySelectorAll('#ba button').forEach((b) => (b.onclick = () => { ba = b.dataset.v; reset(); render() }))
+document.querySelectorAll('#kind button').forEach((b) => (b.onclick = () => { kind = b.dataset.v; reset(); render() }))
+$('restart').onclick = () => { reset(); render() }
+$('theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark' }
+render()
+</script>
+</body>
+</html>

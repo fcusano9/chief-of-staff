@@ -27,6 +27,10 @@ Every rule the app follows, on one page: how tasks are scored and listed, what R
 | Every save | Updates the task's last activity, recomputes its score, and records each changed field in Activity. | `src/main/services/tasks.ts` · `save` |
 | Subtasks | A checklist in order. Empty ones are dropped on save. Subtask changes aren't recorded in Activity. | `src/main/services/tasks.ts` · `syncSubtasks` |
 | Delete | Removes the task with its subtasks, Updates, status card, AI change, and Activity. The imports it came from stay. | `src/main/services/tasks.ts` · `delete` |
+| Merge | Two open tasks, or two waiting items, become one (never a task with a waiting item, and never a Done item). Starts from the task editor's Merge button, or Ctrl+K "Merge with…" while one is open; pending edits are saved first. The item the editor shows is kept and the other is removed. | `src/shared/merge.ts` · `mergeProblem`; `src/main/services/task-merge.ts` |
+| Merge: fields | Where both items have a different title, project, due date, asked by, waiting on, or priority set by hand, the user picks which to keep (the kept item's is picked first). A value always wins over an empty one. | `src/shared/merge.ts` · `mergeFields`, `mergedInput` |
+| Merge: combined | Notes (the kept item's, a blank line, then the other's), subtasks (the kept item's first), Updates (in date order, a line in both kept once), Activity, linked imports, and follow-ups (added together). The earlier created date and waiting-since date are kept. Review suggestions still pending about the removed item point at the kept one. | `src/main/services/task-merge.ts` · `merge` |
+| Merge: cleared | Both items' status cards and AI priority changes, since each described only half of the work. | `src/main/services/task-merge.ts` · `merge` |
 
 ## Priority score
 
@@ -100,7 +104,8 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Notes | The user's own text on a task. When a new task is accepted from Review, the AI's details become its first Notes (see Open questions). | `src/main/services/suggestions.ts` · `createTask` |
 | Updates | Dated lines on every task, project, and person, newest first, such as "Nov 2, 2026: Pricing approved (from “Weekly sync”)". They come from status updates and context accepted in Review, plus any the user adds. | `src/shared/notes.ts` |
 | Latest | Each editor shows the newest update under its Updates button. | `src/renderer/src/components/UpdatesWindow.tsx` |
-| Activity | A read-only log of each task's changes, newest first: created; status; due date set, moved, or removed; project; asked by; title; priority set by hand; follow-ups; AI priority changes; draft replies saved or opened. Not recorded: notes, subtasks, updates, and the score's recalculation. | `src/main/services/task-events.ts` · `taskChanges` |
+| Activity | A read-only log of each task's changes, newest first: created; status; due date set, moved, or removed; project; asked by; title; priority set by hand; follow-ups; AI priority changes; draft replies saved or opened; merges. Not recorded: notes, subtasks, updates, and the score's recalculation. | `src/main/services/task-events.ts` · `taskChanges` |
+| Merged Activity | A merge adds "Merged in “…”", then a line per field it changed. The removed item's lines move over and end with "on “its title”". | `src/main/services/task-merge.ts` · `merge`; `src/shared/events.ts` · `eventOn` |
 | Who | Every Activity line says who made the change: "by you", "from “Import”, accepted in Review", or "by the AI, daily briefing" (or the import's name). | `src/shared/events.ts` · `eventWho` |
 | As it read then | Activity stores names, not ids, so renaming a project doesn't rewrite history. Tasks older than the log say "Changes before … weren't recorded." | `src/main/services/task-events.ts` |
 
@@ -174,7 +179,7 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Weeks | Sunday to Saturday, local time, named by their Sunday. | `src/shared/week.ts` |
 | Completed | Tasks finished during the week. | `src/main/services/weekly.ts` · `lists` |
 | New | Tasks created during the week, with the import they came from, or "Added by you". | `src/main/services/weekly.ts` · `lists` |
-| Slipping | Open tasks overdue at the end of the week (today, for the current week), plus tasks whose due date was pushed later during the week. A push is counted net over the week; moves earlier, dates set or removed, and finished tasks don't count. | `src/main/services/weekly.ts` · `lists` |
+| Slipping | Open tasks overdue at the end of the week (today, for the current week), plus tasks whose due date was pushed later during the week. A push is counted net over the week; moves earlier, dates set or removed, finished tasks, and moves made on an item before it was merged into another don't count. | `src/main/services/weekly.ts` · `lists` |
 | Waiting on | Items waiting at the end of the week, with how many days. | `src/main/services/weekly.ts` · `lists` |
 | The current week | Live: rebuilt every time it's shown. | `src/main/services/weekly.ts` · `get` |
 | Ended weeks | Saved once, the first time the app runs after Saturday midnight, and never changed after. Checked at startup, every 30 minutes, and before listing weeks. | `src/main/services/weekly.ts` · `saveEndedWeeks` |

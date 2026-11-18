@@ -24,6 +24,29 @@ export const noteLines = (summary: string): string[] =>
     .map((l) => l.trim())
     .filter(Boolean)
 
+/**
+ * Two updates texts as one, oldest first, for merging two tasks. Lines are put in date order; a line
+ * without a readable date stays after the line before it. On the same day the first text's lines
+ * come first. A line in both is kept once.
+ */
+export function mergeUpdates(first: string, second: string): string {
+  const keyed = (summary: string, list: number) => {
+    let last = -Infinity
+    return noteLines(summary).map((line, i) => {
+      const date = parseNote(line).date
+      const t = date ? Date.parse(date) : NaN
+      if (!Number.isNaN(t)) last = t
+      return { line, t: last, list, i }
+    })
+  }
+  const seen = new Set<string>()
+  return [...keyed(first, 0), ...keyed(second, 1)]
+    .sort((a, b) => (a.t === b.t ? 0 : a.t - b.t) || a.list - b.list || a.i - b.i)
+    .filter(({ line }) => !seen.has(line) && Boolean(seen.add(line)))
+    .map(({ line }) => line)
+    .join('\n')
+}
+
 /** The newest update, or null when there are none. */
 export function latestNote(summary: string): Note | null {
   const lines = noteLines(summary)

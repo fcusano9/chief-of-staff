@@ -4,6 +4,7 @@ import { cos } from '../api'
 import { useApp, type View } from '../context'
 import { startReflection } from '../screens/WeeklyScreen'
 import { startBriefing } from './Briefing'
+import { requestMerge } from './MergeDialog'
 
 interface Command {
   group: string
@@ -35,7 +36,7 @@ export const TABS: [View, string][] = [...MAIN_TABS.flat(), ...DAILY_TABS]
 
 /** Ctrl+K: jump to any screen, task, project, or person, or run an action. */
 export function CommandPalette({ onClose }: { onClose: () => void }) {
-  const { go, openTask, projects, people, toggleTheme, toast, saveSettings } = useApp()
+  const { go, openTask, projects, people, toggleTheme, toast, saveSettings, view, selection } = useApp()
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -47,10 +48,13 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   }, [])
 
   const commands = useMemo<Command[]>(() => {
+    // Merge with… only while an open task or waiting item is in the editor.
+    const editing = (view === 'tasks' || view === 'waiting') && typeof selection?.id === 'number' && tasks.some((t) => t.id === selection.id)
     const all: Command[] = [
       ...TABS.map(([v, l]) => ({ group: 'Go to', label: l, run: () => go(v) })),
       { group: 'Go to', label: 'Settings', run: () => go('settings') },
       { group: 'Actions', label: 'New task', keys: 'N', run: () => openTask({ id: 'new' }) },
+      ...(editing ? [{ group: 'Actions', label: 'Merge with…', run: requestMerge }] : []),
       {
         group: 'Actions',
         label: 'Write briefing',
@@ -78,7 +82,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     ]
     const q = query.trim().toLowerCase()
     return (q ? all.filter((c) => c.label.toLowerCase().includes(q)) : all).slice(0, 40)
-  }, [query, tasks, projects, people])
+  }, [query, tasks, projects, people, view, selection])
 
   useEffect(() => setCursor(0), [query])
   useEffect(() => {

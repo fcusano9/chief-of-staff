@@ -529,9 +529,9 @@ window.COS_MODEL = {
 
     { "id": "svc-tasks", "zone": "main", "x": 496, "y": 80, "w": 150, "h": 44, "label": "Tasks", "hint": "Save, score, list", "sub": "TaskService", "tags": ["db", "timer"],
       "plain": "Keeps every task with its subtasks, works out its priority score, and gives each screen its lists: open tasks by priority, waiting items by longest wait, done items newest first.",
-      "points": ["A save is one step: the task, its subtasks, its new score, and its Activity lines are written together.", "Entering Waiting on records when the wait started; entering Done records when, and who it was waiting on.", "All open scores are recomputed at startup and every 30 minutes, because time passing changes them."],
-      "files": [{ "path": "src/main/services/tasks.ts", "names": ["TaskService", "listActive", "listDone", "save", "reopen", "recomputeAll", "summary"] }, { "path": "src/shared/priority.ts", "names": ["scorePriority", "needsFollowUp"] }],
-      "ipc": ["tasks.listActive", "tasks.listWaiting", "tasks.listDone", "tasks.reopen", "tasks.listForPerson", "tasks.get", "tasks.save", "tasks.setStatus", "tasks.delete", "tasks.summary"],
+      "points": ["A save is one step: the task, its subtasks, its new score, and its Activity lines are written together.", "Entering Waiting on records when the wait started; entering Done records when, and who it was waiting on.", "All open scores are recomputed at startup and every 30 minutes, because time passing changes them.", "Merge moves another item's Notes, subtasks, Updates, Activity, and linked imports into the kept one, with the fields the user picked, then removes it."],
+      "files": [{ "path": "src/main/services/tasks.ts", "names": ["TaskService", "listActive", "listDone", "save", "reopen", "recomputeAll", "summary"] }, { "path": "src/shared/priority.ts", "names": ["scorePriority", "needsFollowUp"] }, { "path": "src/main/services/task-merge.ts", "names": ["TaskMergeService"] }, { "path": "src/shared/merge.ts", "names": ["mergeFields", "mergedInput", "mergeProblem"] }],
+      "ipc": ["tasks.listActive", "tasks.listWaiting", "tasks.listDone", "tasks.reopen", "tasks.listForPerson", "tasks.get", "tasks.save", "tasks.setStatus", "tasks.delete", "tasks.summary", "tasks.merge"],
       "tables": ["work_items", "subtasks"], "rules": ["b-tasks", "b-priority-score", "b-lists"], "flows": ["recompute", "accept"] },
     { "id": "svc-directory", "zone": "main", "x": 496, "y": 134, "w": 150, "h": 44, "label": "Projects & people", "hint": "Plus their Updates", "sub": "directory.ts", "tags": ["db", "ai"],
       "plain": "Projects, people, and the dated Updates every task, project, and person carries. Archived projects are kept apart, so lists, editors, and the AI skip them.",
@@ -540,8 +540,8 @@ window.COS_MODEL = {
       "ipc": ["projects.list", "projects.listArchived", "projects.save", "projects.saveOverview", "projects.delete", "people.list", "people.save", "people.delete", "people.suggestBrief", "people.saveBrief", "briefs.get", "briefs.save"],
       "tables": ["projects", "people", "context_briefs"], "rules": ["b-projects", "b-people", "b-notes-updates-and-activity", "a-people-briefs"] },
     { "id": "svc-activity", "zone": "main", "x": 496, "y": 188, "w": 150, "h": 44, "label": "Activity log", "hint": "Who changed what", "sub": "TaskEventService", "tags": ["db"],
-      "plain": "Records each change to a task (status, due date, project, who asked, title, priority set by hand, follow-ups, AI changes, draft replies) and who made it. Lines are only ever added.",
-      "points": ["Values are stored as they read then, so renaming a project doesn't rewrite history.", "The weekly review reads due-date moves from here to find pushed-back tasks."],
+      "plain": "Records each change to a task (status, due date, project, who asked, title, priority set by hand, follow-ups, AI changes, draft replies, merges) and who made it. Lines are only ever added; a merge moves them to the kept task.",
+      "points": ["Values are stored as they read then, so renaming a project doesn't rewrite history.", "The weekly review reads due-date moves from here to find pushed-back tasks, leaving out moves made on an item before it was merged."],
       "files": [{ "path": "src/main/services/task-events.ts", "names": ["TaskEventService", "taskChanges", "dueMoves"] }, { "path": "src/shared/events.ts", "names": ["eventWho", "eventWhat"] }],
       "ipc": ["tasks.activity"], "tables": ["task_events", "task_events_meta"], "rules": ["b-notes-updates-and-activity"] },
     { "id": "svc-adjust", "zone": "main", "x": 496, "y": 242, "w": 150, "h": 44, "label": "AI priority changes", "hint": "Nudges of ±{maxAi}", "sub": "PriorityAdjustmentService", "tags": ["db", "ai"],
@@ -912,10 +912,10 @@ window.COS_MODEL = {
     { "id": "tasks", "label": "Tasks", "group": "main", "key": "G K",
       "plain": "Open tasks, grouped and ranked, with the selected task open beside them.",
       "sketch": [["**Project chips** · All · busiest first · No project"], ["Search · Open / Done"], ["**Overdue · This week · Later**", "**Task editor** · status card · reply card · notes · subtasks · Updates · Activity"]],
-      "shows": ["Groups: Overdue, This week (due by Saturday), and Later.", "The project shows as the row's stripe; the reason shows on hover.", "Edits save automatically when switching tasks."],
+      "shows": ["Groups: Overdue, This week (due by Saturday), and Later.", "The project shows as the row's stripe; the reason shows on hover.", "Edits save automatically when switching tasks.", "Merge (editor, or Ctrl+K) combines the open item with another from the same list."],
       "keys": [["↑ ↓", "Move"], ["Enter", "Open"], ["E", "Mark done"], ["N", "New task"], ["/", "Search"], ["Ctrl Enter", "Save"], ["Esc", "Close"]],
-      "calls": ["tasks.listActive", "tasks.listDone", "tasks.setStatus", "tasks.get", "tasks.save", "tasks.delete", "tasks.reopen", "tasks.removeAiAdjustment", "tasks.activity", "tasks.nextAction", "tasks.writeStatus", "tasks.dismissNextAction", "replies.target", "replies.draft", "replies.save", "replies.open", "replies.openDraft", "mail.open", "briefs.get", "briefs.save"],
-      "files": [{ "path": "src/renderer/src/screens/TasksScreen.tsx" }, { "path": "src/renderer/src/components/TaskEditor.tsx" }, { "path": "src/renderer/src/components/StatusCard.tsx" }, { "path": "src/renderer/src/components/ReplyCard.tsx" }, { "path": "src/renderer/src/components/ActivityLog.tsx" }, { "path": "src/renderer/src/components/ProjectChips.tsx" }, { "path": "src/renderer/src/components/SplitView.tsx" }],
+      "calls": ["tasks.listActive", "tasks.listDone", "tasks.setStatus", "tasks.get", "tasks.save", "tasks.delete", "tasks.reopen", "tasks.removeAiAdjustment", "tasks.activity", "tasks.merge", "tasks.nextAction", "tasks.writeStatus", "tasks.dismissNextAction", "replies.target", "replies.draft", "replies.save", "replies.open", "replies.openDraft", "mail.open", "briefs.get", "briefs.save"],
+      "files": [{ "path": "src/renderer/src/screens/TasksScreen.tsx" }, { "path": "src/renderer/src/components/TaskEditor.tsx" }, { "path": "src/renderer/src/components/StatusCard.tsx" }, { "path": "src/renderer/src/components/ReplyCard.tsx" }, { "path": "src/renderer/src/components/ActivityLog.tsx" }, { "path": "src/renderer/src/components/MergeDialog.tsx" }, { "path": "src/renderer/src/components/ProjectChips.tsx" }, { "path": "src/renderer/src/components/SplitView.tsx" }],
       "rules": ["b-tasks", "b-lists", "b-priority-score", "b-notes-updates-and-activity", "b-draft-replies"] },
     { "id": "waiting", "label": "Waiting", "group": "main", "key": "G W",
       "plain": "The same screen as Tasks, showing only what the user is waiting on others for, longest wait first.",
@@ -1027,8 +1027,8 @@ window.COS_MODEL = {
 window.COS_GENERATED = {
  "facts": {
   "version": "1.0.0",
-  "schemaVersion": 19,
-  "channelCount": 87,
+  "schemaVersion": 20,
+  "channelCount": 92,
   "tableCount": 26,
   "priority": {
    "dueHorizonDays": 14,
@@ -1059,6 +1059,7 @@ window.COS_GENERATED = {
   "tasks.dismissNextAction",
   "tasks.removeAiAdjustment",
   "tasks.activity",
+  "tasks.merge",
   "projects.list",
   "projects.listArchived",
   "projects.save",
@@ -1099,6 +1100,10 @@ window.COS_GENERATED = {
   "mail.open",
   "mail.addresses",
   "mail.accounts",
+  "calendar.week",
+  "calendar.refresh",
+  "calendar.open",
+  "calendar.calendars",
   "replies.target",
   "replies.draft",
   "replies.save",
@@ -2257,6 +2262,12 @@ window.COS_GENERATED = {
      "type": "TEXT",
      "required": false,
      "key": false
+    },
+    {
+     "name": "merged_from",
+     "type": "TEXT",
+     "required": false,
+     "key": false
     }
    ],
    "links": [
@@ -2693,6 +2704,26 @@ window.COS_GENERATED = {
          "Delete",
          "Removes the task with its subtasks, Updates, status card, AI change, and Activity. The imports it came from stay.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/tasks.ts\">\u003ccode>src/main/services/tasks.ts\u003c/code>\u003c/a> · \u003ccode>delete\u003c/code>"
+        ],
+        [
+         "Merge",
+         "Two open tasks, or two waiting items, become one (never a task with a waiting item, and never a Done item). Starts from the task editor's Merge button, or Ctrl+K &quot;Merge with…&quot; while one is open; pending edits are saved first. The item the editor shows is kept and the other is removed.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/merge.ts\">\u003ccode>src/shared/merge.ts\u003c/code>\u003c/a> · \u003ccode>mergeProblem\u003c/code>; \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-merge.ts\">\u003ccode>src/main/services/task-merge.ts\u003c/code>\u003c/a>"
+        ],
+        [
+         "Merge: fields",
+         "Where both items have a different title, project, due date, asked by, waiting on, or priority set by hand, the user picks which to keep (the kept item's is picked first). A value always wins over an empty one.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/merge.ts\">\u003ccode>src/shared/merge.ts\u003c/code>\u003c/a> · \u003ccode>mergeFields\u003c/code>, \u003ccode>mergedInput\u003c/code>"
+        ],
+        [
+         "Merge: combined",
+         "Notes (the kept item's, a blank line, then the other's), subtasks (the kept item's first), Updates (in date order, a line in both kept once), Activity, linked imports, and follow-ups (added together). The earlier created date and waiting-since date are kept. Review suggestions still pending about the removed item point at the kept one.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-merge.ts\">\u003ccode>src/main/services/task-merge.ts\u003c/code>\u003c/a> · \u003ccode>merge\u003c/code>"
+        ],
+        [
+         "Merge: cleared",
+         "Both items' status cards and AI priority changes, since each described only half of the work.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-merge.ts\">\u003ccode>src/main/services/task-merge.ts\u003c/code>\u003c/a> · \u003ccode>merge\u003c/code>"
         ]
        ]
       }
@@ -3007,8 +3038,13 @@ window.COS_GENERATED = {
         ],
         [
          "Activity",
-         "A read-only log of each task's changes, newest first: created; status; due date set, moved, or removed; project; asked by; title; priority set by hand; follow-ups; AI priority changes; draft replies saved or opened. Not recorded: notes, subtasks, updates, and the score's recalculation.",
+         "A read-only log of each task's changes, newest first: created; status; due date set, moved, or removed; project; asked by; title; priority set by hand; follow-ups; AI priority changes; draft replies saved or opened; merges. Not recorded: notes, subtasks, updates, and the score's recalculation.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-events.ts\">\u003ccode>src/main/services/task-events.ts\u003c/code>\u003c/a> · \u003ccode>taskChanges\u003c/code>"
+        ],
+        [
+         "Merged Activity",
+         "A merge adds &quot;Merged in “…”&quot;, then a line per field it changed. The removed item's lines move over and end with &quot;on “its title”&quot;.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-merge.ts\">\u003ccode>src/main/services/task-merge.ts\u003c/code>\u003c/a> · \u003ccode>merge\u003c/code>; \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/events.ts\">\u003ccode>src/shared/events.ts\u003c/code>\u003c/a> · \u003ccode>eventOn\u003c/code>"
         ],
         [
          "Who",
@@ -3337,7 +3373,7 @@ window.COS_GENERATED = {
         ],
         [
          "Slipping",
-         "Open tasks overdue at the end of the week (today, for the current week), plus tasks whose due date was pushed later during the week. A push is counted net over the week; moves earlier, dates set or removed, and finished tasks don't count.",
+         "Open tasks overdue at the end of the week (today, for the current week), plus tasks whose due date was pushed later during the week. A push is counted net over the week; moves earlier, dates set or removed, finished tasks, and moves made on an item before it was merged into another don't count.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/weekly.ts\">\u003ccode>src/main/services/weekly.ts\u003c/code>\u003c/a> · \u003ccode>lists\u003c/code>"
         ],
         [
@@ -4017,6 +4053,10 @@ window.COS_GENERATED = {
         [
          "✅ Older cards",
          "Next actions written before this feature keep their step and show no bullets until rewritten."
+        ],
+        [
+         "✅ Merge",
+         "Merging two tasks clears both cards; Write makes a new one."
         ]
        ]
       }
@@ -4065,6 +4105,10 @@ window.COS_GENERATED = {
         [
          "✅ Override",
          "A score the user sets by hand always wins; the AI's change stays on the card, greyed, marked &quot;Not used&quot;."
+        ],
+        [
+         "✅ Merge",
+         "Merging two tasks clears both changes; the kept task's Activity records the removal."
         ]
        ]
       }
