@@ -400,6 +400,8 @@ export interface AppSettings {
   replyStyle: string
   /** Apple Mail accounts to read (Mail's account ids), chosen in Settings. Empty reads nothing. */
   mailAccounts: string[]
+  /** Apple Calendar calendars to read (their ids), chosen in Settings on the Mac. Empty reads nothing. */
+  calendarIds: string[]
   /** Null means the default OneDrive backup folder. */
   backupFolder: string | null
   backupsToKeep: number
@@ -420,9 +422,69 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dailyBriefingTime: '07:30',
   replyStyle: '',
   mailAccounts: [],
+  calendarIds: [],
   backupFolder: null,
   backupsToKeep: 30,
   lastBackupAt: null,
+}
+
+/** Where meetings are read from: classic Outlook on Windows, Apple Calendar on the Mac. */
+export type CalendarApp = 'outlook' | 'apple-calendar'
+
+/** How an attendee answered the invite. */
+export type MeetingResponse = 'organizer' | 'accepted' | 'tentative' | 'declined' | 'none'
+
+export interface MeetingAttendee {
+  name: string
+  /** Lower-case, or '' when the calendar doesn't give one. */
+  email: string
+  response: MeetingResponse
+  /** The person in People with this email (or, without one, this name), or null. */
+  personId: number | null
+}
+
+/** One meeting from the calendar, as shown on Today. Declined, all-day, free and private entries are left out. */
+export interface Meeting {
+  /** Unique within a read; also identifies a single occurrence of a repeating meeting. */
+  id: string
+  title: string
+  /** ISO times. */
+  start: string
+  end: string
+  location: string
+  /** The organizer's name, or '' when it's the user. */
+  organizer: string
+  /** The other attendees (not the user), up to MAX_ATTENDEES. */
+  attendees: MeetingAttendee[]
+  /** Everyone invited except the user, which can be more than `attendees` lists. */
+  attendeeCount: number
+  /** The user's own answer. */
+  myResponse: MeetingResponse
+  /** The invite's text, shortened. */
+  invite: string
+}
+
+/** The current week's meetings and when they were read. */
+export interface CalendarWeek {
+  /** Null when this computer has no calendar to read. */
+  app: CalendarApp | null
+  /** The week's Sunday, 'YYYY-MM-DD'. */
+  weekStart: string
+  /** ISO time of the last read that worked, or null. */
+  readAt: string | null
+  /** Why the last read failed, safe to show; null when it worked. */
+  problem: string | null
+  /** Apple Calendar with no calendars chosen in Settings yet. */
+  needsSetup: boolean
+  meetings: Meeting[]
+}
+
+/** A calendar in Apple Calendar, for Settings. */
+export interface CalendarInfo {
+  id: string
+  title: string
+  /** The account it belongs to, e.g. "Exchange", "iCloud", "Google". */
+  account: string
 }
 
 export interface AppInfo {
@@ -510,7 +572,7 @@ export type ChangeBy =
   /** The AI itself (priority changes); label says where, e.g. "daily briefing" or 'import “Team sync”'. */
   | { by: 'ai'; label: string }
 
-export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority' | 'reply_draft' | 'reply_opened'
+export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority' | 'reply_draft' | 'reply_opened' | 'merged'
 
 /** One recorded change to a task. Values are as they were then (names, not ids). */
 export interface TaskEvent {
@@ -524,6 +586,8 @@ export interface TaskEvent {
   note: string | null
   by: ChangeBy['by']
   byLabel: string | null
+  /** For a line that moved over when another task was merged into this one: that task's title. */
+  mergedFrom: string | null
 }
 
 /** A task's Activity: its recorded changes, newest first. */

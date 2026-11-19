@@ -24,3 +24,5 @@ mac:
   # macOS shows this when the app first asks to control Mail (reading Apple Mail for the mail import).
   extendInfo:
     NSAppleEventsUsageDescription: Chief of Staff reads the Apple Mail accounts you choose and opens or saves reply drafts you ask for.
+    NSCalendarsUsageDescription: Chief of Staff reads the calendars you choose to show your meetings.
+    NSCalendarsFullAccessUsageDescription: Chief of Staff reads the calendars you choose to show your meetings.

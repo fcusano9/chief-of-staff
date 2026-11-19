@@ -65,5 +65,10 @@ export function eventWhat(e: Pick<TaskEvent, 'kind' | 'from' | 'to' | 'note'>, n
     case 'ai_priority':
       if (e.to == null) return `AI priority change removed (was ${signed(e.from)})`
       return `AI priority change ${signed(e.to)}${e.note ? `: ${e.note}` : ''}`
+    case 'merged':
+      return `Merged in “${e.from ?? ''}”`
   }
 }
+
+/** Where a line that moved over in a merge happened, "on “Old title”"; null for the task's own lines. */
+export const eventOn = (e: Pick<TaskEvent, 'mergedFrom'>): string | null => (e.mergedFrom ? `on “${e.mergedFrom}”` : null)

@@ -141,33 +141,38 @@ export class PowerShellOutlook implements OutlookReader {
     }
   }
 
-  private async run(args: string[]): Promise<Record<string, unknown>> {
-    const id = randomUUID()
-    const scriptPath = join(tmpdir(), `cos-outlook-${id}.ps1`)
-    const outPath = join(tmpdir(), `cos-outlook-${id}.json`)
-    // A BOM makes Windows PowerShell 5.1 read the script as UTF-8.
-    writeFileSync(scriptPath, `﻿${script}`, 'utf8')
+  private run(args: string[]): Promise<Record<string, unknown>> {
+    return runOutlookScript(args)
+  }
+}
+
+/** Runs outlook.ps1 with these arguments and returns its JSON result, or throws an OutlookError that's safe to show. */
+export async function runOutlookScript(args: string[]): Promise<Record<string, unknown>> {
+  const id = randomUUID()
+  const scriptPath = join(tmpdir(), `cos-outlook-${id}.ps1`)
+  const outPath = join(tmpdir(), `cos-outlook-${id}.json`)
+  // A BOM makes Windows PowerShell 5.1 read the script as UTF-8.
+  writeFileSync(scriptPath, `﻿${script}`, 'utf8')
+  try {
+    await new Promise<void>((resolve, reject) => {
+      execFile(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, ...args, '-OutFile', outPath],
+        { windowsHide: true, timeout: 10 * 60_000 },
+        (err, _stdout, stderr) => (err ? reject(new OutlookError(`Couldn't run the Outlook reader: ${stderr.trim() || err.message}`)) : resolve()),
+      )
+    })
+    let result: Record<string, unknown>
     try {
-      await new Promise<void>((resolve, reject) => {
-        execFile(
-          'powershell.exe',
-          ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, ...args, '-OutFile', outPath],
-          { windowsHide: true, timeout: 10 * 60_000 },
-          (err, _stdout, stderr) => (err ? reject(new OutlookError(`Couldn't run the Outlook reader: ${stderr.trim() || err.message}`)) : resolve()),
-        )
-      })
-      let result: Record<string, unknown>
-      try {
-        result = JSON.parse(readFileSync(outPath, 'utf8').replace(/^﻿/, '')) as Record<string, unknown>
-      } catch {
-        throw new OutlookError("The Outlook reader didn't return a result.")
-      }
-      if (!result.ok) throw new OutlookError(String(result.error ?? 'Outlook could not be read.'))
-      return result
-    } finally {
-      rmSync(scriptPath, { force: true })
-      rmSync(outPath, { force: true })
+      result = JSON.parse(readFileSync(outPath, 'utf8').replace(/^﻿/, '')) as Record<string, unknown>
+    } catch {
+      throw new OutlookError("The Outlook reader didn't return a result.")
     }
+    if (!result.ok) throw new OutlookError(String(result.error ?? 'Outlook could not be read.'))
+    return result
+  } finally {
+    rmSync(scriptPath, { force: true })
+    rmSync(outPath, { force: true })
   }
 }
 

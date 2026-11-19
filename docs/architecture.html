@@ -436,7 +436,7 @@ window.COS_MODEL = {
       { "title": "The AI only proposes", "text": "Suggestions wait in Review. Status cards and small priority changes are the only exceptions." },
       { "title": "Nothing is sent", "text": "No email, message, or invite leaves the app. Replies are saved as drafts." },
       { "title": "No guessing", "text": "AI answers that name unknown tasks, projects, or people are dropped." },
-      { "title": "AI runs only on request", "text": "The 30-minute timer only rescores tasks, saves ended weeks, and backs up." },
+      { "title": "AI runs only on request", "text": "The 30-minute timer only rescores tasks, saves ended weeks, reads the calendar, and backs up." },
       { "title": "Data stays local", "text": "Only the AI provider the user picks sees any of it." }
     ],
     "built": [
@@ -480,14 +480,14 @@ window.COS_MODEL = {
     { "id": "out", "label": "Data leaving this computer", "note": "Claude requests, the Ollama installer download, OneDrive backups, and Ollama requests when it runs on another machine." },
     { "id": "ai", "label": "Where the AI is involved", "note": "Imports, the daily briefing, the weekly reflection, status cards, draft replies, and person briefs." },
     { "id": "db", "label": "Writes the database", "note": "Each write is one transaction: saved whole or not at all." },
-    { "id": "timer", "label": "On the 30-minute timer", "note": "At startup and every 30 minutes: rescore open tasks, save ended weeks, and back up if the last backup is over 20 hours old." }
+    { "id": "timer", "label": "On the 30-minute timer", "note": "At startup and every 30 minutes: rescore open tasks, save ended weeks, read the calendar, and back up if the last backup is over 20 hours old." }
   ],
 
   "nodes": [
     { "id": "ui-today", "zone": "ui", "x": 24, "y": 76, "w": 156, "h": 44, "label": "Today", "hint": "Counts, briefing, focus", "sub": "TodayScreen.tsx",
-      "plain": "Where the day starts: four counts (urgent, waiting, overdue, open), the daily briefing card, the 7 highest-priority tasks, and the 5 longest waits.",
-      "files": [{ "path": "src/renderer/src/screens/TodayScreen.tsx", "names": ["TodayScreen"] }, { "path": "src/renderer/src/components/Briefing.tsx", "names": ["Briefing"] }],
-      "screen": "today", "rules": ["b-lists", "b-daily-briefing"], "flows": ["briefing"] },
+      "plain": "Where the day starts: four counts (urgent, waiting, overdue, open), the daily briefing card, the 7 highest-priority tasks, the week's meetings, and the 5 longest waits.",
+      "files": [{ "path": "src/renderer/src/screens/TodayScreen.tsx", "names": ["TodayScreen"] }, { "path": "src/renderer/src/components/Briefing.tsx", "names": ["Briefing"] }, { "path": "src/renderer/src/components/MeetingsCard.tsx", "names": ["MeetingsCard"] }, { "path": "src/renderer/src/components/MeetingPanel.tsx", "names": ["MeetingPanel"] }],
+      "screen": "today", "rules": ["b-lists", "b-daily-briefing", "b-meetings"], "flows": ["briefing"] },
     { "id": "ui-tasks", "zone": "ui", "x": 24, "y": 132, "w": 156, "h": 44, "label": "Tasks & Waiting", "hint": "Lists and the task editor", "sub": "TasksScreen.tsx",
       "plain": "The two working lists, grouped and ranked, with the task editor beside them: notes, subtasks, the status card, the reply card, Updates, and Activity.",
       "files": [{ "path": "src/renderer/src/screens/TasksScreen.tsx", "names": ["TasksScreen", "sections"] }, { "path": "src/renderer/src/components/TaskEditor.tsx", "names": ["TaskEditor"] }],
@@ -509,7 +509,7 @@ window.COS_MODEL = {
       "plain": "The queue of AI suggestions. Shown in the top bar only while it has items.",
       "files": [{ "path": "src/renderer/src/screens/ReviewScreen.tsx", "names": ["ReviewScreen"] }], "screen": "review", "rules": ["b-import-and-review"], "flows": ["accept"] },
     { "id": "ui-settings", "zone": "ui", "x": 24, "y": 468, "w": 156, "h": 44, "label": "Settings", "hint": "AI, backups, look", "sub": "SettingsScreen.tsx",
-      "plain": "Appearance, priority weights, keyboard shortcuts, backups and restore, the AI model and providers, and Apple Mail accounts on a Mac.",
+      "plain": "Appearance, priority weights, keyboard shortcuts, backups and restore, the AI model and providers, and, on a Mac, Apple Mail accounts and Apple Calendar calendars.",
       "files": [{ "path": "src/renderer/src/screens/SettingsScreen.tsx", "names": ["SettingsScreen", "SHORTCUTS"] }, { "path": "src/renderer/src/components/AiSettings.tsx" }],
       "screen": "settings", "rules": ["b-settings-limits", "b-ai-choice", "b-data-safety"], "flows": ["backup"] },
     { "id": "ui-ailog", "zone": "ui", "x": 24, "y": 524, "w": 156, "h": 44, "label": "AI log & spending", "hint": "What was sent, the cost", "sub": "AiLogScreen.tsx",
@@ -529,9 +529,9 @@ window.COS_MODEL = {
 
     { "id": "svc-tasks", "zone": "main", "x": 496, "y": 80, "w": 150, "h": 44, "label": "Tasks", "hint": "Save, score, list", "sub": "TaskService", "tags": ["db", "timer"],
       "plain": "Keeps every task with its subtasks, works out its priority score, and gives each screen its lists: open tasks by priority, waiting items by longest wait, done items newest first.",
-      "points": ["A save is one step: the task, its subtasks, its new score, and its Activity lines are written together.", "Entering Waiting on records when the wait started; entering Done records when, and who it was waiting on.", "All open scores are recomputed at startup and every 30 minutes, because time passing changes them."],
-      "files": [{ "path": "src/main/services/tasks.ts", "names": ["TaskService", "listActive", "listDone", "save", "reopen", "recomputeAll", "summary"] }, { "path": "src/shared/priority.ts", "names": ["scorePriority", "needsFollowUp"] }],
-      "ipc": ["tasks.listActive", "tasks.listWaiting", "tasks.listDone", "tasks.reopen", "tasks.listForPerson", "tasks.get", "tasks.save", "tasks.setStatus", "tasks.delete", "tasks.summary"],
+      "points": ["A save is one step: the task, its subtasks, its new score, and its Activity lines are written together.", "Entering Waiting on records when the wait started; entering Done records when, and who it was waiting on.", "All open scores are recomputed at startup and every 30 minutes, because time passing changes them.", "Merge moves another item's Notes, subtasks, Updates, Activity, and linked imports into the kept one, with the fields the user picked, then removes it."],
+      "files": [{ "path": "src/main/services/tasks.ts", "names": ["TaskService", "listActive", "listDone", "save", "reopen", "recomputeAll", "summary"] }, { "path": "src/shared/priority.ts", "names": ["scorePriority", "needsFollowUp"] }, { "path": "src/main/services/task-merge.ts", "names": ["TaskMergeService"] }, { "path": "src/shared/merge.ts", "names": ["mergeFields", "mergedInput", "mergeProblem"] }],
+      "ipc": ["tasks.listActive", "tasks.listWaiting", "tasks.listDone", "tasks.reopen", "tasks.listForPerson", "tasks.get", "tasks.save", "tasks.setStatus", "tasks.delete", "tasks.summary", "tasks.merge"],
       "tables": ["work_items", "subtasks"], "rules": ["b-tasks", "b-priority-score", "b-lists"], "flows": ["recompute", "accept"] },
     { "id": "svc-directory", "zone": "main", "x": 496, "y": 134, "w": 150, "h": 44, "label": "Projects & people", "hint": "Plus their Updates", "sub": "directory.ts", "tags": ["db", "ai"],
       "plain": "Projects, people, and the dated Updates every task, project, and person carries. Archived projects are kept apart, so lists, editors, and the AI skip them.",
@@ -540,8 +540,8 @@ window.COS_MODEL = {
       "ipc": ["projects.list", "projects.listArchived", "projects.save", "projects.saveOverview", "projects.delete", "people.list", "people.save", "people.delete", "people.suggestBrief", "people.saveBrief", "briefs.get", "briefs.save"],
       "tables": ["projects", "people", "context_briefs"], "rules": ["b-projects", "b-people", "b-notes-updates-and-activity", "a-people-briefs"] },
     { "id": "svc-activity", "zone": "main", "x": 496, "y": 188, "w": 150, "h": 44, "label": "Activity log", "hint": "Who changed what", "sub": "TaskEventService", "tags": ["db"],
-      "plain": "Records each change to a task (status, due date, project, who asked, title, priority set by hand, follow-ups, AI changes, draft replies) and who made it. Lines are only ever added.",
-      "points": ["Values are stored as they read then, so renaming a project doesn't rewrite history.", "The weekly review reads due-date moves from here to find pushed-back tasks."],
+      "plain": "Records each change to a task (status, due date, project, who asked, title, priority set by hand, follow-ups, AI changes, draft replies, merges) and who made it. Lines are only ever added; a merge moves them to the kept task.",
+      "points": ["Values are stored as they read then, so renaming a project doesn't rewrite history.", "The weekly review reads due-date moves from here to find pushed-back tasks, leaving out moves made on an item before it was merged."],
       "files": [{ "path": "src/main/services/task-events.ts", "names": ["TaskEventService", "taskChanges", "dueMoves"] }, { "path": "src/shared/events.ts", "names": ["eventWho", "eventWhat"] }],
       "ipc": ["tasks.activity"], "tables": ["task_events", "task_events_meta"], "rules": ["b-notes-updates-and-activity"] },
     { "id": "svc-adjust", "zone": "main", "x": 496, "y": 242, "w": 150, "h": 44, "label": "AI priority changes", "hint": "Nudges of ±{maxAi}", "sub": "PriorityAdjustmentService", "tags": ["db", "ai"],
@@ -605,10 +605,15 @@ window.COS_MODEL = {
       "files": [{ "path": "src/main/services/mail.ts", "names": ["MailService", "check", "read"] }, { "path": "src/main/mail/plan.ts", "names": ["planMailbox", "skipReason", "conversationContent"] }],
       "ipc": ["mail.info", "mail.check", "mail.read", "mail.status", "mail.stop", "mail.imports", "mail.open", "mail.addresses", "mail.accounts"],
       "tables": ["mail_imports", "mail_messages", "source_items"], "rules": ["b-mail"], "flows": ["mail"] },
+    { "id": "svc-calendar", "zone": "main", "x": 816, "y": 296, "w": 150, "h": 44, "label": "Calendar", "hint": "This week's meetings", "sub": "CalendarService", "tags": ["timer"],
+      "plain": "Reads the current week's meetings (Sunday to Saturday) from Outlook on Windows or Apple Calendar on the Mac, and matches attendees to People. Kept in memory only: nothing is saved or sent anywhere.",
+      "points": ["Read at startup, every 30 minutes, and when the user refreshes.", "Declined, cancelled, all-day, Free, and private entries are left out.", "Attendees match People by email, then name; a name two people share matches neither.", "On the Mac, only the calendars ticked in Settings are read."],
+      "files": [{ "path": "src/main/services/calendar.ts", "names": ["CalendarService", "refresh", "week", "matcher"] }, { "path": "src/main/calendar/reader.ts", "names": ["CalendarReader", "toMeetings", "tidyInvite", "FixtureCalendar"] }, { "path": "src/main/calendar/outlook.ts", "names": ["OutlookCalendar"] }, { "path": "src/main/calendar/applecalendar.ts", "names": ["AppleCalendarReader", "runAppleCalendar"] }, { "path": "src/main/calendar/applecalendar.jxa" }, { "path": "src/shared/calendar.ts", "names": ["nameKey", "tasksForMeeting", "nextMeetingWith"] }],
+      "ipc": ["calendar.week", "calendar.refresh", "calendar.open", "calendar.calendars"], "rules": ["b-meetings"] },
 
     { "id": "svc-startup", "zone": "main", "x": 496, "y": 380, "w": 150, "h": 44, "label": "Startup & timers", "hint": "Every 30 minutes", "sub": "index.ts", "tags": ["timer"],
       "plain": "Starts the app in a safe order (data folder, one copy only, pending restore, database upgrade with a safety copy first, services, window) and runs the one repeating timer.",
-      "points": ["The timer runs every 30 minutes: recompute scores, save ended weeks, back up if due.", "If the database can't start, the app shows an error and quits rather than run half-working."],
+      "points": ["The timer runs every 30 minutes: recompute scores, save ended weeks, back up if due, and read the calendar.", "If the database can't start, the app shows an error and quits rather than run half-working."],
       "files": [{ "path": "src/main/index.ts", "names": ["startDatabase", "createWindow", "backupIfDue", "requestSingleInstanceLock"] }, { "path": "src/main/paths.ts", "names": ["chooseDataLocation", "findRedirectingPackage"] }],
       "rules": ["b-data-safety"], "flows": ["startup", "recompute"] },
     { "id": "svc-backup", "zone": "main", "x": 656, "y": 380, "w": 150, "h": 44, "label": "Backup & restore", "hint": "Daily and safety copies", "sub": "backup.ts", "tags": ["timer"],
@@ -667,7 +672,7 @@ window.COS_MODEL = {
       "rules": ["a-rules-for-every-ai-feature", "a-what-the-ai-is-sent-about-each-item"] },
 
     { "id": "mail-outlook", "zone": "mail", "x": 1004, "y": 400, "w": 174, "h": 44, "label": "Outlook reader", "hint": "Windows · PowerShell", "sub": "outlook.ps1",
-      "plain": "A bundled PowerShell script talks to classic Outlook over COM, because Electron can't. It reads mail, finds the newest email in a conversation, and saves or opens reply drafts. It never sends, moves, deletes, or flags.",
+      "plain": "A bundled PowerShell script talks to classic Outlook over COM, because Electron can't. It reads mail and the calendar, finds the newest email in a conversation, and saves or opens reply drafts. It never sends, moves, deletes, or flags.",
       "points": ["Uses the running Outlook and says so if it's closed, rather than starting it."],
       "files": [{ "path": "src/main/mail/outlook.ts", "names": ["PowerShellOutlook", "OutlookReader", "FixtureOutlook"] }, { "path": "src/main/mail/outlook.ps1" }], "rules": ["b-mail"] },
     { "id": "mail-apple", "zone": "mail", "x": 1004, "y": 452, "w": 174, "h": 44, "label": "Apple Mail reader", "hint": "Mac · osascript", "sub": "applemail.jxa",
@@ -738,12 +743,15 @@ window.COS_MODEL = {
     { "kind": "detail", "from": "svc-weekly", "to": "svc-activity", "label": "due moves" },
     { "kind": "detail", "from": "svc-replies", "to": "mail-outlook" },
     { "kind": "detail", "from": "svc-replies", "to": "mail-apple" },
+    { "kind": "detail", "from": "svc-calendar", "to": "mail-outlook", "label": "calendar" },
+    { "kind": "detail", "from": "svc-calendar", "to": "svc-directory", "label": "match people" },
     { "kind": "detail", "from": "svc-ailog", "to": "svc-usage" },
     { "kind": "detail", "from": "svc-ollama", "to": "ext-ollamacom", "label": "download", "tags": ["out"] },
     { "kind": "detail", "from": "svc-ollama", "to": "ext-ollama", "label": "start, pull" },
     { "kind": "detail", "from": "svc-startup", "to": "svc-tasks", "label": "recompute", "tags": ["timer"], "route": "left" },
     { "kind": "detail", "from": "svc-startup", "to": "svc-weekly", "label": "save weeks", "tags": ["timer"] },
     { "kind": "detail", "from": "svc-startup", "to": "svc-backup", "label": "backup", "tags": ["timer"] },
+    { "kind": "detail", "from": "svc-startup", "to": "svc-calendar", "label": "read calendar", "tags": ["timer"] },
     { "kind": "detail", "from": "svc-startup", "to": "st-db", "label": "open, upgrade" }
   ],
 
@@ -902,20 +910,20 @@ window.COS_MODEL = {
 
   "screens": [
     { "id": "today", "label": "Today", "group": "main", "key": "G T",
-      "plain": "Where the day starts. Four counts, then the daily briefing, then the work to focus on.",
-      "sketch": [["Urgent", "Waiting on", "Overdue", "Open"], ["**Daily briefing** · summary · Do next · Follow up · New"], ["**Focus** · highest priority first", "**Waiting** · longest first"]],
-      "shows": ["Urgent counts tasks at 80 or more.", "The briefing is written only on Write briefing or Refresh.", "Focus shows the 7 highest open tasks; Waiting the 5 longest waits."],
+      "plain": "Where the day starts. Four counts, then the daily briefing, then the work to focus on and the week's meetings.",
+      "sketch": [["Urgent", "Waiting on", "Overdue", "Open"], ["**Daily briefing** · summary · Do next · Follow up · New"], ["**Focus** · highest priority first", "**Meetings** · today · rest of the week · **Waiting** · longest first"]],
+      "shows": ["Urgent counts tasks at 80 or more.", "The briefing is written only on Write briefing or Refresh.", "Focus shows the 7 highest open tasks; Waiting the 5 longest waits.", "Meetings lists today's, with the rest of the week folded. A meeting opens a panel with its attendees and their open tasks."],
       "keys": [["Ctrl K", "Write briefing (in the palette)"]],
-      "calls": ["tasks.summary", "tasks.listActive", "tasks.listWaiting", "briefing.latest", "briefing.list", "briefing.get", "briefing.write", "briefing.isWriting", "briefing.aiCalls", "tasks.get"],
-      "files": [{ "path": "src/renderer/src/screens/TodayScreen.tsx" }, { "path": "src/renderer/src/components/Briefing.tsx" }],
-      "rules": ["b-lists", "b-daily-briefing", "a-daily-briefing-today"] },
+      "calls": ["tasks.summary", "tasks.listActive", "tasks.listWaiting", "briefing.latest", "briefing.list", "briefing.get", "briefing.write", "briefing.isWriting", "briefing.aiCalls", "tasks.get", "calendar.week", "calendar.refresh", "calendar.open"],
+      "files": [{ "path": "src/renderer/src/screens/TodayScreen.tsx" }, { "path": "src/renderer/src/components/Briefing.tsx" }, { "path": "src/renderer/src/components/MeetingsCard.tsx" }, { "path": "src/renderer/src/components/MeetingPanel.tsx" }, { "path": "src/renderer/src/components/calendar.ts" }],
+      "rules": ["b-lists", "b-daily-briefing", "a-daily-briefing-today", "b-meetings"] },
     { "id": "tasks", "label": "Tasks", "group": "main", "key": "G K",
       "plain": "Open tasks, grouped and ranked, with the selected task open beside them.",
       "sketch": [["**Project chips** · All · busiest first · No project"], ["Search · Open / Done"], ["**Overdue · This week · Later**", "**Task editor** · status card · reply card · notes · subtasks · Updates · Activity"]],
-      "shows": ["Groups: Overdue, This week (due by Saturday), and Later.", "The project shows as the row's stripe; the reason shows on hover.", "Edits save automatically when switching tasks."],
+      "shows": ["Groups: Overdue, This week (due by Saturday), and Later.", "The project shows as the row's stripe; the reason shows on hover.", "Edits save automatically when switching tasks.", "Merge (editor, or Ctrl+K) combines the open item with another from the same list."],
       "keys": [["↑ ↓", "Move"], ["Enter", "Open"], ["E", "Mark done"], ["N", "New task"], ["/", "Search"], ["Ctrl Enter", "Save"], ["Esc", "Close"]],
-      "calls": ["tasks.listActive", "tasks.listDone", "tasks.setStatus", "tasks.get", "tasks.save", "tasks.delete", "tasks.reopen", "tasks.removeAiAdjustment", "tasks.activity", "tasks.nextAction", "tasks.writeStatus", "tasks.dismissNextAction", "replies.target", "replies.draft", "replies.save", "replies.open", "replies.openDraft", "mail.open", "briefs.get", "briefs.save"],
-      "files": [{ "path": "src/renderer/src/screens/TasksScreen.tsx" }, { "path": "src/renderer/src/components/TaskEditor.tsx" }, { "path": "src/renderer/src/components/StatusCard.tsx" }, { "path": "src/renderer/src/components/ReplyCard.tsx" }, { "path": "src/renderer/src/components/ActivityLog.tsx" }, { "path": "src/renderer/src/components/ProjectChips.tsx" }, { "path": "src/renderer/src/components/SplitView.tsx" }],
+      "calls": ["tasks.listActive", "tasks.listDone", "tasks.setStatus", "tasks.get", "tasks.save", "tasks.delete", "tasks.reopen", "tasks.removeAiAdjustment", "tasks.activity", "tasks.merge", "tasks.nextAction", "tasks.writeStatus", "tasks.dismissNextAction", "replies.target", "replies.draft", "replies.save", "replies.open", "replies.openDraft", "mail.open", "briefs.get", "briefs.save", "calendar.week", "calendar.open"],
+      "files": [{ "path": "src/renderer/src/screens/TasksScreen.tsx" }, { "path": "src/renderer/src/components/TaskEditor.tsx" }, { "path": "src/renderer/src/components/StatusCard.tsx" }, { "path": "src/renderer/src/components/ReplyCard.tsx" }, { "path": "src/renderer/src/components/ActivityLog.tsx" }, { "path": "src/renderer/src/components/MergeDialog.tsx" }, { "path": "src/renderer/src/components/NextMeeting.tsx" }, { "path": "src/renderer/src/components/ProjectChips.tsx" }, { "path": "src/renderer/src/components/SplitView.tsx" }],
       "rules": ["b-tasks", "b-lists", "b-priority-score", "b-notes-updates-and-activity", "b-draft-replies"] },
     { "id": "waiting", "label": "Waiting", "group": "main", "key": "G W",
       "plain": "The same screen as Tasks, showing only what the user is waiting on others for, longest wait first.",
@@ -944,8 +952,8 @@ window.COS_MODEL = {
       "sketch": [["Search · Company · Open asks"], ["**People**", "**Person** · brief · Regenerate · stars · Updates · tasks they asked for"]],
       "shows": ["The brief is written by the AI only on Regenerate.", "Most stars first."],
       "keys": [["↑ ↓", "Move"], ["Enter", "Open"], ["/", "Search"]],
-      "calls": ["people.save", "people.delete", "people.saveBrief", "people.suggestBrief", "tasks.listForPerson", "briefs.get", "briefs.save"],
-      "files": [{ "path": "src/renderer/src/screens/PeopleScreen.tsx" }], "rules": ["b-people", "a-people-briefs"] },
+      "calls": ["people.save", "people.delete", "people.saveBrief", "people.suggestBrief", "tasks.listForPerson", "briefs.get", "briefs.save", "calendar.week", "calendar.open"],
+      "files": [{ "path": "src/renderer/src/screens/PeopleScreen.tsx" }, { "path": "src/renderer/src/components/NextMeeting.tsx" }], "rules": ["b-people", "a-people-briefs"] },
     { "id": "import", "label": "Import", "group": "daily", "key": "G I",
       "plain": "Where work comes in. The mail card (Outlook on Windows, Apple Mail on the Mac), the text box, and every recent import.",
       "sketch": [["**Mail card** · address · Check · Read", "Copilot Prompt Generator"], ["**Paste or drop text** · date · Extract"], ["**Recent imports** · rename · AI log · Run again · Delete"]],
@@ -961,12 +969,12 @@ window.COS_MODEL = {
       "calls": ["suggestions.listPending", "suggestions.accept", "suggestions.reject", "mail.open"],
       "files": [{ "path": "src/renderer/src/screens/ReviewScreen.tsx" }], "rules": ["b-import-and-review"] },
     { "id": "settings", "label": "Settings", "group": "other", "key": "",
-      "plain": "Appearance, priority weights, keyboard shortcuts, backups and restore, the AI, and Apple Mail accounts on a Mac.",
-      "sketch": [["**Appearance** · theme · density", "**Priority weights**"], ["**AI** · name · model · Claude · Ollama · writing style", "**Backups** · back up now · restore"], ["**Apple Mail** (Mac)", "**Keyboard shortcuts**"]],
+      "plain": "Appearance, priority weights, keyboard shortcuts, backups and restore, the AI, and, on a Mac, Apple Mail accounts and Apple Calendar calendars.",
+      "sketch": [["**Appearance** · theme · density", "**Priority weights**"], ["**AI** · name · model · Claude · Ollama · writing style", "**Backups** · back up now · restore"], ["**Apple Mail** (Mac) · **Apple Calendar** (Mac)", "**Keyboard shortcuts**"]],
       "shows": ["One model picker lists Basic, the Claude models once a key is saved, and every Ollama model.", "Restore lists only usable backups."],
       "keys": [["Ctrl K", "Palette: theme, density, back up"]],
-      "calls": ["settings.get", "settings.save", "backup.now", "backup.openFolder", "backup.list", "backup.restore", "ai.status", "ai.setKey", "ai.test", "ai.choices", "ollama.status", "ollama.install", "ollama.cancelInstall", "ollama.start", "ollama.pull", "ollama.cancelPull", "ollama.delete", "mail.accounts", "usage.spending"],
-      "files": [{ "path": "src/renderer/src/screens/SettingsScreen.tsx" }, { "path": "src/renderer/src/components/AiSettings.tsx" }, { "path": "src/renderer/src/components/ModelMenu.tsx" }, { "path": "src/renderer/src/components/RestoreBackups.tsx" }, { "path": "src/renderer/src/components/AppleMailSettings.tsx" }], "rules": ["b-settings-limits", "b-ai-choice", "b-data-safety"] },
+      "calls": ["settings.get", "settings.save", "backup.now", "backup.openFolder", "backup.list", "backup.restore", "ai.status", "ai.setKey", "ai.test", "ai.choices", "ollama.status", "ollama.install", "ollama.cancelInstall", "ollama.start", "ollama.pull", "ollama.cancelPull", "ollama.delete", "mail.accounts", "usage.spending", "calendar.week", "calendar.calendars", "calendar.refresh"],
+      "files": [{ "path": "src/renderer/src/screens/SettingsScreen.tsx" }, { "path": "src/renderer/src/components/AiSettings.tsx" }, { "path": "src/renderer/src/components/ModelMenu.tsx" }, { "path": "src/renderer/src/components/RestoreBackups.tsx" }, { "path": "src/renderer/src/components/AppleMailSettings.tsx" }, { "path": "src/renderer/src/components/AppleCalendarSettings.tsx" }], "rules": ["b-settings-limits", "b-ai-choice", "b-data-safety"] },
     { "id": "ailog", "label": "AI log", "group": "other", "key": "",
       "plain": "Opened from Import or Review: the exact requests and answers for one import, run by run.",
       "sketch": [["Runs"], ["**Instructions · Message · Answer form · Response · Full request**"], ["Kept · Dropped and why · model · cost"]],
@@ -1027,8 +1035,8 @@ window.COS_MODEL = {
 window.COS_GENERATED = {
  "facts": {
   "version": "1.0.0",
-  "schemaVersion": 19,
-  "channelCount": 87,
+  "schemaVersion": 20,
+  "channelCount": 92,
   "tableCount": 26,
   "priority": {
    "dueHorizonDays": 14,
@@ -1059,6 +1067,7 @@ window.COS_GENERATED = {
   "tasks.dismissNextAction",
   "tasks.removeAiAdjustment",
   "tasks.activity",
+  "tasks.merge",
   "projects.list",
   "projects.listArchived",
   "projects.save",
@@ -1099,6 +1108,10 @@ window.COS_GENERATED = {
   "mail.open",
   "mail.addresses",
   "mail.accounts",
+  "calendar.week",
+  "calendar.refresh",
+  "calendar.open",
+  "calendar.calendars",
   "replies.target",
   "replies.draft",
   "replies.save",
@@ -2257,6 +2270,12 @@ window.COS_GENERATED = {
      "type": "TEXT",
      "required": false,
      "key": false
+    },
+    {
+     "name": "merged_from",
+     "type": "TEXT",
+     "required": false,
+     "key": false
     }
    ],
    "links": [
@@ -2586,7 +2605,7 @@ window.COS_GENERATED = {
    "intro": [
     {
      "type": "p",
-     "html": "Every rule the app follows, on one page: how tasks are scored and listed, what Review does, how mail, the briefing, the weekly review, and backups behave. It says what the code does today. The rules for the AI itself (what it's sent, what it may answer, its limits) are in \u003ca href=\"https://github.com/fcusano9/chief-of-staff/blob/main/docs/AI-RULES.md\">AI-RULES.md\u003c/a>, and the reasons behind each choice are in \u003ca href=\"https://github.com/fcusano9/chief-of-staff/blob/main/docs/DECISIONS.md\">DECISIONS.md\u003c/a>."
+     "html": "Every rule the app follows, on one page: how tasks are scored and listed, what Review does, how mail, meetings, the briefing, the weekly review, and backups behave. It says what the code does today. The rules for the AI itself (what it's sent, what it may answer, its limits) are in \u003ca href=\"https://github.com/fcusano9/chief-of-staff/blob/main/docs/AI-RULES.md\">AI-RULES.md\u003c/a>, and the reasons behind each choice are in \u003ca href=\"https://github.com/fcusano9/chief-of-staff/blob/main/docs/DECISIONS.md\">DECISIONS.md\u003c/a>."
     },
     {
      "type": "p",
@@ -2619,7 +2638,7 @@ window.COS_GENERATED = {
         ],
         [
          "Runs when the user acts",
-         "No AI request runs on a schedule. The only timer recomputes scores, saves ended weeks, and makes the daily backup.",
+         "No AI request runs on a schedule. The only timer recomputes scores, saves ended weeks, reads the calendar, and makes the daily backup.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/index.ts\">\u003ccode>src/main/index.ts\u003c/code>\u003c/a>"
         ],
         [
@@ -2693,6 +2712,26 @@ window.COS_GENERATED = {
          "Delete",
          "Removes the task with its subtasks, Updates, status card, AI change, and Activity. The imports it came from stay.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/tasks.ts\">\u003ccode>src/main/services/tasks.ts\u003c/code>\u003c/a> · \u003ccode>delete\u003c/code>"
+        ],
+        [
+         "Merge",
+         "Two open tasks, or two waiting items, become one (never a task with a waiting item, and never a Done item). Starts from the task editor's Merge button, or Ctrl+K &quot;Merge with…&quot; while one is open; pending edits are saved first. The item the editor shows is kept and the other is removed.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/merge.ts\">\u003ccode>src/shared/merge.ts\u003c/code>\u003c/a> · \u003ccode>mergeProblem\u003c/code>; \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-merge.ts\">\u003ccode>src/main/services/task-merge.ts\u003c/code>\u003c/a>"
+        ],
+        [
+         "Merge: fields",
+         "Where both items have a different title, project, due date, asked by, waiting on, or priority set by hand, the user picks which to keep (the kept item's is picked first). A value always wins over an empty one.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/merge.ts\">\u003ccode>src/shared/merge.ts\u003c/code>\u003c/a> · \u003ccode>mergeFields\u003c/code>, \u003ccode>mergedInput\u003c/code>"
+        ],
+        [
+         "Merge: combined",
+         "Notes (the kept item's, a blank line, then the other's), subtasks (the kept item's first), Updates (in date order, a line in both kept once), Activity, linked imports, and follow-ups (added together). The earlier created date and waiting-since date are kept. Review suggestions still pending about the removed item point at the kept one.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-merge.ts\">\u003ccode>src/main/services/task-merge.ts\u003c/code>\u003c/a> · \u003ccode>merge\u003c/code>"
+        ],
+        [
+         "Merge: cleared",
+         "Both items' status cards and AI priority changes, since each described only half of the work.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-merge.ts\">\u003ccode>src/main/services/task-merge.ts\u003c/code>\u003c/a> · \u003ccode>merge\u003c/code>"
         ]
        ]
       }
@@ -3007,8 +3046,13 @@ window.COS_GENERATED = {
         ],
         [
          "Activity",
-         "A read-only log of each task's changes, newest first: created; status; due date set, moved, or removed; project; asked by; title; priority set by hand; follow-ups; AI priority changes; draft replies saved or opened. Not recorded: notes, subtasks, updates, and the score's recalculation.",
+         "A read-only log of each task's changes, newest first: created; status; due date set, moved, or removed; project; asked by; title; priority set by hand; follow-ups; AI priority changes; draft replies saved or opened; merges. Not recorded: notes, subtasks, updates, and the score's recalculation.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-events.ts\">\u003ccode>src/main/services/task-events.ts\u003c/code>\u003c/a> · \u003ccode>taskChanges\u003c/code>"
+        ],
+        [
+         "Merged Activity",
+         "A merge adds &quot;Merged in “…”&quot;, then a line per field it changed. The removed item's lines move over and end with &quot;on “its title”&quot;.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-merge.ts\">\u003ccode>src/main/services/task-merge.ts\u003c/code>\u003c/a> · \u003ccode>merge\u003c/code>; \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/events.ts\">\u003ccode>src/shared/events.ts\u003c/code>\u003c/a> · \u003ccode>eventOn\u003c/code>"
         ],
         [
          "Who",
@@ -3194,6 +3238,78 @@ window.COS_GENERATED = {
      ]
     },
     {
+     "id": "b-meetings",
+     "title": "Meetings",
+     "level": 2,
+     "blocks": [
+      {
+       "type": "table",
+       "head": [
+        "Rule",
+        "Detail",
+        "Where"
+       ],
+       "rows": [
+        [
+         "One source per computer",
+         "Windows reads classic Outlook's default calendar; Outlook must be running. The Mac reads only the Apple Calendar calendars ticked in Settings → Apple Calendar (none at first), and macOS asks once for calendar permission.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/calendar/outlook.ts\">\u003ccode>src/main/calendar/outlook.ts\u003c/code>\u003c/a> · \u003ccode>OutlookCalendar\u003c/code>, \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/calendar/applecalendar.ts\">\u003ccode>src/main/calendar/applecalendar.ts\u003c/code>\u003c/a> · \u003ccode>AppleCalendarReader\u003c/code>"
+        ],
+        [
+         "When",
+         "At startup, every 30 minutes, when the ticked calendars change, and on Try again after a failed read.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/calendar.ts\">\u003ccode>src/main/services/calendar.ts\u003c/code>\u003c/a> · \u003ccode>refresh\u003c/code>"
+        ],
+        [
+         "Read only, kept in memory",
+         "The current week, Sunday to Saturday. Nothing is saved or sent anywhere, and no meeting is created, changed, or answered. A read from last week shows nothing until this week is read.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/calendar.ts\">\u003ccode>src/main/services/calendar.ts\u003c/code>\u003c/a> · \u003ccode>week\u003c/code>"
+        ],
+        [
+         "Left out",
+         "Declined, cancelled, all-day, Free, and private entries. The Mac can't tell which entries are private.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/calendar/reader.ts\">\u003ccode>src/main/calendar/reader.ts\u003c/code>\u003c/a> · \u003ccode>toMeetings\u003c/code>"
+        ],
+        [
+         "Attendees",
+         "The user is left out, and up to 50 are listed (the count still includes everyone). Each is matched to People by email, then by name (&quot;Lee, Dana&quot; matches &quot;Dana Lee&quot;); a name two people share matches neither. Matching is redone each time, so a person just added is linked at once. Anyone unmatched has &quot;+ Add to People&quot;.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/calendar.ts\">\u003ccode>src/main/services/calendar.ts\u003c/code>\u003c/a> · \u003ccode>matcher\u003c/code>"
+        ],
+        [
+         "Invite",
+         "The invite text without the Teams join block, up to 4,000 characters.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/calendar/reader.ts\">\u003ccode>src/main/calendar/reader.ts\u003c/code>\u003c/a> · \u003ccode>tidyInvite\u003c/code>"
+        ],
+        [
+         "A failed read",
+         "The last good read stays on screen, with the problem and Try again.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/calendar.ts\">\u003ccode>src/main/services/calendar.ts\u003c/code>\u003c/a> · \u003ccode>read\u003c/code>"
+        ],
+        [
+         "Open with attendees",
+         "Open tasks and waiting items whose Asked by person, or Waiting on name (when exactly one person has it), is in the meeting. Shown as the number on each meeting and listed in its panel.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/calendar.ts\">\u003ccode>src/shared/calendar.ts\u003c/code>\u003c/a> · \u003ccode>tasksForMeeting\u003c/code>"
+        ],
+        [
+         "Where meetings show",
+         "The Meetings card on Today (today's meetings, with the rest of the week folded), &quot;Next meeting with …&quot; in the task editor, and &quot;Meetings this week&quot; in the person editor. The editors leave out past meetings.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/renderer/src/components/MeetingsCard.tsx\">\u003ccode>src/renderer/src/components/MeetingsCard.tsx\u003c/code>\u003c/a>, \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/renderer/src/components/NextMeeting.tsx\">\u003ccode>src/renderer/src/components/NextMeeting.tsx\u003c/code>\u003c/a>"
+        ],
+        [
+         "Open in Outlook / Calendar",
+         "Shows the meeting in Outlook. Apple Calendar opens on the meeting's day.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/calendar.ts\">\u003ccode>src/main/services/calendar.ts\u003c/code>\u003c/a> · \u003ccode>open\u003c/code>"
+        ],
+        [
+         "Not used yet",
+         "The daily briefing doesn't use meetings, there's no meeting prep yet, and meetings aren't linked to projects.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/docs/ROADMAP.md\">\u003ccode>docs/ROADMAP.md\u003c/code>\u003c/a>"
+        ]
+       ]
+      }
+     ]
+    },
+    {
      "id": "b-draft-replies",
      "title": "Draft replies",
      "level": 2,
@@ -3337,7 +3453,7 @@ window.COS_GENERATED = {
         ],
         [
          "Slipping",
-         "Open tasks overdue at the end of the week (today, for the current week), plus tasks whose due date was pushed later during the week. A push is counted net over the week; moves earlier, dates set or removed, and finished tasks don't count.",
+         "Open tasks overdue at the end of the week (today, for the current week), plus tasks whose due date was pushed later during the week. A push is counted net over the week; moves earlier, dates set or removed, finished tasks, and moves made on an item before it was merged into another don't count.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/weekly.ts\">\u003ccode>src/main/services/weekly.ts\u003c/code>\u003c/a> · \u003ccode>lists\u003c/code>"
         ],
         [
@@ -4017,6 +4133,10 @@ window.COS_GENERATED = {
         [
          "✅ Older cards",
          "Next actions written before this feature keep their step and show no bullets until rewritten."
+        ],
+        [
+         "✅ Merge",
+         "Merging two tasks clears both cards; Write makes a new one."
         ]
        ]
       }
@@ -4065,6 +4185,10 @@ window.COS_GENERATED = {
         [
          "✅ Override",
          "A score the user sets by hand always wins; the AI's change stays on the card, greyed, marked &quot;Not used&quot;."
+        ],
+        [
+         "✅ Merge",
+         "Merging two tasks clears both changes; the kept task's Activity records the removal."
         ]
        ]
       }

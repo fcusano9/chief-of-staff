@@ -55,6 +55,8 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
   const [search, setSearch] = useState('')
   const [mode, setMode] = useState<Mode>('open')
   const [cursor, setCursor] = useState(0)
+  // Bumped after a merge, so the editor reloads the merged task.
+  const [editorKey, setEditorKey] = useState(0)
   const rightRef = useRef<HTMLElement>(null)
   const done: Hint[] = mode === 'open' ? [['E', 'done']] : []
   useShortcutHints([['↑ ↓', 'move'], ['↵', 'open'], ...done, ['N', 'new'], ['/', 'search']])
@@ -193,7 +195,7 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
 
   const right = selection ? (
     <TaskEditor
-      key={String(selection.id)}
+      key={`${selection.id}:${editorKey}`}
       taskId={selection.id}
       defaultProjectId={selection.id === 'new' ? selection.projectId : null}
       defaultWaiting={selection.id === 'new' ? !!selection.waiting : false}
@@ -209,6 +211,12 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
       onDeleted={(id) => {
         toast('Task deleted')
         selectNeighbor(id)
+      }}
+      onMerged={(t) => {
+        toast(`Merged into “${t.title}”`)
+        setEditorKey((k) => k + 1)
+        openTask({ id: t.id })
+        refresh()
       }}
     />
   ) : (

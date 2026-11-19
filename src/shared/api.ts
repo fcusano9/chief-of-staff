@@ -1,3 +1,4 @@
+import type { MergeChoices } from './merge'
 import type {
   AiRun,
   AiSpending,
@@ -32,6 +33,8 @@ import type {
   AppSettings,
   BriefScope,
   BriefSuggestion,
+  CalendarInfo,
+  CalendarWeek,
   ContextBrief,
   Person,
   PersonInput,
@@ -74,6 +77,11 @@ export interface Api {
   'tasks.removeAiAdjustment': (taskId: number) => Task
   /** The task's recorded changes for its Activity log, newest first. */
   'tasks.activity': (taskId: number) => TaskActivity
+  /**
+   * Merges `otherId` into `keepId` (two open tasks, or two waiting items), with the user's picks for
+   * fields where they differ, then removes `otherId`. Returns the kept task.
+   */
+  'tasks.merge': (keepId: number, otherId: number, choices: MergeChoices) => Task
   'projects.list': () => ProjectSummary[]
   /** Archived projects, which projects.list leaves out. */
   'projects.listArchived': () => ProjectSummary[]
@@ -130,6 +138,14 @@ export interface Api {
   'mail.addresses': () => string[]
   /** Apple Mail's accounts, for Settings; refresh asks Mail again. Empty on other computers. */
   'mail.accounts': (refresh: boolean) => MailAccount[]
+  /** The current week's meetings from the last calendar read (nothing is read). */
+  'calendar.week': () => CalendarWeek
+  /** Reads the calendar again and returns the week. */
+  'calendar.refresh': () => CalendarWeek
+  /** Shows a meeting in Outlook, or its day in Apple Calendar. */
+  'calendar.open': (id: string) => void
+  /** Apple Calendar's calendars, for Settings (empty on Windows). */
+  'calendar.calendars': () => CalendarInfo[]
   /** The Outlook email a task's Reply card answers, or null when the task isn't linked to one. */
   'replies.target': (taskId: number) => ReplyTarget | null
   /** Asks the selected AI for a draft reply (with a revision: rewrites the previous draft following the user's note). Saves nothing. */
@@ -207,6 +223,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'tasks.dismissNextAction',
   'tasks.removeAiAdjustment',
   'tasks.activity',
+  'tasks.merge',
   'projects.list',
   'projects.listArchived',
   'projects.save',
@@ -247,6 +264,10 @@ export const API_CHANNELS: ApiChannel[] = [
   'mail.open',
   'mail.addresses',
   'mail.accounts',
+  'calendar.week',
+  'calendar.refresh',
+  'calendar.open',
+  'calendar.calendars',
   'replies.target',
   'replies.draft',
   'replies.save',
