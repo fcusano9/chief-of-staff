@@ -945,8 +945,13 @@ Propose suggestions for Frank Cusano based on the imported item.",
             "type": "object",
           },
           "__schema14": {
-            "description": "{enum: ["email","teams_chat","meeting_transcript","copilot_summary","note"]}",
-            "type": "string",
+            "enum": [
+              "email",
+              "teams_chat",
+              "meeting_transcript",
+              "copilot_summary",
+              "note",
+            ],
           },
           "__schema2": {
             "description": "{minimum: -9007199254740991, maximum: 9007199254740991}",
@@ -962,8 +967,11 @@ Propose suggestions for Frank Cusano based on the imported item.",
             "type": "string",
           },
           "__schema6": {
-            "description": "{enum: ["project","task","person"]}",
-            "type": "string",
+            "enum": [
+              "project",
+              "task",
+              "person",
+            ],
           },
           "__schema7": {
             "description": "{minimum: -9007199254740991, maximum: 9007199254740991}",
@@ -1076,8 +1084,16 @@ Propose suggestions for Frank Cusano based on the imported item.",
                   "type": "string",
                 },
                 "kind": {
-                  "description": "{enum: ["new_task","needs_reply","status_update","mark_done","waiting_on","brief_update","new_project","new_person"]}",
-                  "type": "string",
+                  "enum": [
+                    "new_task",
+                    "needs_reply",
+                    "status_update",
+                    "mark_done",
+                    "waiting_on",
+                    "brief_update",
+                    "new_project",
+                    "new_person",
+                  ],
                 },
                 "project_id": {
                   "anyOf": [
@@ -1340,8 +1356,13 @@ Propose suggestions for Frank Cusano based on the imported item.",
             "type": "object",
           },
           "__schema14": {
-            "description": "{enum: ["email","teams_chat","meeting_transcript","copilot_summary","note"]}",
-            "type": "string",
+            "enum": [
+              "email",
+              "teams_chat",
+              "meeting_transcript",
+              "copilot_summary",
+              "note",
+            ],
           },
           "__schema2": {
             "description": "{minimum: -9007199254740991, maximum: 9007199254740991}",
@@ -1357,8 +1378,11 @@ Propose suggestions for Frank Cusano based on the imported item.",
             "type": "string",
           },
           "__schema6": {
-            "description": "{enum: ["project","task","person"]}",
-            "type": "string",
+            "enum": [
+              "project",
+              "task",
+              "person",
+            ],
           },
           "__schema7": {
             "description": "{minimum: -9007199254740991, maximum: 9007199254740991}",
@@ -1471,8 +1495,16 @@ Propose suggestions for Frank Cusano based on the imported item.",
                   "type": "string",
                 },
                 "kind": {
-                  "description": "{enum: ["new_task","needs_reply","status_update","mark_done","waiting_on","brief_update","new_project","new_person"]}",
-                  "type": "string",
+                  "enum": [
+                    "new_task",
+                    "needs_reply",
+                    "status_update",
+                    "mark_done",
+                    "waiting_on",
+                    "brief_update",
+                    "new_project",
+                    "new_person",
+                  ],
                 },
                 "project_id": {
                   "anyOf": [
