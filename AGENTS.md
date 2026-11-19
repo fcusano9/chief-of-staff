@@ -76,6 +76,7 @@ npm run typecheck    # both TS projects
 npm run build        # electron-vite build into out/
 npm run e2e          # build, then click through the real app (see e2e/README.md)
 npm run bench:ai     # score demo, local and Claude models on sample imports (see bench/README.md)
+npm run bench:key    # Windows: store the Anthropic key the benchmark uses in Credential Manager (hidden typing; -- -Delete removes it)
 npm run install:win  # package to %LOCALAPPDATA%\Programs\Chief of Staff (build) (Start-menu shortcut points here)
 npm run package:win  # Windows installer in release/; package:mac makes the Mac .dmg (see README, "Making a release": tagging vX.Y.Z builds both on GitHub as a draft release)
 ```

@@ -9,7 +9,7 @@ BENCH_MODELS=gpt-oss:20b@medium+single npm run bench:ai   # local model with oth
 BENCH_RESCORE=bench/results/a.json,bench/results/b.json npm run bench:ai   # re-score saved answers, no model calls
 ```
 
-- **Claude** runs only with a key, and only these made-up cases are sent. Set `ANTHROPIC_API_KEY`, or on a Mac store it once in the Keychain with `security add-generic-password -s chief-of-staff-bench -a anthropic -w` (remove it with `security delete-generic-password -s chief-of-staff-bench`). The app's own key can't be read here because it's encrypted for the app.
+- **Claude** runs only with a key, and only these made-up cases are sent. Set `ANTHROPIC_API_KEY`, or store the key once: on Windows run `npm run bench:key` (it asks for the key with hidden typing and saves it in Credential Manager as `chief-of-staff-bench`; `npm run bench:key -- -Delete` removes it), on a Mac run `security add-generic-password -s chief-of-staff-bench -a anthropic -w` (remove it with `security delete-generic-password -s chief-of-staff-bench`). The app's own key can't be read here because it's encrypted for the app.
 - **Re-scoring** applies the current cases and scoring to saved runs, so runs from different days compare fairly. Timings stay as measured.
 - **Local models** need Ollama running (`ollama serve`, or the Ollama app) and the models pulled first. Each model is loaded once before timing, then unloaded so the next one has the memory.
 - **Reports** go to `bench/results/` (git ignores it) as Markdown plus JSON with every raw answer.

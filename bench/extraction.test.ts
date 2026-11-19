@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { it } from 'vitest'
@@ -10,6 +9,7 @@ import type { AiCallRecord } from '../src/main/ai/provider'
 import { estimateCost, formatCost } from '@shared/pricing'
 import { validateSuggestions, type RawSuggestion } from '../src/main/ai/schema'
 import { CASES, CONTEXT } from './cases'
+import { anthropicKey } from './key'
 import { scoreCase, type CaseScore } from './score'
 
 /**
@@ -20,22 +20,15 @@ import { scoreCase, type CaseScore } from './score'
  *   BENCH_MODELS=gpt-oss:20b@medium+single npm run bench:ai   local model with other options
  *   (flags, joined with +: low|medium|high, and single for one pass instead of split passes)
  *
- * Claude needs ANTHROPIC_API_KEY in the environment, or on a Mac a Keychain item named
- * "chief-of-staff-bench" (security add-generic-password -s chief-of-staff-bench -a anthropic -w).
- * Only these made-up cases are sent.
+ * Claude needs ANTHROPIC_API_KEY in the environment, or a stored key named "chief-of-staff-bench":
+ * on a Mac a Keychain item (security add-generic-password -s chief-of-staff-bench -a anthropic -w),
+ * on Windows a Credential Manager entry (npm run bench:key, which runs bench/save-key.ps1).
+ * See bench/key.ts. Only these made-up cases are sent.
  *
  *   BENCH_RESCORE=bench/results/a.json,bench/results/b.json npm run bench:ai
  * re-scores saved answers with the current cases and scoring, without calling any model, and
  * combines them into one report.
  */
-function anthropicKey(): string {
-  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY
-  try {
-    return execFileSync('security', ['find-generic-password', '-s', 'chief-of-staff-bench', '-w'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
-  } catch {
-    return ''
-  }
-}
 
 /** "gpt-oss:20b@medium+split" → the model plus its options. */
 function parseSpec(spec: string): { model: string; options: OllamaOptions } {
