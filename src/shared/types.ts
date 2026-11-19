@@ -572,7 +572,7 @@ export type ChangeBy =
   /** The AI itself (priority changes); label says where, e.g. "daily briefing" or 'import “Team sync”'. */
   | { by: 'ai'; label: string }
 
-export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority' | 'reply_draft' | 'reply_opened'
+export type TaskEventKind = 'created' | 'status' | 'due' | 'project' | 'requester' | 'title' | 'override' | 'followups' | 'ai_priority' | 'reply_draft' | 'reply_opened' | 'merged'
 
 /** One recorded change to a task. Values are as they were then (names, not ids). */
 export interface TaskEvent {
@@ -586,6 +586,8 @@ export interface TaskEvent {
   note: string | null
   by: ChangeBy['by']
   byLabel: string | null
+  /** For a line that moved over when another task was merged into this one: that task's title. */
+  mergedFrom: string | null
 }
 
 /** A task's Activity: its recorded changes, newest first. */

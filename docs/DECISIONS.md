@@ -2,6 +2,15 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-17 · Merging two tasks or waiting items (Frank)
+Frank's choices for issue #60 (mockup `design/merge-tasks.html`, approved):
+- **Starts from the task editor** (a Merge button next to Delete) or Ctrl+K "Merge with…", not from selecting two rows in a list.
+- **Same list only:** a task merges with a task, a waiting item with a waiting item. Done items can't be merged.
+- **The open item is kept; the other is removed** once its Notes, subtasks, Updates, Activity, and linked imports have moved in. He chose this over marking it Done, which would count it in Done lists and the weekly review's Completed.
+- **Both status cards and AI priority changes are cleared,** since each described only half of the work.
+- **Notes are joined with a blank line**, with nothing added to name the other item.
+- Moved Activity lines keep where they happened ("on “old title”"), and their due-date moves don't count as the kept task slipping in the weekly review.
+
 ### 2026-11-14 · Calendar read, step 1: meetings on Today (Frank)
 Frank chose the calendar read as the next roadmap item and how it works (mockup `design/calendar-today.html`, layout A approved):
 - **Four uses, in three PRs:** (1) read the calendar and show it on Today, linked to People and tasks; (2) the daily briefing uses meetings; (3) meeting prep, written only when the user clicks ✦ Prep, on a card, never to Review. Each lands as its own PR with testing in between.

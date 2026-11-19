@@ -1,3 +1,4 @@
+import type { MergeChoices } from './merge'
 import type {
   AiRun,
   AiSpending,
@@ -76,6 +77,11 @@ export interface Api {
   'tasks.removeAiAdjustment': (taskId: number) => Task
   /** The task's recorded changes for its Activity log, newest first. */
   'tasks.activity': (taskId: number) => TaskActivity
+  /**
+   * Merges `otherId` into `keepId` (two open tasks, or two waiting items), with the user's picks for
+   * fields where they differ, then removes `otherId`. Returns the kept task.
+   */
+  'tasks.merge': (keepId: number, otherId: number, choices: MergeChoices) => Task
   'projects.list': () => ProjectSummary[]
   /** Archived projects, which projects.list leaves out. */
   'projects.listArchived': () => ProjectSummary[]
@@ -217,6 +223,7 @@ export const API_CHANNELS: ApiChannel[] = [
   'tasks.dismissNextAction',
   'tasks.removeAiAdjustment',
   'tasks.activity',
+  'tasks.merge',
   'projects.list',
   'projects.listArchived',
   'projects.save',

@@ -124,6 +124,10 @@ The app should keep itself up to date (requested 2026-11-05; not to be built yet
 - **Signing:** unsigned updates may trigger Windows SmartScreen. On Mac, automatic updates generally require a signed, notarized app. Signing certificates cost money, which needs the owner's approval.
 - **Data safety:** an update that changes the database already gets the automatic safety copy before upgrading.
 
+## Merge tasks (built 2026-11-17)
+
+- ✅ **Merge two tasks or two waiting items** from the task editor or Ctrl+K, picking between fields that differ (issue #60). Unit tests, plus the `merge` e2e suite.
+
 ## Text import and Copilot prompts (built 2026-11-09)
 
 - ✅ **Simpler text import:** paste or drop text, the date at the top right, Extract. No type, title or sender to fill in; the AI names each import (Claude or Ollama), and Recent imports has rename.

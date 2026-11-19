@@ -9,6 +9,7 @@ import { ReplyCard } from './ReplyCard'
 import { StatusCard } from './StatusCard'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from './UpdatesWindow'
 import { idsFor, NextMeeting } from './NextMeeting'
+import { MergeDialog, useMergeRequests } from './MergeDialog'
 
 const EDITABLE_STATUSES: TaskStatus[] = ['open', 'waiting_on', 'done']
 
@@ -58,13 +59,15 @@ interface Props {
   onSaved: (task: Task) => void
   onDone: (task: Task) => void
   onDeleted: (id: number) => void
+  /** Called after another item was merged into this one. */
+  onMerged: (task: Task) => void
 }
 
 /**
  * The right-hand task view. Edits are kept locally until saved. Switching to another task saves
  * pending edits automatically, so moving through the list never loses work.
  */
-export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = false, onClose, onSaved, onDone, onDeleted }: Props) {
+export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = false, onClose, onSaved, onDone, onDeleted, onMerged }: Props) {
   const { projects, people, toast, refresh } = useApp()
   const [activityKey, setActivityKey] = useState(0)
   const [task, setTask] = useState<Task | null>(null)
@@ -77,6 +80,10 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
   // A task with no subtasks shows only "+ Add subtask" until it's clicked.
   const [addingSubtask, setAddingSubtask] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
+  // The task being merged into (saved first), while the merge dialog is open.
+  const [merging, setMerging] = useState<Task | null>(null)
+  const startMergeRef = useRef(() => {})
+  useMergeRequests(() => startMergeRef.current())
 
   const dirty = form != null && JSON.stringify(form) !== snapshot
   const latest = useRef({ form, dirty })
@@ -169,6 +176,15 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
       toast(errorMessage(err), true)
     }
   }
+
+  const canMerge = !isNew && form.input.status !== 'done' && task?.status !== 'done'
+  // Pending edits are saved first, as Mark done does; the merge starts from the task as saved.
+  const startMerge = async () => {
+    if (!canMerge || merging) return
+    const saved = dirty ? await save() : await cos['tasks.get'](form.input.id)
+    if (saved && saved.status !== 'done') setMerging(saved)
+  }
+  startMergeRef.current = () => void startMerge()
 
   const addSubtask = () => {
     if (!newSubtask.trim()) return
@@ -400,6 +416,11 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
               }}
             />
           )}
+          {canMerge && (
+            <button className="btn ghost" data-action="merge" onClick={() => void startMerge()}>
+              Merge
+            </button>
+          )}
           <div className="spacer" />
           {dirty && !isNew && (
             <button className="btn ghost" onClick={() => setForm(JSON.parse(snapshot) as Form)}>
@@ -430,6 +451,17 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
           </button>
         </div>
       </div>
+      {merging && (
+        <MergeDialog
+          keep={merging}
+          onClose={() => setMerging(null)}
+          onMerged={(t) => {
+            latest.current.dirty = false
+            setMerging(null)
+            onMerged(t)
+          }}
+        />
+      )}
       {showUpdates && task && (
         <UpdatesWindow
           scope="task"

@@ -373,6 +373,12 @@ export const MIGRATIONS: Migration[] = [
   );
   CREATE INDEX ix_copilot_coverage_prompt ON copilot_coverage(prompt, to_at);
   `,
+  // Merging two tasks: the merged-in task's Activity lines move to the kept task, and merged_from
+  // keeps the title that task had, so its lines still say where they happened. Null for the task's
+  // own lines. A new event kind, 'merged', records the merge itself (from_value is that title).
+  `
+  ALTER TABLE task_events ADD COLUMN merged_from TEXT;
+  `,
 ]
 
 /** Adds each project's status brief to the end of its Updates, dated when it was written, then clears it. */

@@ -41,7 +41,7 @@ export interface DueMove {
 
 /**
  * The task event log behind each task's Activity, and the weekly review's pushed-back dates.
- * Rows are only ever added; they go when the task is deleted.
+ * Rows are only ever added; a merge moves them to the kept task, and they go when the task is deleted.
  */
 export class TaskEventService {
   constructor(
@@ -64,10 +64,14 @@ export class TaskEventService {
     return { events: rows.map(toEvent) }
   }
 
-  /** Due dates moved from one date to another (not set or removed) between `from` and `to`, oldest first. */
+  /**
+   * Due dates moved from one date to another (not set or removed) between `from` and `to`, oldest
+   * first. Moves that happened on a task since merged into another are left out: they were about
+   * a different task's date.
+   */
   dueMoves(from: string, to: string): DueMove[] {
     const rows = this.db
-      .prepare(`SELECT * FROM task_events WHERE kind = 'due' AND from_value IS NOT NULL AND to_value IS NOT NULL AND at >= ? AND at < ? ORDER BY at, id`)
+      .prepare(`SELECT * FROM task_events WHERE kind = 'due' AND from_value IS NOT NULL AND to_value IS NOT NULL AND merged_from IS NULL AND at >= ? AND at < ? ORDER BY at, id`)
       .all(from, to) as Record<string, unknown>[]
     return rows.map((r) => ({ taskId: Number(r.work_item_id), at: String(r.at), from: String(r.from_value), to: String(r.to_value), by: r.by as ChangeBy['by'], byLabel: (r.by_label as string) ?? null }))
   }
@@ -84,5 +88,6 @@ function toEvent(r: Record<string, unknown>): TaskEvent {
     note: (r.note as string) ?? null,
     by: r.by as ChangeBy['by'],
     byLabel: (r.by_label as string) ?? null,
+    mergedFrom: (r.merged_from as string) ?? null,
   }
 }
