@@ -5,6 +5,7 @@ import type { BriefingInput, RawBriefing } from './briefing'
 import type { RawReflection, WeeklyInput } from './weekly'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { RawExtraction } from './schema'
+import type { CacheTokens } from '@shared/pricing'
 
 /**
  * Anything that can read an imported item and propose suggestions. Claude is the first real
@@ -48,8 +49,11 @@ export interface AiCallRecord {
   error: string | null
   startedAt: string
   durationMs: number
+  /** The whole prompt, including any part written to or read from Claude's prompt cache. */
   inputTokens: number | null
   outputTokens: number | null
+  /** Claude only: how much of inputTokens was written to and read from the prompt cache, for cost estimates. */
+  cache?: CacheTokens | null
   /** Set only by providers that charge per token (Claude): the model that answered, for cost estimates. */
   paidModel?: string | null
 }
@@ -63,7 +67,7 @@ export async function logged<T>(
   log: AiCallLog | undefined,
   meta: { purpose: string; endpoint: string; request: unknown },
   run: () => Promise<T>,
-  describe: (result: T) => { response: unknown; inputTokens?: number | null; outputTokens?: number | null; paidModel?: string | null },
+  describe: (result: T) => { response: unknown; inputTokens?: number | null; outputTokens?: number | null; cache?: CacheTokens | null; paidModel?: string | null },
   errorResponse: (err: unknown) => unknown = () => null,
 ): Promise<T> {
   const startedAt = new Date().toISOString()
@@ -71,7 +75,7 @@ export async function logged<T>(
   try {
     const result = await run()
     const d = describe(result)
-    log?.record({ ...meta, startedAt, durationMs: Date.now() - t0, response: d.response, error: null, inputTokens: d.inputTokens ?? null, outputTokens: d.outputTokens ?? null, paidModel: d.paidModel ?? null })
+    log?.record({ ...meta, startedAt, durationMs: Date.now() - t0, response: d.response, error: null, inputTokens: d.inputTokens ?? null, outputTokens: d.outputTokens ?? null, cache: d.cache ?? null, paidModel: d.paidModel ?? null })
     return result
   } catch (err) {
     log?.record({ ...meta, startedAt, durationMs: Date.now() - t0, response: errorResponse(err), error: err instanceof Error ? err.message : String(err), inputTokens: null, outputTokens: null })

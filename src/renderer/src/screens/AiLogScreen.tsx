@@ -12,7 +12,7 @@ const num = (n: number) => n.toLocaleString()
 const kindLabel = (k: string) => SUGGESTION_LABELS[k as SuggestionKind] ?? k
 const modelName = (id: string) => CLAUDE_MODELS.find((m) => m.id === id)?.label ?? id
 /** Estimated cost of one paid request, or null (free, failed, or a model with no known price). */
-export const callCost = (c: AiCall): number | null => (c.paidModel && c.inputTokens != null ? estimateCost(c.paidModel, c.inputTokens, c.outputTokens ?? 0) : null)
+export const callCost = (c: AiCall): number | null => (c.paidModel && c.inputTokens != null ? estimateCost(c.paidModel, c.inputTokens, c.outputTokens ?? 0, c.cache) : null)
 /** Total estimated cost of some requests, or null when none of them has one. */
 export const callsCost = (calls: AiCall[]): number | null => {
   const costs = calls.map(callCost).filter((c): c is number => c != null)

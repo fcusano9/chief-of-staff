@@ -99,24 +99,32 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
   }
 }
 
-/**
- * The system prompt. `kinds` limits which suggestions to ask for: the local model does better
- * with a few kinds per request (see OllamaProvider's split passes); Claude gets them all at once.
- */
 /** The item's local date (YYYY-MM-DD) from its occurredAt, for the calendar. */
 export const itemDateOf = (source: Pick<SourceForExtraction, 'occurredAt'>): string | null => {
   const d = new Date(source.occurredAt)
   return Number.isNaN(d.getTime()) ? null : localDate(d)
 }
 
+/**
+ * The local model's system prompt: the instructions, then the calendar. `kinds` limits which
+ * suggestions to ask for: the local model does better with a few kinds per request (see
+ * OllamaProvider's split passes); Claude gets them all at once.
+ */
 export function buildSystemPrompt(ctx: ExtractionContext, kinds: SuggestionKind[] = ALL_KINDS, itemDate: string | null = null): string {
+  return `${buildInstructions(ctx, kinds)}\n${calendar(ctx.today, itemDate)}`
+}
+
+/**
+ * The import instructions without the calendar. They change only when the user's name or the
+ * prompts do, so Claude caches them (see buildExtractionRequest) and gets the calendar after them.
+ */
+export function buildInstructions(ctx: Pick<ExtractionContext, 'userName'>, kinds: SuggestionKind[] = ALL_KINDS): string {
   const name = ctx.userName
   const defs = importKindDefinitions(name)
   return importSystem({
     name,
     kindList: kinds.map((k) => `- ${k}: ${defs[k]}`).join('\n'),
     nextActions: asksForNextActions(kinds) ? importNextActionRule(name) : '',
-    calendar: calendar(ctx.today, itemDate),
   })
 }
 
@@ -151,7 +159,16 @@ export function calendar(today: string, itemDate: string | null = null): string 
   return importCalendar({ today: label(today), itemDate: older ? label(older) : null, days: lines.join('\n') })
 }
 
+/** The local model's user message: the open tasks, projects, and people, then the item. */
 export function buildUserPrompt(ctx: ExtractionContext, source: SourceForExtraction): string {
+  return `${buildDirectory(ctx)}\n\n${buildItem(ctx, source)}`
+}
+
+/**
+ * The open tasks, projects, and people. An Outlook mail run sends the same ones with every
+ * conversation (it builds them once per run), so Claude caches them.
+ */
+export function buildDirectory(ctx: ExtractionContext): string {
   const tasks = ctx.tasks.length
     ? ctx.tasks
         .map((t) => `- [${t.id}] ${t.title} (${t.status.replace('_', ' ')}${t.dueDate ? `, due ${t.dueDate}` : ''}${t.project ? `, project: ${t.project}` : ''}${t.requester ? `, asked by ${t.requester}` : ''}${t.waitingOn ? `, waiting on ${t.waitingOn}` : ''}, priority ${t.priority}${aiChangeText(t.aiChange)})${t.updates.length ? ` Updates: ${t.updates.join(' | ')}` : ''}`)
@@ -174,9 +191,12 @@ ${projects}
 
 <people>
 ${people}
-</people>
+</people>`
+}
 
-<imported_item kind="${SOURCE_KIND_LABELS[source.kind]}" title="${escapeAttr(source.title)}"${source.fromName ? ` from="${escapeAttr(source.fromName)}"` : ''} date="${source.occurredAt.slice(0, 10)}">
+/** The imported item and the closing request: the part that changes with every item. */
+export function buildItem(ctx: ExtractionContext, source: SourceForExtraction): string {
+  return `<imported_item kind="${SOURCE_KIND_LABELS[source.kind]}" title="${escapeAttr(source.title)}"${source.fromName ? ` from="${escapeAttr(source.fromName)}"` : ''} date="${source.occurredAt.slice(0, 10)}">
 ${source.content.replace(/<\/?imported_item/gi, '[imported_item')}
 </imported_item>
 

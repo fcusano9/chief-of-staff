@@ -379,6 +379,14 @@ export const MIGRATIONS: Migration[] = [
   `
   ALTER TABLE task_events ADD COLUMN merged_from TEXT;
   `,
+  // Claude's prompt cache: how many of a request's input tokens were written to and read from it,
+  // so cost estimates use the cache prices. input_tokens stays the whole prompt. 0 for older rows.
+  `
+  ALTER TABLE ai_usage ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE ai_usage ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE ai_calls ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE ai_calls ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0;
+  `,
 ]
 
 /** Adds each project's status brief to the end of its Updates, dated when it was written, then clears it. */

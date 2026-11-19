@@ -159,12 +159,51 @@ describe('AI log for each import', () => {
   it('records the Claude request as it goes on the wire, never the API key', () => {
     const ctx = buildExtractionContext(db, 'Frank Cusano')
     const request = asSent(buildExtractionRequest('claude-opus-5-5', ctx, { kind: 'note', title: 't', fromName: null, occurredAt: '2026-11-03T00:00:00Z', content: 'c' })) as Record<string, any>
-    expect(request.system).toContain('You help Frank Cusano keep a task list current')
-    expect(request.messages[0].content).toContain('<imported_item')
+    expect(request.system[0].text).toContain('You help Frank Cusano keep a task list current')
+    expect(request.messages[0].content.at(-1).text).toContain('<imported_item')
     expect(request.output_config.format.type).toBe('json_schema')
     expect(request.output_config.format.schema.properties.suggestions).toBeDefined()
     expect(request.output_config.format).not.toHaveProperty('parse') // helper functions aren't sent
     expect(JSON.stringify(request)).not.toMatch(/sk-ant|api[_-]?key/i)
+  })
+
+  it('marks the instructions and the task list for Claude to cache, and sends the calendar and item after them', () => {
+    const ctx = buildExtractionContext(db, 'Frank Cusano')
+    const item = (occurredAt: string) => asSent(buildExtractionRequest('claude-opus-5-5', ctx, { kind: 'email', title: 't', fromName: null, occurredAt, content: 'c' })) as Record<string, any>
+    const older = item('2026-11-01T12:00:00Z')
+    const newer = item('2026-11-03T12:00:00Z')
+    expect(older.system).toEqual([{ type: 'text', text: expect.stringContaining('You help Frank Cusano'), cache_control: { type: 'ephemeral' } }])
+    const [directory, rest] = older.messages[0].content
+    expect(directory).toMatchObject({ text: expect.stringContaining('<open_tasks>'), cache_control: { type: 'ephemeral' } })
+    expect(directory.text).not.toContain('<imported_item')
+    expect(rest.cache_control).toBeUndefined()
+    expect(rest.text).toMatch(/Sunday 2026-11-01[\s\S]*<imported_item/)
+    // Items from different days start the same way, so the cached part is reused.
+    expect(newer.system).toEqual(older.system)
+    expect(newer.messages[0].content[0]).toEqual(directory)
+    expect(older.system[0].text).not.toContain('2026-11-01')
+  })
+
+  it('saves the cached tokens of each request and prices them', async () => {
+    class Cached extends LoggingFake {
+      override async extract(...args: Parameters<LoggingFake['extract']>) {
+        const log = args[2]
+        return logged(log, { purpose: 'Find suggestions', endpoint: 'Anthropic Messages API', request: { model: 'claude-opus-5-5' } }, async () => ({ suggestions: [], next_actions: [], priority_changes: [] }), () => ({
+          response: { model: 'claude-opus-5-5' },
+          inputTokens: 10_000,
+          outputTokens: 1_000,
+          cache: { write: 0, read: 8_000 },
+          paidModel: 'claude-opus-5-5',
+        }))
+      }
+    }
+    const s = sources(() => new Cached([]))
+    const { source } = await s.importAndExtract({ kind: 'note', title: 'n', content: 'x' })
+    const call = s.aiRuns(source.id)[0]!.calls[0]!
+    expect(call.cache).toEqual({ write: 0, read: 8_000 })
+    const cost = (2_000 * 4 + 8_000 * 0.2 + 1_000 * 20) / 1e6
+    expect(s.get(source.id)!.estimatedCost).toBeCloseTo(cost)
+    expect(db.prepare('SELECT input_tokens, cache_write_tokens, cache_read_tokens FROM ai_usage').get()).toEqual({ input_tokens: 10_000, cache_write_tokens: 0, cache_read_tokens: 8_000 })
   })
 
   it('logged() records success and failure with timing', async () => {

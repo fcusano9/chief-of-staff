@@ -64,6 +64,14 @@ describe('cost estimates', () => {
     expect(estimateCost('claude-haiku-5-5', 100_001, 1_000)).toBeCloseTo(0.0525)
   })
 
+  it('prices cached input at the cache write and read prices', () => {
+    // 10,000 in: 2,000 not cached ($4), 3,000 written ($5), 5,000 read ($0.20), plus 1,000 out ($20).
+    expect(estimateCost('claude-opus-5-5', 10_000, 1_000, { write: 3_000, read: 5_000 })).toBeCloseTo((2_000 * 4 + 3_000 * 5 + 5_000 * 0.2 + 1_000 * 20) / 1e6)
+    expect(estimateCost('claude-sonnet-5-5', 10_000, 0, { write: 0, read: 10_000 })).toBeCloseTo(0.001)
+    // Haiku's higher price counts the cached part of the prompt too.
+    expect(estimateCost('claude-haiku-5-5', 150_000, 0, { write: 0, read: 140_000 })).toBeCloseTo((10_000 * 0.5 + 140_000 * 0.05) / 1e6)
+  })
+
   it('returns null for a model it has no price for', () => {
     expect(estimateCost('claude-opus-4-8', 1000, 100)).toBeNull()
     expect(estimateCost(null, 1000, 100)).toBeNull()

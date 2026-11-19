@@ -509,8 +509,11 @@ export interface AiCall {
   error: string | null
   startedAt: string
   durationMs: number
+  /** The whole prompt, cached parts included. */
   inputTokens: number | null
   outputTokens: number | null
+  /** How much of inputTokens was written to and read from Claude's prompt cache (imports only; absent elsewhere). */
+  cache?: { write: number; read: number }
   /** The Claude model that answered, for paid requests only (null for Basic and Ollama). */
   paidModel: string | null
 }
