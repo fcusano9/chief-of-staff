@@ -47,7 +47,7 @@ const server = createServer((req, res) => {
     if (req.url === '/api/tags') return res.end(JSON.stringify({ models: [{ name: 'fake:1b' }] }))
     if (req.url === '/api/chat') {
       chats.push(JSON.parse(body))
-      const answer = chats.length === 1 ? { reply_all: true, body: 'Hi Dana,\n\nYes, tier 2 works.\n\nFrank' } : { reply_all: true, body: 'Hi Dana,\n\nYes, but Friday is tight. [date] works better.\n\nFrank' }
+      const answer = chats.length === 1 ? { body: 'Hi Dana,\n\nYes, tier 2 works.\n\nFrank' } : { body: 'Hi Dana,\n\nYes, but Friday is tight. [date] works better.\n\nFrank' }
       return res.end(JSON.stringify({ message: { content: JSON.stringify(answer) }, done_reason: 'stop', prompt_eval_count: 100 }))
     }
     res.statusCode = 404
@@ -97,7 +97,7 @@ try {
   await app.clickText('Draft reply', '[data-testid="reply-card"] button')
   await app.waitFor('textarea[aria-label="Draft reply"]', 10000)
   const card = await text(app, '[data-testid="reply-card"]')
-  check('preview shows recipients, the AI pick and subject', card.includes('Dana Lee; Priya Shah') && card.includes('Marcus Webb') && card.includes('AI pick') && card.includes('RE: Q1 dealer pricing'), card)
+  check('preview shows the Reply all recipients and subject, with no Reply / Reply all choice', card.includes('Dana Lee; Priya Shah') && card.includes('Marcus Webb') && card.includes('RE: Q1 dealer pricing') && !card.includes('AI pick') && !card.includes('Send to'), card)
   check('the draft text is shown, editable', (await app.eval(`return document.querySelector('textarea[aria-label="Draft reply"]').value`)) === 'Hi Dana,\n\nYes, tier 2 works.\n\nFrank')
   const sent = JSON.stringify(chats[0]?.messages ?? [])
   check('the AI got the thread, the task and the style note', sent.includes('Can you confirm the tier 2 discount by Friday?') && sent.includes('Reply to Dana') && sent.includes('Short and direct.'))
@@ -114,16 +114,12 @@ try {
   check('Try again sends the note and the previous draft', retry.includes('Friday is tight') && retry.includes('Yes, tier 2 works.'))
   check('the new draft replaces the old one', (await app.eval(`return document.querySelector('textarea[aria-label="Draft reply"]').value`)).includes('[date] works better'))
 
-  // Switch to Reply, edit, save.
-  await app.clickText('Reply', '[data-testid="reply-card"] .rp-seg button:last-child')
-  await app.sleep(200)
-  const one = await text(app, '[data-testid="reply-card"]')
-  check('Reply goes to the sender only, and the AI pick mark goes', !one.includes('Priya Shah') && !one.includes('AI pick'), one)
+  // Edit, save.
   await app.eval(`const t = document.querySelector('textarea[aria-label="Draft reply"]'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(t, t.value.replace('[date]', 'Monday')); t.dispatchEvent(new Event('input',{bubbles:true})); return true`)
   await app.clickText('Save to Outlook Drafts', '[data-testid="reply-card"] button')
   await app.sleep(500)
   const saved = existsSync(drafts) ? JSON.parse(readFileSync(drafts, 'utf8')) : []
-  check('saved to Drafts as Reply, with the edit', saved.length === 1 && saved[0].replyAll === false && saved[0].entryId === 'E1' && saved[0].body.includes('Monday works better'), JSON.stringify(saved))
+  check('saved to Drafts as Reply all, with the edit', saved.length === 1 && saved[0].replyAll === true && saved[0].entryId === 'E1' && saved[0].body.includes('Monday works better'), JSON.stringify(saved))
   const after = await text(app, '[data-testid="reply-card"]')
   check('says saved, with Open in Outlook', after.includes('Saved to Outlook Drafts') && after.includes('Open in Outlook'), after)
   check('Activity notes the draft', (await text(app, '.pane.right')).includes('Draft reply saved to Outlook Drafts'))
@@ -146,7 +142,7 @@ try {
   await app.clickText('Save to Outlook Drafts', '[data-testid="reply-card"] button')
   await app.sleep(500)
   const saved2 = JSON.parse(readFileSync(drafts, 'utf8'))
-  check('saved as a reply to the follow-up, so it stays in the chain', saved2.at(-1)?.entryId === 'E2', JSON.stringify(saved2.at(-1)))
+  check('saved as Reply all on the follow-up, so it stays in the chain', saved2.at(-1)?.entryId === 'E2' && saved2.at(-1)?.replyAll === true, JSON.stringify(saved2.at(-1)))
   check('no renderer errors', app.errors.length === 0, app.errors.join(' | '))
 } catch (e) {
   results.push(`ERROR  ${e.stack}`)

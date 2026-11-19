@@ -167,8 +167,9 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Rule | Detail | Where |
 |---|---|---|
 | Where | The Reply card on a task linked to an email; hidden otherwise. Greyed out with Basic. | `src/renderer/src/components/ReplyCard.tsx` |
-| Which email | Always the newest email in the conversation, sent or received, asked of the mail app when drafting and when saving. If it's the user's own, the AI writes a short follow-up nudge instead of an answer. | `src/main/services/replies.ts` · `draft` |
-| Recipients | The AI picks Reply all or Reply (marked "AI pick") and the user can switch. Who it goes to comes from Outlook, or for Apple Mail is worked out from the email. | `src/main/services/replies.ts` |
+| Which email | The last email, sent or received, that included the person the task is with (the sender of the email the task was created from, as From, To, or Cc). Automatic replies (out of office, or an Auto-Submitted header) don't count. If no email includes them, the newest that isn't automatic. Asked of the mail app when drafting and when saving. If it's the user's own, the AI writes a short follow-up nudge instead of an answer. | `src/main/mail/plan.ts` · `replyTarget` |
+| Side discussions | Emails after that one without the person (an internal side discussion) aren't replied to, but the AI reads them as context, including up to 10 the app hasn't read yet. | `src/main/services/replies.ts` · `withUnread` |
+| Recipients | Always Reply all on that email, adding no one; there's no Reply / Reply all choice. To change who it goes to, the user opens it in the mail app and edits the recipients there. Who it goes to comes from Outlook, or for Apple Mail is worked out from the email. | `src/main/services/replies.ts` · `save` |
 | Never sent | Open in Outlook / Mail opens a reply window with the text; Save to Outlook / Mail Drafts saves a draft. Neither sends. Apple Mail drafts don't include the quoted original. | `src/main/services/replies.ts` · `save` |
 | Not kept | Drafts aren't stored in the app. Activity records "Draft reply saved to … Drafts" or "Reply opened in …". The task stays open. | `src/main/services/replies.ts` |
 | Writing style | One note in Settings → AI, up to 1,000 characters, sent with every draft. | `src/main/services/settings.ts` |

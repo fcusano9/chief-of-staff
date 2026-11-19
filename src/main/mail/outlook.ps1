@@ -3,7 +3,7 @@
 # Never sends, moves, flags or deletes.
 #   -Action list -Since <ISO time> -OutFile <path>   writes received (Inbox and subfolders) and sent mail as JSON
 #   -Action open -EntryId <id> -StoreId <id> -OutFile <path>   shows the message in Outlook
-#   -Action latest -EntryId <id> -StoreId <id> -OutFile <path>   the newest sent or received email in that message's conversation
+#   -Action latest -EntryId <id> -StoreId <id> [-Person <address>] [-Later <n>] -OutFile <path>   the email a draft reply answers in that message's conversation, and the emails after it
 #   -Action recipients -EntryId <id> -StoreId <id> -OutFile <path>   who Reply and Reply all would go to (nothing is saved)
 #   -Action reply -EntryId <id> -StoreId <id> -BodyFile <path> [-ReplyAll] [-Open] -OutFile <path>   saves a reply to Drafts, or with -Open shows it in a window instead; never sends
 #   -Action me -OutFile <path>   the mailbox's email addresses
@@ -22,6 +22,8 @@ param(
   [string]$BodyFile,
   [switch]$ReplyAll,
   [switch]$Open,
+  [string]$Person = '',
+  [int]$Later = 10,
   [int]$MaxBody = 30000
 )
 $ErrorActionPreference = 'Stop'
@@ -34,6 +36,7 @@ function Write-Result($value) {
 $PR_SMTP = 'http://schemas.microsoft.com/mapi/proptag/0x5D01001F'
 $PR_HEADERS = 'http://schemas.microsoft.com/mapi/proptag/0x007D001F'
 $PR_MESSAGE_ID = 'http://schemas.microsoft.com/mapi/proptag/0x1035001F'
+$PR_SMTP_ADDRESS = 'http://schemas.microsoft.com/mapi/proptag/0x39FE001F'
 
 function Get-Prop($item, $name) {
   try { return [string]$item.PropertyAccessor.GetProperty($name) } catch { return '' }
@@ -54,6 +57,47 @@ function Get-SenderEmail($item) {
 function Get-Header($headers, $name) {
   $m = [regex]::Match($headers, "(?im)^$([regex]::Escape($name)):\s*(.+)$")
   if ($m.Success) { return $m.Groups[1].Value.Trim() } else { return '' }
+}
+
+# Sent by a machine, not a person: an out-of-office or other automatic reply, or an Auto-Submitted
+# header other than "no". The same rule and patterns as isAutomatic in plan.ts (tests/mail.test.ts checks them).
+function Test-Automatic($item) {
+  if ([string]$item.MessageClass -match '^IPM\.Note\.Rules\.OofTemplate') { return $true }
+  if ([string]$item.Subject -match '^\s*(automatic reply|auto(matic)?[- ]reply|out of (the )?office)\b') { return $true }
+  $auto = Get-Header (Get-Prop $item $PR_HEADERS) 'Auto-Submitted'
+  return [bool]($auto -and $auto -notmatch '^no$')
+}
+
+# Whether $address (lower case) sent this email or is among its recipients.
+function Test-Includes($item, $address) {
+  if (-not $address) { return $false }
+  if ((Get-SenderEmail $item).ToLowerInvariant() -eq $address) { return $true }
+  foreach ($r in $item.Recipients) {
+    $a = Get-Prop $r $PR_SMTP_ADDRESS
+    if (-not $a) { try { $a = [string]$r.Address } catch { $a = '' } }
+    if ($a.ToLowerInvariant() -eq $address) { return $true }
+  }
+  return $false
+}
+
+# One email as a draft reply needs it: whether the user sent it, who sent it and to whom, and its text.
+function Convert-Reply($item, $mine, $sentFolder) {
+  $fromEmail = Get-SenderEmail $item
+  $body = ''
+  try { $body = [string]$item.Body } catch {}
+  if ($body.Length -gt $MaxBody) { $body = $body.Substring(0, $MaxBody) }
+  $to = ''; $cc = ''
+  try { $to = [string]$item.To; $cc = [string]$item.CC } catch {}
+  [ordered]@{
+    entryId = [string]$item.EntryID
+    fromMe  = [bool](([string]$item.Parent.EntryID -eq $sentFolder) -or ($mine -contains $fromEmail.ToLowerInvariant()))
+    from    = [string]$item.SenderName
+    to      = $to
+    cc      = $cc
+    subject = [string]$item.Subject
+    time    = $item.SentOn.ToUniversalTime().ToString('o')
+    body    = $body
+  }
 }
 
 function Convert-Item($item, $folderPath, $direction) {
@@ -126,13 +170,19 @@ try {
   }
 
   if ($Action -eq 'latest') {
-    # Walks the message's conversation (Outlook's own threading, across folders) for the newest
-    # email that was actually sent: drafts and Deleted Items are left out. Falls back to the message
-    # itself when the store doesn't support conversations.
+    # Picks the email a draft reply answers, by the same rule as replyTarget in plan.ts. Walks the
+    # message's conversation (Outlook's own threading, across folders); only emails actually sent
+    # count, so drafts and Deleted Items are left out. The reply goes on the newest one that includes
+    # -Person (from, to or cc) and isn't automatic (out of office); else the newest that isn't
+    # automatic; else the newest. Up to -Later emails after it that aren't automatic (a side
+    # discussion without that person) come back as 'after', for the AI to read. Falls back to the
+    # message itself when the store doesn't support conversations.
     $item = $ns.GetItemFromID($EntryId, $StoreId)
-    $best = $item
+    $address = $Person.Trim().ToLowerInvariant()
     $skipFolders = @()
     foreach ($n in 3, 16) { try { $skipFolders += [string]$ns.GetDefaultFolder($n).EntryID } catch {} }
+    $nodes = New-Object System.Collections.ArrayList
+    [void]$nodes.Add($item)
     $conv = $null
     try { $conv = $item.GetConversation() } catch {}
     if ($conv) {
@@ -141,35 +191,35 @@ try {
       while ($stack.Count -gt 0) {
         $node = $stack.Pop()
         try { foreach ($child in $conv.GetChildren($node)) { $stack.Push($child) } } catch {}
-        try {
-          if ($node.Class -ne 43 -or -not $node.Sent) { continue }
-          if ($skipFolders -contains [string]$node.Parent.EntryID) { continue }
-          if ($node.SentOn -gt $best.SentOn) { $best = $node }
-        } catch {}
+        [void]$nodes.Add($node)
       }
     }
+    $found = New-Object System.Collections.ArrayList
+    $seen = @{}
+    foreach ($node in $nodes) {
+      try {
+        if ($node.Class -ne 43 -or -not $node.Sent) { continue }
+        if ($skipFolders -contains [string]$node.Parent.EntryID) { continue }
+        $id = [string]$node.EntryID
+        if ($seen.ContainsKey($id)) { continue }
+        $seen[$id] = $true
+        [void]$found.Add([pscustomobject]@{ item = $node; sent = $node.SentOn; auto = (Test-Automatic $node); has = (Test-Includes $node $address) })
+      } catch {}
+    }
+    if ($found.Count -eq 0) { [void]$found.Add([pscustomobject]@{ item = $item; sent = $item.SentOn; auto = $false; has = $false }) }
+    $sorted = @($found | Sort-Object -Property sent)
+    $pick = $sorted | Where-Object { $_.has -and -not $_.auto } | Select-Object -Last 1
+    if (-not $pick) { $pick = $sorted | Where-Object { -not $_.auto } | Select-Object -Last 1 }
+    if (-not $pick) { $pick = $sorted | Select-Object -Last 1 }
     $mine = @(Get-MyAddresses $ns | ForEach-Object { $_.ToLowerInvariant() })
     $sentFolder = ''
     try { $sentFolder = [string]$ns.GetDefaultFolder(5).EntryID } catch {}
-    $fromEmail = Get-SenderEmail $best
-    $fromMe = ([string]$best.Parent.EntryID -eq $sentFolder) -or ($mine -contains $fromEmail.ToLowerInvariant())
-    $body = ''
-    try { $body = [string]$best.Body } catch {}
-    if ($body.Length -gt $MaxBody) { $body = $body.Substring(0, $MaxBody) }
-    $to = ''; $cc = ''
-    try { $to = [string]$best.To; $cc = [string]$best.CC } catch {}
-    Write-Result ([ordered]@{
-      ok      = $true
-      entryId = [string]$best.EntryID
-      storeId = [string]$best.Parent.StoreID
-      fromMe  = [bool]$fromMe
-      from    = [string]$best.SenderName
-      to      = $to
-      cc      = $cc
-      subject = [string]$best.Subject
-      time    = $best.SentOn.ToUniversalTime().ToString('o')
-      body    = $body
-    })
+    $result = [ordered]@{ ok = $true }
+    $chosen = Convert-Reply $pick.item $mine $sentFolder
+    foreach ($k in $chosen.Keys) { $result[$k] = $chosen[$k] }
+    $result['storeId'] = [string]$pick.item.Parent.StoreID
+    $result['after'] = @($sorted | Where-Object { -not $_.auto -and $_.sent -gt $pick.sent } | Select-Object -Last $Later | ForEach-Object { Convert-Reply $_.item $mine $sentFolder })
+    Write-Result $result
     exit 0
   }
 

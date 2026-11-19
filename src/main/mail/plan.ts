@@ -1,5 +1,6 @@
+import { nameKey } from '@shared/calendar'
 import type { OutlookMailbox, OutlookMessage } from './outlook'
-import { MAIL_CHARS } from '../ai/limits'
+import { MAIL_CHARS, REPLY_LATER_EMAILS } from '../ai/limits'
 
 /**
  * Turning raw Outlook messages into conversations for the AI: which to skip, which were read
@@ -45,13 +46,70 @@ export const SKIP = {
 export const messageKey = (m: OutlookMessage): string => (m.messageId ? `mid:${m.messageId}` : `entry:${m.entryId}`)
 
 const AUTOMATED_SENDER = /^(no-?reply|do-?not-?reply|notifications?|notify|alerts?|mailer-daemon|postmaster|bounces?)([+._-].*)?@/i
+/** Outlook's message class for an out-of-office reply. outlook.ps1 uses the same pattern (tests check it). */
+export const OOF_CLASS = /^IPM\.Note\.Rules\.OofTemplate/i
+/** Subjects of automatic replies ("Automatic reply: …", "Out of office: …"). outlook.ps1 uses the same pattern (tests check it). */
+export const AUTO_REPLY_SUBJECT = /^\s*(automatic reply|auto(matic)?[- ]reply|out of (the )?office)\b/i
+
+type AutoFields = Pick<OutlookMessage, 'messageClass' | 'subject' | 'autoSubmitted'>
+
+/** An out-of-office or other automatic reply. */
+export function isAutoReply(m: AutoFields): boolean {
+  return OOF_CLASS.test(m.messageClass) || AUTO_REPLY_SUBJECT.test(m.subject) || /auto-replied/i.test(m.autoSubmitted)
+}
+
+/** Sent by a machine, not a person: an automatic reply, or any email whose Auto-Submitted header isn't "no". */
+export function isAutomatic(m: AutoFields): boolean {
+  const auto = m.autoSubmitted.trim()
+  return isAutoReply(m) || (auto !== '' && !/^no$/i.test(auto))
+}
+
+/** Who a draft reply is for: the sender of the email the task was created from. */
+export interface ReplyPerson {
+  name: string
+  email: string
+}
+
+/** Whether `p` is among these people (an email's sender, To, and Cc): by address, else by name ("Lee, Dana" matches "Dana Lee"). */
+export function includesPerson(people: { name: string; email: string }[], p: ReplyPerson): boolean {
+  const email = p.email.trim().toLowerCase()
+  const name = nameKey(p.name)
+  return people.some((x) => {
+    const keys = [x.email.trim().toLowerCase(), nameKey(x.name)].filter(Boolean)
+    return keys.some((k) => k === email || k === name)
+  })
+}
+
+/** An Outlook-shaped email's sender, To, and Cc, for includesPerson. To and Cc are names only ("A; B"). */
+export const peopleOn = (m: Pick<OutlookMessage, 'from' | 'fromEmail' | 'to' | 'cc'>): { name: string; email: string }[] => [
+  { name: m.from, email: m.fromEmail },
+  ...`${m.to};${m.cc}`.split(';').map((n) => ({ name: n.trim().replace(/^'|'$/g, ''), email: '' })).filter((x) => x.name),
+]
+
+/**
+ * The email a draft reply answers: the newest one that includes the person the task is with and
+ * isn't automatic, so an out-of-office reply or an internal side discussion without them never
+ * takes its place. Else the newest that isn't automatic; else the newest of all. outlook.ps1
+ * follows the same rule.
+ */
+export function replyTarget<T extends { time: string }>(messages: T[], automatic: (m: T) => boolean, includes: (m: T) => boolean = () => true): T | undefined {
+  const byTime = [...messages].sort((a, b) => a.time.localeCompare(b.time))
+  const byPeople = byTime.filter((m) => !automatic(m))
+  return byPeople.filter(includes).at(-1) ?? byPeople.at(-1) ?? byTime.at(-1)
+}
+
+/** The emails after the one a reply answers that aren't automatic (a side discussion without that person), oldest first, for the AI to read. */
+export function emailsAfter<T extends { time: string }>(messages: T[], target: T, automatic: (m: T) => boolean): T[] {
+  return messages
+    .filter((m) => m !== target && m.time > target.time && !automatic(m))
+    .sort((a, b) => a.time.localeCompare(b.time))
+    .slice(-REPLY_LATER_EMAILS)
+}
 
 /** Why a message shouldn't be read: invites, auto-replies, newsletters and automated senders. */
 export function skipReason(m: OutlookMessage): string | null {
   if (!m.isMail || /^IPM\.Schedule\.Meeting/i.test(m.messageClass)) return SKIP.invite
-  if (/^IPM\.Note\.Rules\.OofTemplate/i.test(m.messageClass) || /^\s*(automatic reply|auto(matic)?[- ]reply|out of (the )?office)\b/i.test(m.subject) || /auto-replied/i.test(m.autoSubmitted)) {
-    return SKIP.autoReply
-  }
+  if (isAutoReply(m)) return SKIP.autoReply
   if (m.direction === 'sent') return null
   if (m.listUnsubscribe || m.listId || /^(bulk|list|junk)$/i.test(m.precedence.trim())) return SKIP.newsletter
   if ((m.autoSubmitted && !/^no$/i.test(m.autoSubmitted.trim())) || AUTOMATED_SENDER.test(m.fromEmail) || /\bno-?reply\b/i.test(m.fromEmail)) return SKIP.automated

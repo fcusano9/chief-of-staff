@@ -16,18 +16,18 @@ export interface ReplyInput {
   subject: string
   /** Who sent the email being answered; for a follow-up, who the user's email went to. */
   from: string
-  /** The newest email is the user's own ('YYYY-MM-DD' sent), unanswered: write a follow-up nudge, not an answer. */
+  /** The email being answered is the user's own ('YYYY-MM-DD' sent), unanswered: write a follow-up nudge, not an answer. */
   followUp: { to: string; sentAt: string } | null
   /** The conversation as the mail import saved it, oldest first. */
   thread: string
   task: { title: string; notes: string | null; updates: string[] }
-  recipients: { reply: { to: string; cc: string }; replyAll: { to: string; cc: string } }
+  /** Who the reply goes to: Reply all on the email answered. */
+  recipients: { to: string; cc: string }
   /** Try again: the user's note on what should change, and the draft being replaced. */
   revision: { note: string; previous: string } | null
 }
 
 export const ReplySchema = z.object({
-  reply_all: z.boolean().describe(REPLY_FIELDS.reply_all),
   body: z.string().describe(REPLY_FIELDS.body),
 })
 export type RawReply = z.infer<typeof ReplySchema>
@@ -45,8 +45,7 @@ Subject: ${fence(input.subject)}
 ${fence(thread)}
 </email_thread>
 
-Reply would go to: ${fence(input.recipients.reply.to) || '(the sender)'}
-Reply all would go to: ${fence(input.recipients.replyAll.to) || '(the sender)'}${input.recipients.replyAll.cc ? `, cc ${fence(input.recipients.replyAll.cc)}` : ''}
+The reply goes to: ${fence(input.recipients.to) || '(the sender)'}${input.recipients.cc ? `, cc ${fence(input.recipients.cc)}` : ''}
 
 <task>
 Task: ${fence(input.task.title)}
@@ -64,7 +63,7 @@ ${REPLY_ASK}`
 }
 
 /** Tidies the draft (trims, collapses runs of blank lines) and refuses an empty one. */
-export function cleanReply(raw: RawReply): { replyAll: boolean; body: string } {
+export function cleanReply(raw: RawReply): { body: string } {
   const body = raw.body
     .replace(/\r\n/g, '\n')
     .split('\n')
@@ -74,5 +73,5 @@ export function cleanReply(raw: RawReply): { replyAll: boolean; body: string } {
     .trim()
     .slice(0, REPLY_BODY_CHARS)
   if (!body) throw new AiError("The AI didn't write a reply. Try again.")
-  return { replyAll: raw.reply_all === true, body }
+  return { body }
 }

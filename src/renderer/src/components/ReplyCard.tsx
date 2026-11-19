@@ -6,11 +6,11 @@ import { mailAppName } from './mailApp'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
-type Phase = { kind: 'idle' } | { kind: 'writing' } | { kind: 'draft'; draft: ReplyDraft; replyAll: boolean; body: string; retry: boolean; note: string } | { kind: 'saved'; ids: { entryId: string; storeId: string } } | { kind: 'opened' }
+type Phase = { kind: 'idle' } | { kind: 'writing' } | { kind: 'draft'; draft: ReplyDraft; body: string; retry: boolean; note: string } | { kind: 'saved'; ids: { entryId: string; storeId: string } } | { kind: 'opened' }
 
 /**
  * The Reply card on a task linked to an email (Outlook, or Apple Mail on the Mac). Draft reply asks
- * the AI for a reply (its own first draft); the user checks the recipients and text, can Try again
+ * the AI for a reply (its own first draft), always Reply all; the user checks the recipients and text, can Try again
  * with a note, then either opens it in a reply window of the mail app to finish, or saves it to the
  * mail app's Drafts. Nothing is ever sent. Hidden on tasks with no linked email.
  */
@@ -37,7 +37,7 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
     const back = phase
     setPhase({ kind: 'writing' })
     cos['replies.draft'](taskId, revision)
-      .then((draft) => setPhase({ kind: 'draft', draft, replyAll: draft.replyAll, body: draft.body, retry: false, note: '' }))
+      .then((draft) => setPhase({ kind: 'draft', draft, body: draft.body, retry: false, note: '' }))
       .catch((err) => {
         toast(errorMessage(err), true)
         setPhase(back.kind === 'draft' ? { ...back, retry: false } : { kind: 'idle' })
@@ -45,7 +45,7 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
   }
   const appName = mailAppName(target.app)
   const save = (p: Extract<Phase, { kind: 'draft' }>) => {
-    cos['replies.save'](taskId, { replyAll: p.replyAll, body: p.body })
+    cos['replies.save'](taskId, { body: p.body })
       .then((ids) => {
         setPhase({ kind: 'saved', ids })
         toast(`Saved to ${appName} Drafts`)
@@ -54,7 +54,7 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
       .catch((err) => toast(errorMessage(err), true))
   }
   const openInApp = (p: Extract<Phase, { kind: 'draft' }>) => {
-    cos['replies.open'](taskId, { replyAll: p.replyAll, body: p.body })
+    cos['replies.open'](taskId, { body: p.body })
       .then(() => {
         setPhase({ kind: 'opened' })
         onSaved?.()
@@ -155,23 +155,11 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
   }
 
   const p = phase
-  const to = p.replyAll ? p.draft.replyAllTo : p.draft.reply
+  const to = p.draft.to
   return (
     <div className="rp" data-testid="reply-card">
       {head}
       <div className="rp-sec">
-        <div className="rp-who">
-          <span className="rp-k">Send to</span>
-          <span className="seg rp-seg">
-            <button type="button" className={p.replyAll ? 'on' : ''} onClick={() => setPhase({ ...p, replyAll: true })}>
-              Reply all
-            </button>
-            <button type="button" className={p.replyAll ? '' : 'on'} onClick={() => setPhase({ ...p, replyAll: false })}>
-              Reply
-            </button>
-          </span>
-          {p.replyAll === p.draft.replyAll && <span className="faint rp-pick">AI pick</span>}
-        </div>
         <div className="rp-who">
           <span className="rp-k">To</span>
           <span>{to.to || target.from}</span>

@@ -1,7 +1,8 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
+import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DemoProvider } from '../src/main/ai/demo'
 import { validateSuggestions } from '../src/main/ai/schema'
@@ -10,7 +11,7 @@ import { logged, type AiCallLog } from '../src/main/ai/provider'
 import type { ExtractionContext, SourceForExtraction } from '../src/main/ai/context'
 import { openDatabase } from '../src/main/db'
 import type { OutlookMailbox, OutlookMessage, OutlookReader } from '../src/main/mail/outlook'
-import { conversationContent, planMailbox, SKIP, skipReason, splitQuoted } from '../src/main/mail/plan'
+import { AUTO_REPLY_SUBJECT, conversationContent, emailsAfter, includesPerson, isAutomatic, isAutoReply, OOF_CLASS, peopleOn, planMailbox, replyTarget, SKIP, skipReason, splitQuoted } from '../src/main/mail/plan'
 import { BriefService, PersonService, ProjectService } from '../src/main/services/directory'
 import { MailService } from '../src/main/services/mail'
 import { applyMailRules, SourceService, type MailMeta } from '../src/main/services/sources'
@@ -43,6 +44,57 @@ describe('which mail is skipped', () => {
     expect(skipReason(msg({ autoSubmitted: 'auto-generated' }))).toBe(SKIP.automated)
     expect(skipReason(msg({ fromEmail: 'no-reply@vendor.com' }))).toBe(SKIP.automated)
     expect(skipReason(msg({ fromEmail: 'notifications@build.example.com' }))).toBe(SKIP.automated)
+  })
+
+  it('tells automatic email from email a person wrote', () => {
+    expect(isAutomatic(msg({ messageClass: 'IPM.Note.Rules.OofTemplate.Microsoft' }))).toBe(true)
+    expect(isAutomatic(msg({ subject: 'Out of Office: Q1 pricing' }))).toBe(true)
+    expect(isAutomatic(msg({ autoSubmitted: 'auto-replied' }))).toBe(true)
+    expect(isAutomatic(msg({ autoSubmitted: 'auto-generated' }))).toBe(true)
+    expect(isAutomatic(msg({ autoSubmitted: 'No' }))).toBe(false)
+    expect(isAutomatic(msg({ subject: 'RE: Automatic reply settings for the team' }))).toBe(false)
+    expect(isAutoReply(msg({ autoSubmitted: 'auto-generated' }))).toBe(false)
+  })
+
+  it('picks the newest email a person wrote for a reply, or the newest of all when every one is automatic', () => {
+    const real = msg({ entryId: 'REAL', time: '2026-11-02T14:00:00.000Z' })
+    const oof = msg({ entryId: 'OOF', time: '2026-11-02T14:01:00.000Z', subject: 'Automatic reply: Q1 pricing' })
+    const later = msg({ entryId: 'LATER', time: '2026-11-02T15:00:00.000Z', messageClass: 'IPM.Note.Rules.OofTemplate.Microsoft' })
+    expect(replyTarget([later, real, oof], isAutomatic)?.entryId).toBe('REAL')
+    expect(replyTarget([oof, later], isAutomatic)?.entryId).toBe('LATER')
+    expect(replyTarget([], isAutomatic)).toBeUndefined()
+  })
+
+  it('picks the last email the person was on, leaving a side discussion without them for the AI to read', () => {
+    const dana = { name: 'Dana Lee', email: 'dana@example.com' }
+    const ask = msg({ entryId: 'ASK', time: '2026-11-02T14:00:00.000Z', to: 'Frank Cusano; Priya Shah' })
+    const mine = msg({ entryId: 'MINE', time: '2026-11-02T15:00:00.000Z', direction: 'sent', from: ME, fromEmail: 'frank@example.com', to: 'Lee, Dana' })
+    const side = msg({ entryId: 'SIDE', time: '2026-11-02T16:00:00.000Z', from: 'Priya Shah', fromEmail: 'priya@example.com', to: ME })
+    const oof = msg({ entryId: 'OOF', time: '2026-11-02T17:00:00.000Z', subject: 'Automatic reply: Q1 pricing', to: ME })
+    const on = (m: OutlookMessage) => includesPerson(peopleOn(m), dana)
+    expect([ask, mine, side, oof].map(on)).toEqual([true, true, false, true])
+    const pick = replyTarget([oof, side, ask, mine], isAutomatic, on)!
+    expect(pick.entryId).toBe('MINE')
+    expect(emailsAfter([oof, side, ask, mine], pick, isAutomatic).map((m) => m.entryId)).toEqual(['SIDE'])
+    // Nobody includes them: the newest a person wrote.
+    expect(replyTarget([side, ask], isAutomatic, (m) => includesPerson(peopleOn(m), { name: 'Joe Kim', email: 'joe@lg.com' }))?.entryId).toBe('SIDE')
+  })
+
+  it('matches a person by address, or by name however Outlook writes it', () => {
+    const joe = { name: 'Joe Kim', email: 'joe@lg.com' }
+    expect(includesPerson([{ name: 'Someone', email: 'JOE@lg.com' }], joe)).toBe(true)
+    expect(includesPerson([{ name: 'Kim, Joe', email: '' }], joe)).toBe(true)
+    expect(includesPerson([{ name: 'joe@lg.com', email: '' }], joe)).toBe(true)
+    expect(includesPerson(peopleOn(msg({ to: "Frank Cusano; 'joe@lg.com'", cc: '' })), joe)).toBe(true)
+    expect(includesPerson([{ name: 'Joe Kimball', email: 'jk@lg.com' }], joe)).toBe(false)
+    expect(includesPerson([{ name: '', email: '' }], { name: '', email: '' })).toBe(false)
+  })
+
+  it('uses the same automatic-reply patterns in the Outlook script', () => {
+    const script = readFileSync(fileURLToPath(new URL('../src/main/mail/outlook.ps1', import.meta.url)), 'utf8')
+    expect(script).toContain(`-match '${OOF_CLASS.source}'`)
+    expect(script).toContain(`-match '${AUTO_REPLY_SUBJECT.source}'`)
+    expect(script).toContain(`-notmatch '^no$'`)
   })
 
   it('reads ordinary mail, including mail sent to a person with "notify" elsewhere in the address', () => {
@@ -188,7 +240,7 @@ class FakeOutlook implements OutlookReader {
     this.opened.push(entryId)
   }
   async latest() {
-    return { entryId: 'e', storeId: 's', fromMe: false, from: '', to: '', cc: '', subject: '', time: '', body: '' }
+    return { entryId: 'e', storeId: 's', fromMe: false, from: '', to: '', cc: '', subject: '', time: '', body: '', after: [] }
   }
   async recipients() {
     return { subject: 'RE: x', reply: { to: '', cc: '' }, replyAll: { to: '', cc: '' } }
