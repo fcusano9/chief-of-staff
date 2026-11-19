@@ -22,4 +22,6 @@ BENCH_RESCORE=bench/results/a.json,bench/results/b.json npm run bench:ai   # re-
 | Rule breaks | Someone else's task, a duplicate of an open task, a finished task marked done wrongly, or following an injected instruction |
 | Failed | Errors or unreadable output |
 
+For Claude, a **Claude cost** table follows: input, cached (read and written), and output tokens from what Anthropic reports with each answer, the estimated cost at the app's list prices, what the same tokens would cost with nothing cached, and the share caching saved. All cases share one task list, as conversations in a mail run do, so every case after the first can read the cache. Re-scored runs keep the figures they were saved with; runs saved before this table have none.
+
 The cases are small, so treat differences of one or two points as noise. Add a case to `cases.ts` whenever a real import goes wrong.

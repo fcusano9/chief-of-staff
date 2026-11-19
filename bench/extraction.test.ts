@@ -6,6 +6,8 @@ import { ClaudeProvider } from '../src/main/ai/claude'
 import { buildSystemPrompt, buildUserPrompt } from '../src/main/ai/context'
 import { DemoProvider } from '../src/main/ai/demo'
 import { OllamaProvider, thinkSetting, type OllamaOptions, type Reasoning } from '../src/main/ai/ollama'
+import type { AiCallRecord } from '../src/main/ai/provider'
+import { estimateCost, formatCost } from '@shared/pricing'
 import { validateSuggestions, type RawSuggestion } from '../src/main/ai/schema'
 import { CASES, CONTEXT } from './cases'
 import { scoreCase, type CaseScore } from './score'
@@ -61,6 +63,18 @@ interface Run {
   outputTokens?: number
   outputPerSecond?: number
   promptPerSecond?: number
+  /** Claude only: what its requests used, from the token counts Anthropic reports with each answer. */
+  claude?: ClaudeUsage
+}
+
+interface ClaudeUsage {
+  /** The model that answered (a refusal fallback can answer on another model). */
+  model: string
+  /** The whole prompt, cached parts included. */
+  inputTokens: number
+  outputTokens: number
+  cacheWrite: number
+  cacheRead: number
 }
 
 interface ModelInfo {
@@ -109,7 +123,22 @@ async function benchModel(spec: string): Promise<{ runs: Run[]; info: ModelInfo;
       let raw: RawSuggestion[]
       let stats: Partial<Run> = {}
       if (isDemo) raw = (await new DemoProvider().extract(CONTEXT, c.source)).suggestions
-      else if (claude) raw = (await claude.extract(CONTEXT, c.source)).suggestions
+      else if (claude) {
+        const calls: AiCallRecord[] = []
+        raw = (await claude.extract(CONTEXT, c.source, { record: (call) => calls.push(call) })).suggestions
+        const call = calls.find((x) => x.inputTokens != null)
+        if (call) {
+          stats = {
+            claude: {
+              model: call.paidModel ?? model,
+              inputTokens: call.inputTokens!,
+              outputTokens: call.outputTokens ?? 0,
+              cacheWrite: call.cache?.write ?? 0,
+              cacheRead: call.cache?.read ?? 0,
+            },
+          }
+        }
+      }
       else {
         raw = (await local!.extract(CONTEXT, c.source)).suggestions
         const s = local!.lastStats!
@@ -164,6 +193,28 @@ function report(results: { model: string; runs: Run[]; info: ModelInfo }[]): str
         info.memoryGb ? `${info.memoryGb.toFixed(1)} GB` : '–',
       ].join(' | ').replace(/^/, '| ').replace(/$/, ' |'),
     )
+  }
+  const paid = results.filter((r) => r.runs.some((x) => x.claude))
+  if (paid.length) {
+    lines.push(
+      '',
+      '## Claude cost',
+      '',
+      'Estimated from the token counts Anthropic reports with each answer, at the list prices built into the app. "Without caching" prices the same tokens as if none were cached.',
+      '',
+      '| Model | Input tokens | Read from cache | Written to cache | Output tokens | Cost | Without caching | Saved |',
+      '|---|---|---|---|---|---|---|---|',
+    )
+    for (const { model, runs } of paid) {
+      const used = runs.flatMap((r) => (r.claude ? [r.claude] : []))
+      const total = (k: keyof Omit<ClaudeUsage, 'model'>) => sum(used.map((u) => u[k]))
+      const cost = sum(used.map((u) => estimateCost(u.model, u.inputTokens, u.outputTokens, { write: u.cacheWrite, read: u.cacheRead }) ?? 0))
+      const uncached = sum(used.map((u) => estimateCost(u.model, u.inputTokens, u.outputTokens) ?? 0))
+      const n = (x: number) => x.toLocaleString('en-US')
+      lines.push(
+        `| ${model} | ${n(total('inputTokens'))} | ${n(total('cacheRead'))} | ${n(total('cacheWrite'))} | ${n(total('outputTokens'))} | ${formatCost(cost)} | ${formatCost(uncached)} | ${pct(uncached - cost, uncached)} |`,
+      )
+    }
   }
   lines.push('', '## Details', '')
   for (const { model, runs } of results) {
