@@ -4,7 +4,8 @@ import { rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { MailAccount } from '@shared/types'
-import { OutlookError, type LatestMessage, type OutlookMailbox, type OutlookMessage, type OutlookReader, type ReplyRecipients } from './outlook'
+import { OutlookError, type LatestMessage, type MailText, type OutlookMailbox, type OutlookMessage, type OutlookReader, type ReplyFind, type ReplyRecipients } from './outlook'
+import { emailsAfter, includesPerson, isAutomatic, replyTarget } from './plan'
 import script from './applemail.jxa?raw'
 
 /** Where a message is in Apple Mail: its account, the mailbox names from the account down, and Mail's id for it. */
@@ -193,19 +194,32 @@ export class AppleMailReader implements OutlookReader {
     await this.run({ action: 'open', ref: refOf(entryId) })
   }
 
-  async latest(entryId: string): Promise<LatestMessage> {
+  async latest(entryId: string, _storeId?: string, find?: ReplyFind): Promise<LatestMessage> {
     const ref = refOf(entryId)
     const start = await this.message(ref)
     const mine = await this.mine(ref.account)
     const key = conversationKey(start.raw)
-    const after = new Date(Date.parse(start.raw.time) - 60_000).toISOString()
-    const r = await this.run({ action: 'thread', account: ref.account, since: after })
+    // Mail is searched by date: from the first email the app read in the conversation, so the person's last email is found.
+    const startAt = Date.parse(start.raw.time)
+    const sinceAt = find?.since ? Date.parse(find.since) : Number.NaN
+    const from = Number.isNaN(sinceAt) ? startAt : Math.min(startAt, sinceAt)
+    const r = await this.run({ action: 'thread', account: ref.account, since: new Date(from - 60_000).toISOString() })
     const same = ((r.messages as RawAppleMessage[]) ?? []).filter((m) => conversationKey(m) === key || topicOf(m.subject) === topicOf(start.raw.subject))
-    const newest = same.sort((a, b) => a.time.localeCompare(b.time)).at(-1)
-    const best = newest && newest.time > start.raw.time ? await this.message(newest.ref) : start
-    const { name, email } = splitSender(best.raw.sender)
-    const fromMe = best.raw.direction === 'sent' || mine.includes(email.toLowerCase())
-    return { entryId: JSON.stringify(best.raw.ref), storeId: best.raw.ref.account, fromMe, from: name, to: names(best.raw.to), cc: names(best.raw.cc), subject: best.raw.subject, time: best.raw.time, body: best.body }
+    const seen = new Set<string>()
+    const pool = [start.raw, ...same].filter((m) => {
+      const k = refKey(m.ref)
+      return seen.has(k) ? false : (seen.add(k), true)
+    })
+    const person = find?.person
+    const pick = replyTarget(pool, automatic, person ? (m) => includesPerson(peopleOf(m), person) : undefined) ?? start.raw
+    const best = sameRef(pick.ref, start.raw.ref) ? start : await this.message(pick.ref)
+    const later = emailsAfter(pool, pick, automatic)
+    const bodies = later.length ? (((await this.run({ action: 'bodies', refs: later.map((m) => m.ref) })).bodies as (string | null)[] | undefined) ?? []) : []
+    const text = (m: RawAppleMessage, body: string): MailText => {
+      const { name, email } = splitSender(m.sender)
+      return { entryId: JSON.stringify(m.ref), fromMe: m.direction === 'sent' || mine.includes(email.toLowerCase()), from: name, to: names(m.to), cc: names(m.cc), subject: m.subject, time: m.time, body }
+    }
+    return { ...text(best.raw, best.body), storeId: best.raw.ref.account, after: later.map((m, i) => text(m, String(bodies[i] ?? '').slice(0, MAX_BODY))) }
   }
 
   async recipients(entryId: string): Promise<ReplyRecipients> {
@@ -238,6 +252,12 @@ export class AppleMailReader implements OutlookReader {
 }
 
 const conversationKey = (m: RawAppleMessage) => threadRoot(m.headers) || `topic:${topicOf(m.subject)}`
+/** An out-of-office or other automatic email, by its subject and Auto-Submitted header (Mail doesn't show Outlook's message class). */
+const automatic = (m: RawAppleMessage) => isAutomatic({ messageClass: '', subject: m.subject, autoSubmitted: header(m.headers, 'Auto-Submitted') })
+const refKey = (r: MailRef) => `${r.account}|${r.path.join('/')}|${r.id}`
+const sameRef = (a: MailRef, b: MailRef) => refKey(a) === refKey(b)
+/** An email's sender, To, and Cc, for includesPerson. */
+const peopleOf = (m: RawAppleMessage) => [splitSender(m.sender), ...[...m.to, ...m.cc].map((r) => ({ name: r.name, email: r.address }))]
 
 function refOf(entryId: string): MailRef {
   try {

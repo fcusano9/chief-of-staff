@@ -150,12 +150,12 @@ export interface Api {
   'replies.target': (taskId: number) => ReplyTarget | null
   /** Asks the selected AI for a draft reply (with a revision: rewrites the previous draft following the user's note). Saves nothing. */
   'replies.draft': (taskId: number, revision: { note: string; previous: string } | null) => ReplyDraft
-  /** Saves the reply to Outlook Drafts (never sends) and notes it in the task's Activity. Returns the draft's Outlook ids. */
-  'replies.save': (taskId: number, reply: { replyAll: boolean; body: string }) => { entryId: string; storeId: string }
+  /** Saves the reply (Reply all) to Outlook Drafts (never sends) and notes it in the task's Activity. Returns the draft's Outlook ids. */
+  'replies.save': (taskId: number, reply: { body: string }) => { entryId: string; storeId: string }
   /** Shows a saved draft in Outlook. */
   'replies.openDraft': (entryId: string, storeId: string) => void
-  /** Opens the reply in a window of the mail app for the user to finish. Never saves or sends it. */
-  'replies.open': (taskId: number, reply: { replyAll: boolean; body: string }) => void
+  /** Opens the reply (Reply all) in a window of the mail app for the user to finish. Never saves or sends it. */
+  'replies.open': (taskId: number, reply: { body: string }) => void
   'suggestions.listPending': () => Suggestion[]
   'suggestions.count': () => number
   'suggestions.accept': (id: number, edits?: Partial<SuggestionPayload>) => number | null

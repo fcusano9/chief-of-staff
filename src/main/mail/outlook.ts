@@ -4,6 +4,8 @@ import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { MailAccount, MailApp } from '@shared/types'
+import { REPLY_LATER_EMAILS } from '../ai/limits'
+import { emailsAfter, includesPerson, isAutomatic, peopleOn, replyTarget, type ReplyPerson } from './plan'
 import script from './outlook.ps1?raw'
 
 /** One message as outlook.ps1 reports it. */
@@ -43,10 +45,9 @@ export interface ReplyRecipients {
   replyAll: { to: string; cc: string }
 }
 
-/** The newest sent or received email in a conversation, as Outlook threads it. */
-export interface LatestMessage {
+/** One email's text, as the mail app gives it for a draft reply. */
+export interface MailText {
   entryId: string
-  storeId: string
   /** The user sent it (a follow-up, when they're waiting on someone). */
   fromMe: boolean
   from: string
@@ -57,6 +58,21 @@ export interface LatestMessage {
   time: string
   /** The whole body, quoted history included. */
   body: string
+}
+
+/** The email a draft reply answers (`replyTarget` in plan.ts), as the mail app threads the conversation. */
+export interface LatestMessage extends MailText {
+  storeId: string
+  /** The emails after it that aren't automatic (a side discussion without that person), oldest first, for the AI to read. */
+  after: MailText[]
+}
+
+/** What latest() looks for. */
+export interface ReplyFind {
+  /** The person the task is with: the reply goes on the newest email that includes them. */
+  person?: ReplyPerson | null
+  /** When the app first read mail in the conversation (ISO), so Apple Mail, which searches by date, looks back far enough. */
+  since?: string | null
 }
 
 /**
@@ -76,8 +92,11 @@ export interface OutlookReader {
   list(since: Date): Promise<OutlookMailbox>
   /** Shows one message in Outlook. */
   open(entryId: string, storeId: string): Promise<void>
-  /** The newest email, sent or received, in the conversation this message belongs to. Drafts don't count. */
-  latest(entryId: string, storeId: string): Promise<LatestMessage>
+  /**
+   * The email a draft reply answers, in the conversation this message belongs to: the newest one,
+   * sent or received, that includes `find.person` and isn't automatic (`replyTarget`). Drafts don't count.
+   */
+  latest(entryId: string, storeId: string, find?: ReplyFind): Promise<LatestMessage>
   /** Who Reply and Reply all would go to. Nothing is saved. */
   recipients(entryId: string, storeId: string): Promise<ReplyRecipients>
   /** Saves a reply (text above the quoted thread) to Outlook Drafts. Never sends. Returns the draft's ids. */
@@ -110,10 +129,15 @@ export class PowerShellOutlook implements OutlookReader {
     await this.run(['-Action', 'open', '-EntryId', entryId, '-StoreId', storeId])
   }
 
-  async latest(entryId: string, storeId: string): Promise<LatestMessage> {
-    const r = await this.run(['-Action', 'latest', '-EntryId', entryId, '-StoreId', storeId])
-    const str = (k: string) => String(r[k] ?? '')
-    return { entryId: str('entryId'), storeId: str('storeId'), fromMe: r.fromMe === true, from: str('from'), to: str('to'), cc: str('cc'), subject: str('subject'), time: str('time'), body: str('body') }
+  async latest(entryId: string, storeId: string, find?: ReplyFind): Promise<LatestMessage> {
+    // -Person only with a value: PowerShell can drop an empty argument and read the next one as its value.
+    const person = find?.person?.email.trim()
+    const r = await this.run(['-Action', 'latest', '-EntryId', entryId, '-StoreId', storeId, '-Later', String(REPLY_LATER_EMAILS), ...(person ? ['-Person', person] : [])])
+    const text = (x: Record<string, unknown>): MailText => {
+      const str = (k: string) => String(x[k] ?? '')
+      return { entryId: str('entryId'), fromMe: x.fromMe === true, from: str('from'), to: str('to'), cc: str('cc'), subject: str('subject'), time: str('time'), body: str('body') }
+    }
+    return { ...text(r), storeId: String(r.storeId ?? ''), after: asArray(r.after as Record<string, unknown>[] | Record<string, unknown> | null).map(text) }
   }
 
   async recipients(entryId: string, storeId: string): Promise<ReplyRecipients> {
@@ -178,7 +202,7 @@ export async function runOutlookScript(args: string[]): Promise<Record<string, u
 
 /**
  * Test data instead of Outlook (COS_OUTLOOK_FIXTURE, only for test data folders). Opening does
- * nothing; latest() is the newest message with the same conversationId; recipients come from the
+ * nothing; latest() picks from the messages with the same conversationId (`replyTarget`); recipients come from the
  * fixture message (for the user's own message, its To and Cc); saved replies are kept in `saved` (and, in
  * the app, written next to the fixture as <fixture>.drafts.json so e2e can check them).
  */
@@ -207,14 +231,18 @@ export class FixtureOutlook implements OutlookReader {
 
   async open(): Promise<void> {}
 
-  async latest(entryId: string, _storeId?: string): Promise<LatestMessage> {
+  async latest(entryId: string, _storeId?: string, find?: ReplyFind): Promise<LatestMessage> {
     const box = this.box()
     const m = box.messages.find((x) => x.entryId === entryId)
     if (!m) throw new OutlookError('That email is not in Outlook.')
     const mine = new Set(box.me.addresses.map((a) => a.toLowerCase()))
-    const newest = box.messages.filter((x) => x.isMail && x.conversationId === m.conversationId).sort((a, b) => a.time.localeCompare(b.time)).at(-1) ?? m
-    const { entryId: id, storeId, from, to, cc, subject, time, body } = newest
-    return { entryId: id, storeId, fromMe: newest.direction === 'sent' || mine.has(newest.fromEmail.toLowerCase()), from, to, cc, subject, time, body }
+    const conversation = box.messages.filter((x) => x.isMail && x.conversationId === m.conversationId)
+    const person = find?.person
+    const pick = replyTarget(conversation, isAutomatic, person ? (x) => includesPerson(peopleOn(x), person) : undefined) ?? m
+    const text = (x: OutlookMessage): MailText => ({
+      entryId: x.entryId, fromMe: x.direction === 'sent' || mine.has(x.fromEmail.toLowerCase()), from: x.from, to: x.to, cc: x.cc, subject: x.subject, time: x.time, body: x.body,
+    })
+    return { ...text(pick), storeId: pick.storeId, after: emailsAfter(conversation, pick, isAutomatic).map(text) }
   }
 
   async recipients(entryId: string, _storeId?: string): Promise<ReplyRecipients> {

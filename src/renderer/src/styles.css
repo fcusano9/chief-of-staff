@@ -388,8 +388,6 @@ textarea.notes-inp { min-height: calc(var(--fs) * 1.5 * 6 + var(--inp-py) * 2 + 
 .rp-sec { margin-top: 10px; }
 .rp-who { display: flex; gap: 8px; align-items: baseline; font-size: var(--fs-sm); padding: 2px 0; }
 .rp-k { color: var(--muted); min-width: 56px; }
-.rp-seg button { padding: 1px 10px; white-space: nowrap; }
-.rp-pick { font-size: var(--fs-xs); }
 /* textarea.inp sets a smaller min-height, so this needs the same weight (like textarea.notes-inp). */
 textarea.rp-body { margin-top: 8px; min-height: calc(var(--fs) * 1.5 * 9 + var(--inp-py) * 2 + 2px); }
 .rp-ok { color: var(--ok); font-size: var(--fs-sm); white-space: nowrap; }

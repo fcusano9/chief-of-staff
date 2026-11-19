@@ -640,7 +640,7 @@ export interface ReplyTarget {
   from: string
   /** ISO time of the newest email. */
   at: string
-  /** The newest email in the conversation is the user's own, so the draft is a follow-up to it. */
+  /** The email answered (the last one that included the person the task is with) is the user's own, so the draft is a follow-up to it. */
   followUp: boolean
   /** False when this computer has no mail app the app can use. */
   supported: boolean
@@ -650,12 +650,10 @@ export interface ReplyTarget {
 
 /** A draft reply shown in the app before it's saved to Outlook Drafts. */
 export interface ReplyDraft {
-  replyAll: boolean
   body: string
   subject: string
-  /** Who each choice would go to, as Outlook shows them. */
-  reply: { to: string; cc: string }
-  replyAllTo: { to: string; cc: string }
+  /** Who the reply goes to, as the mail app shows them. Every draft is Reply all. */
+  to: { to: string; cc: string }
   writtenBy: string
   /** The email the draft replies to, as Outlook found it when drafting (it may be newer than the target's). */
   email: { from: string; at: string; followUp: boolean }

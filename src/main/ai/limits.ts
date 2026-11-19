@@ -101,6 +101,9 @@ export const REPLY_CHARS = {
 /** Draft replies: the longest draft kept from the AI, in characters. */
 export const REPLY_BODY_CHARS = 8000
 
+/** Draft replies: the most emails after the one answered (a side discussion without that person) the mail app returns for the AI to read. */
+export const REPLY_LATER_EMAILS = 10
+
 /** Outlook mail: characters sent per message, of earlier messages quoted in the newest one, and per conversation in all. */
 export const MAIL_CHARS = {
   message: 8000,

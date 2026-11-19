@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reply all</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 13.5px/1.55 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input, textarea { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 8px; padding: 8px 16px; min-height: 44px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex-wrap: wrap; }
+.seg button { border: 0; background: var(--surface); padding: 3px 12px; cursor: pointer; color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--sel); color: var(--text); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+.btn.ghost:hover { color: var(--text); background: var(--hover); }
+.btn.sm { padding: 2px 9px; font-size: 12.5px; }
+.page { max-width: 760px; margin: 0 auto; padding: 24px 16px 60px; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.col h2 { font-size: 12.5px; color: var(--muted); font-weight: 500; margin: 0 0 8px; }
+.inp { width: 100%; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 7px 9px; outline: 0; }
+textarea.inp { resize: vertical; display: block; }
+.rp { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.rp .h { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.rp .h b { font-weight: 600; }
+.rp .mail { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.rp .sec { margin-top: 10px; }
+.rp .k { color: var(--muted); min-width: 56px; }
+.rp .who { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; padding: 2px 0; }
+.seg2 { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex: none; }
+.seg2 button { white-space: nowrap; border: 0; background: var(--surface); padding: 1px 10px; cursor: pointer; color: var(--muted); font-size: 12px; }
+.seg2 button + button { border-left: 1px solid var(--border); }
+.seg2 button.on { background: var(--sel); color: var(--text); }
+.pick { color: var(--faint); font-size: 11.5px; }
+.bad { color: var(--danger); }
+.gone { outline: 2px dashed var(--danger); outline-offset: 2px; border-radius: 6px; }
+.changed { outline: 2px dashed var(--ok); outline-offset: 2px; border-radius: 6px; }
+.notes { margin-top: 22px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 18px; color: var(--muted); }
+.notes h3 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.notes li { margin: 4px 0; }
+.notes b { color: var(--text); font-weight: 500; }
+@media (max-width: 760px) { .pair { grid-template-columns: minmax(0, 1fr); } .top .logo span { display: none; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Reply all</span></div>
+  <div class="seg" id="cases">
+    <button data-c="simple" class="on">Joe emailed last</button>
+    <button data-c="followup">Your follow-up, then out of office</button>
+    <button data-c="side">Internal side discussion</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+<div class="page">
+  <div class="pair">
+    <div class="col"><h2>Before</h2><div id="before"></div></div>
+    <div class="col"><h2>After</h2><div id="after"></div></div>
+  </div>
+  <div class="notes" id="notes"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id)
+let c = 'simple'
+
+const REPLY = `Hi Joe,
+
+Thanks for sending the new lineup. We'd like to start with the 55-inch panels for the Q2 pilot. Could you send pricing for [quantity] units?
+
+Thanks,
+Frank`
+
+const NUDGE = `Hi Joe,
+
+Following up on the display lineup. Could you send the pricing this week so we can plan the Q2 pilot?
+
+Thanks,
+Frank`
+
+const SIDE = `Hi Joe,
+
+Thanks for the lineup. We can take 40 of the 55-inch panels for the Q2 pilot. Could you confirm pricing and lead time?
+
+Thanks,
+Frank`
+
+const CASES = {
+  simple: {
+    before: { line: 'To the email “New display lineup” from Joe Kim · Nov 12', to: 'Joe Kim', cc: 'Priya Shah, Marcus Webb', body: REPLY },
+    after: { line: 'To the email “New display lineup” from Joe Kim · Nov 12', to: 'Joe Kim', cc: 'Priya Shah, Marcus Webb', body: REPLY },
+  },
+  followup: {
+    before: { line: 'Follow-up to your email “New display lineup” to Joe Kim · Nov 14', to: 'Joe Kim', cc: 'Priya Shah', body: NUDGE },
+    after: { line: 'Follow-up to your email “New display lineup” to Joe Kim · Nov 14', to: 'Joe Kim', cc: 'Priya Shah', body: NUDGE },
+  },
+  side: {
+    before: { line: 'To the email “RE: New display lineup” from Priya Shah · Nov 13', to: 'Priya Shah', cc: '', body: REPLY.replace('Hi Joe', 'Hi Priya'), wrong: true },
+    after: { line: 'To the email “New display lineup” from Joe Kim · Nov 12', to: 'Joe Kim', cc: 'Priya Shah, Marcus Webb', body: SIDE, fixed: true },
+  },
+}
+
+function card(d, before) {
+  const mark = (cls) => (before ? (d.wrong ? ` ${cls}` : '') : d.fixed ? ' changed' : '')
+  return `<div class="rp">
+    <div class="h"><b>✉ Reply</b><span class="spacer"></span><button class="btn ghost sm">Open email</button></div>
+    <div class="mail${mark('bad')}">${d.line}</div>
+    <div class="sec">
+      ${before ? `<div class="who gone"><span class="k">Send to</span>
+        <span class="seg2"><button class="on">Reply all</button><button>Reply</button></span>
+        <span class="pick">AI pick</span></div>` : ''}
+      <div class="who${mark('bad')}"><span class="k">To</span><span>${d.to}</span></div>
+      ${d.cc ? `<div class="who"><span class="k">Cc</span><span>${d.cc}</span></div>` : ''}
+      <div class="who"><span class="k">Subject</span><span>RE: New display lineup</span></div>
+    </div>
+    <textarea class="inp" style="margin-top:8px;min-height:170px">${d.body}</textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn ghost sm">Discard</button><button class="btn ghost sm">✦ Try again</button><span class="spacer"></span>
+      <button class="btn sm">Open in Outlook</button><button class="btn primary sm">Save to Outlook Drafts</button>
+    </div>
+  </div>`
+}
+
+const NOTES = {
+  simple: `<li>Joe sent the newest email, so the reply goes to his email, with everyone on it.</li>`,
+  followup: `<li>You replied to Joe, then his out-of-office came back. The out-of-office is skipped, so the draft is a nudge on your own email, sent to everyone on it.</li>`,
+  side: `<li>Joe emailed you and Priya. You and Priya then talked without Joe. <b>Before:</b> the draft went to Priya, because hers was the newest email. <b>After:</b> it goes to Joe's last email, with everyone on that one, and no one new.</li>
+    <li>The AI still reads the internal emails as context, including any that arrived since the last Check.</li>`,
+}
+
+function render() {
+  const d = CASES[c]
+  $('before').innerHTML = card(d.before, true)
+  $('after').innerHTML = card(d.after, false)
+  $('notes').innerHTML = `<h3>What changes</h3><ul>
+    <li><b>Every draft is Reply all</b> to the last email that included the person the task is with: the sender of the email the task was created from. Out-of-office and other automatic replies don't count.</li>
+    <li><b>The Send to row is removed</b> (the Reply / Reply all switch and "AI pick", outlined in red). To change who it goes to, use Open in Outlook and edit the recipients there.</li>
+    ${NOTES[c]}
+    <li>Nothing else on the card changes: the email line, To, Cc, Subject, the text, and the buttons stay as they are.</li>
+  </ul>`
+}
+
+$('cases').addEventListener('click', (e) => {
+  const b = e.target.closest('button')
+  if (!b) return
+  c = b.dataset.c
+  document.querySelectorAll('#cases button').forEach((x) => x.classList.toggle('on', x === b))
+  render()
+})
+$('theme').addEventListener('click', () => {
+  const root = document.documentElement
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+  root.dataset.theme = dark ? 'light' : 'dark'
+})
+render()
+</script>
+</body>
+</html>

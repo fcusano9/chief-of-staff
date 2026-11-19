@@ -595,9 +595,9 @@ window.COS_MODEL = {
       "ipc": ["weekly.list", "weekly.get", "weekly.writeReflection", "weekly.isWriting", "weekly.aiCalls"],
       "tables": ["weekly_meta", "weekly_reviews", "weekly_reflections", "weekly_ai_calls"], "rules": ["b-weekly-review", "a-weekly-review-weekly"], "flows": ["weekly"] },
     { "id": "svc-replies", "zone": "main", "x": 816, "y": 188, "w": 150, "h": 44, "label": "Draft replies", "hint": "Never sent", "sub": "ReplyService", "tags": ["ai"],
-      "plain": "Drafts a reply on a task linked to an email, always to the newest email in the conversation. The user finishes it in Outlook or Mail; the app never sends it.",
-      "points": ["When the newest email is the user's own, the AI writes a short follow-up nudge instead.", "Recipients come from the mail app, not the AI.", "Drafts aren't stored in the app; Activity notes each one."],
-      "files": [{ "path": "src/main/services/replies.ts", "names": ["ReplyService", "target", "draft", "save"] }, { "path": "src/main/ai/reply.ts", "names": ["cleanReply"] }],
+      "plain": "Drafts a reply on a task linked to an email, always to the last email that included the person the task is with. The user finishes it in Outlook or Mail; the app never sends it.",
+      "points": ["Automatic replies (out of office) don't count. An internal side discussion after that email is read as context, not answered.", "When that email is the user's own, the AI writes a short follow-up nudge instead.", "Recipients come from the mail app, not the AI.", "Drafts aren't stored in the app; Activity notes each one."],
+      "files": [{ "path": "src/main/services/replies.ts", "names": ["ReplyService", "target", "draft", "save", "replyPersonOf"] }, { "path": "src/main/mail/plan.ts", "names": ["replyTarget", "isAutomatic"] }, { "path": "src/main/ai/reply.ts", "names": ["cleanReply"] }],
       "ipc": ["replies.target", "replies.draft", "replies.save", "replies.openDraft", "replies.open"], "rules": ["b-draft-replies", "a-draft-replies-task-card"], "flows": ["reply"] },
     { "id": "svc-mail", "zone": "main", "x": 816, "y": 242, "w": 150, "h": 44, "label": "Mail import", "hint": "Check, then Read", "sub": "MailService", "tags": ["db"],
       "plain": "Finds new mail since the last import, groups it into conversations, and skips what isn't worth reading. Read sends each chosen conversation through Import, one at a time, in the background.",
@@ -830,9 +830,9 @@ window.COS_MODEL = {
     { "id": "reply", "title": "Draft reply to Drafts", "summary": "On a task linked to an email: the AI writes a first draft, the user edits it, and it's saved to Drafts or opened in a window. It's never sent.",
       "steps": [
         { "title": "The Reply card appears", "text": "Only on tasks linked to an email, and greyed out with Basic.", "nodes": ["ui-tasks", "svc-replies"], "edges": [["ui-tasks", "bridge"], ["bridge", "main-ipc"], ["main-ipc", "svc-replies"]], "code": "src/main/services/replies.ts · target" },
-        { "title": "Find the newest email", "text": "The mail app is asked for the newest email in the conversation, sent or received, and who Reply and Reply all would go to.", "nodes": ["svc-replies", "mail-outlook", "mail-apple", "ext-outlook", "ext-mail"], "edges": [["svc-replies", "mail-outlook"], ["mail-outlook", "ext-outlook"], ["svc-replies", "mail-apple"]], "code": "src/main/services/replies.ts · draft" },
+        { "title": "Find the email to answer", "text": "The mail app is asked for the last email, sent or received, that included the person the task is with, leaving out automatic replies, and who Reply all goes to. Emails after it come back too, as context.", "nodes": ["svc-replies", "mail-outlook", "mail-apple", "ext-outlook", "ext-mail"], "edges": [["svc-replies", "mail-outlook"], ["mail-outlook", "ext-outlook"], ["svc-replies", "mail-apple"]], "code": "src/main/services/replies.ts · draft" },
         { "title": "Write the draft", "text": "The AI gets the thread, the task, its Notes and latest updates, and the writing-style note. If the newest email is the user's own, it writes a short follow-up nudge.", "nodes": ["svc-replies", "ai-provider", "ai-claude"], "edges": [["svc-replies", "ai-provider"], ["ai-provider", "ai-claude"]], "code": "src/main/ai/reply.ts · cleanReply" },
-        { "title": "Preview and edit", "text": "To, Cc, and Subject come from the mail app. The AI's pick of Reply or Reply all is marked; the user can switch, edit the text, or Try again with a note.", "nodes": ["ui-tasks"], "code": "src/renderer/src/components/ReplyCard.tsx · ReplyCard" },
+        { "title": "Preview and edit", "text": "To, Cc, and Subject come from the mail app; every draft is Reply all, adding no one. The user can edit the text, or Try again with a note.", "nodes": ["ui-tasks"], "code": "src/renderer/src/components/ReplyCard.tsx · ReplyCard" },
         { "title": "Save to Drafts or open", "text": "Save to Outlook / Mail Drafts saves it as a draft; Open in Outlook / Mail opens a reply window. Neither sends.", "nodes": ["svc-replies", "mail-outlook", "mail-apple", "ext-outlook", "ext-mail"], "edges": [["svc-replies", "mail-outlook"], ["mail-outlook", "ext-outlook"]], "code": "src/main/services/replies.ts · save" },
         { "title": "Note it in Activity", "text": "“Draft reply saved to Outlook Drafts” or “Reply opened in Mail”. The task stays open.", "nodes": ["svc-activity"], "edges": [["svc-replies", "svc-activity"]], "code": "src/shared/events.ts · eventWhat" }
       ] },
@@ -3329,13 +3329,18 @@ window.COS_GENERATED = {
         ],
         [
          "Which email",
-         "Always the newest email in the conversation, sent or received, asked of the mail app when drafting and when saving. If it's the user's own, the AI writes a short follow-up nudge instead of an answer.",
-         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/replies.ts\">\u003ccode>src/main/services/replies.ts\u003c/code>\u003c/a> · \u003ccode>draft\u003c/code>"
+         "The last email, sent or received, that included the person the task is with (the sender of the email the task was created from, as From, To, or Cc). Automatic replies (out of office, or an Auto-Submitted header) don't count. If no email includes them, the newest that isn't automatic. Asked of the mail app when drafting and when saving. If it's the user's own, the AI writes a short follow-up nudge instead of an answer.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/mail/plan.ts\">\u003ccode>src/main/mail/plan.ts\u003c/code>\u003c/a> · \u003ccode>replyTarget\u003c/code>"
+        ],
+        [
+         "Side discussions",
+         "Emails after that one without the person (an internal side discussion) aren't replied to, but the AI reads them as context, including up to 10 the app hasn't read yet.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/replies.ts\">\u003ccode>src/main/services/replies.ts\u003c/code>\u003c/a> · \u003ccode>withUnread\u003c/code>"
         ],
         [
          "Recipients",
-         "The AI picks Reply all or Reply (marked &quot;AI pick&quot;) and the user can switch. Who it goes to comes from Outlook, or for Apple Mail is worked out from the email.",
-         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/replies.ts\">\u003ccode>src/main/services/replies.ts\u003c/code>\u003c/a>"
+         "Always Reply all on that email, adding no one; there's no Reply / Reply all choice. To change who it goes to, the user opens it in the mail app and edits the recipients there. Who it goes to comes from Outlook, or for Apple Mail is worked out from the email.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/replies.ts\">\u003ccode>src/main/services/replies.ts\u003c/code>\u003c/a> · \u003ccode>save\u003c/code>"
         ],
         [
          "Never sent",
@@ -4220,7 +4225,7 @@ window.COS_GENERATED = {
         ],
         [
          "✅ Which email",
-         "Always a reply to the newest email in the conversation, sent or received, so every follow-up the user sent stays in the chain. The mail app is asked for it when drafting and saving, so a follow-up sent since the last Check counts; if the app hasn't read it, its text is added to the thread sent to the AI."
+         "Always a reply to the last email, sent or received, that included the person the task is with (the sender of the email the task was created from), so every follow-up the user sent stays in the chain. Automatic replies (out of office) don't count. The mail app is asked for it when drafting and saving, so a follow-up sent since the last Check counts. Emails after it without that person (an internal side discussion) are sent as context, not answered; emails the app hasn't read yet (up to \u003cstrong>10\u003c/strong> after the one answered) are added to the thread sent to the AI."
         ],
         [
          "✅ Follow-ups",
@@ -4228,7 +4233,7 @@ window.COS_GENERATED = {
         ],
         [
          "✅ Recipients",
-         "The AI picks Reply all (when the others need the answer) or Reply; the card marks it &quot;AI pick&quot; and the user can switch. Who each goes to comes from Outlook (on the Mac, worked out from the email), not the AI."
+         "Every draft is Reply all on the email answered, adding no one; the AI doesn't choose. Who it goes to comes from Outlook (on the Mac, worked out from the email), not the AI."
         ],
         [
          "✅ Never sent",

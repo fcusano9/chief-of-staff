@@ -137,12 +137,39 @@ describe('Apple Mail reader (fake osascript)', () => {
     expect(latest).toMatchObject({ entryId: JSON.stringify(newer.ref), fromMe: true, from: 'Frank Cusano', body: 'body of 99' })
     expect(asked.find((a) => a.action === 'thread')).toMatchObject({ account: ACCOUNT, since: '2026-11-03T09:59:00.000Z' })
 
+    // An out-of-office reply after the user's follow-up doesn't count.
+    const oof = raw({ time: '2026-11-04T09:01:00.000Z', subject: 'Automatic reply: Q1 pricing', headers: `Thread-Index: ${ti('ee')}\nAuto-Submitted: auto-generated` })
+    const { r: r2 } = reader([ACCOUNT], {
+      accounts,
+      message: (req) => ({ message: { ...[first, newer, oof].find((x) => x.ref.id === (req.ref as { id: number }).id)!, body: 'text' } }),
+      thread: () => ({ messages: [first, newer, oof] }),
+    })
+    expect((await r2.latest(JSON.stringify(first.ref))).entryId).toBe(JSON.stringify(newer.ref))
+
     await r.openReply(latest.entryId, '', true, 'Hi Dana')
     await r.saveReply(latest.entryId, '', false, 'Hi Dana')
     expect(asked.filter((a) => a.action === 'reply')).toEqual([
       { action: 'reply', ref: newer.ref, replyAll: true, body: 'Hi Dana', open: true },
       { action: 'reply', ref: newer.ref, replyAll: false, body: 'Hi Dana', open: false },
     ])
+  })
+
+  it('replies on the last email the person was on, looking back to the first email read, and fetches the text of the side discussion after it', async () => {
+    const ask = raw({ time: '2026-11-03T10:00:00.000Z' })
+    const side = raw({ time: '2026-11-04T09:00:00.000Z', sender: 'Priya Shah <priya@example.com>', to: [{ name: 'Frank Cusano', address: 'frank@example.com' }], cc: [], subject: 'RE: Q1 pricing', headers: `Thread-Index: ${ti('dd')}` })
+    const { r, asked } = reader([ACCOUNT], {
+      accounts,
+      message: (req) => {
+        const id = (req.ref as { id: number }).id
+        return { message: { ...[ask, side].find((x) => x.ref.id === id)!, body: `body of ${id}` } }
+      },
+      thread: () => ({ messages: [ask, side] }),
+      bodies: (req) => ({ bodies: (req.refs as unknown[]).map(() => 'Approved.') }),
+    })
+    // The newest email the app read is the side one; the task is with Dana, who sent the first.
+    const latest = await r.latest(JSON.stringify(side.ref), '', { person: { name: 'Dana Lee', email: 'dana@example.com' }, since: ask.time })
+    expect(asked.find((a) => a.action === 'thread')).toMatchObject({ since: '2026-11-03T09:59:00.000Z' })
+    expect(latest).toMatchObject({ entryId: JSON.stringify(ask.ref), fromMe: false, from: 'Dana Lee', body: `body of ${ask.ref.id}`, after: [{ entryId: JSON.stringify(side.ref), from: 'Priya Shah', body: 'Approved.' }] })
   })
 })
 
