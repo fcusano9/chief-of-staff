@@ -100,7 +100,7 @@ npm run bench:ai      # compare AI models on sample imports (see bench/README.md
 | `bench` | Scores AI models on made-up imports ([README](bench/README.md)) |
 | `scripts` | `demo-data.mjs`, the made-up dev data |
 | `design` | Clickable mockups approved before each feature was built ([index](design/README.md)) |
-| `docs` | Roadmap, decisions, AI and business rules, Copilot prompts, and the interactive guide |
+| `docs` | Roadmap, decisions, AI and business rules, Copilot prompts, and the interactive guide ([index](docs/README.md)) |
 
 ### Making a release
 
@@ -125,7 +125,7 @@ The tag must match `package.json`, or the workflow stops. To build without relea
 
 ## Contributing
 
-Start with [AGENTS.md](AGENTS.md) (rules, architecture, and how to make common changes), then [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/DECISIONS.md](docs/DECISIONS.md). For a visual tour, open [docs/ARCHITECTURE.html](docs/ARCHITECTURE.html) in a browser.
+Start with [AGENTS.md](AGENTS.md) (rules, architecture, and how to make common changes), then [docs/README.md](docs/README.md), which says what each doc is for and how to keep them current. For a visual tour, open [docs/ARCHITECTURE.html](docs/ARCHITECTURE.html) in a browser.
 
 ## License
 

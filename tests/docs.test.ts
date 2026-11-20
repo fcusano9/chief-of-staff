@@ -1,4 +1,5 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -345,5 +346,53 @@ describe('the priority calculator on the page', () => {
       }
       expect(c.effectivePriority(t), JSON.stringify(t)).toBe(effectivePriority(t))
     }
+  })
+})
+
+/*
+ * Lists and links in the other docs, so they can't quietly fall out of step with the repo. The
+ * rest of keeping docs current is the audit checklist in docs/README.md.
+ */
+describe('the other docs', () => {
+  const filesIn = (dir: string, ext: string) => readdirSync(join(ROOT, dir)).filter((f) => f.endsWith(ext))
+  /** Markdown link targets, leaving out code blocks and `inline code`, which can look like links. */
+  const linksIn = (text: string) =>
+    [...text.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '').matchAll(/\]\(([^)\s]+)\)/g)].map((m) => m[1]!)
+
+  it('has no broken relative links in Markdown files', () => {
+    const docs = execFileSync('git', ['ls-files', '*.md'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter((f) => f && existsSync(join(ROOT, f)))
+    const broken = docs.flatMap((doc) =>
+      linksIn(read(doc))
+        .filter((url) => !/^(?:[a-z]+:|#)/i.test(url))
+        .map((url) => decodeURI(url.split('#')[0]!))
+        .filter((target) => target && !existsSync(join(ROOT, dirname(doc), target)))
+        .map((target) => `${doc} → ${target}`),
+    )
+    expect(broken, 'Links to files that don\'t exist').toEqual([])
+  })
+
+  it('lists every doc in docs/README.md', () => {
+    const listed = linksIn(read('docs/README.md'))
+    const docs = readdirSync(join(ROOT, 'docs')).filter((f) => f !== 'README.md')
+    expect(docs.filter((f) => !listed.includes(f)), 'Docs missing from the table in docs/README.md').toEqual([])
+  })
+
+  it('lists every mockup in design/README.md', () => {
+    const listed = linksIn(read('design/README.md'))
+    expect(filesIn('design', '.html').filter((f) => !listed.includes(f)), 'Mockups missing from design/README.md: add each with its status').toEqual([])
+  })
+
+  it('describes every e2e suite in e2e/README.md', () => {
+    const suites = [...read('e2e/run.mjs').matchAll(/'([\w-]+\.mjs)'/g)].map((m) => m[1]!)
+    const readme = read('e2e/README.md')
+    expect(suites.filter((s) => !readme.includes(`\`${s}\``)), 'Suites in e2e/run.mjs with no row in e2e/README.md').toEqual([])
+  })
+
+  it('names every service in the layout in AGENTS.md', () => {
+    const agents = read('AGENTS.md')
+    const layout = agents.slice(agents.indexOf('  services/'), agents.indexOf('\n  ai/'))
+    const services = filesIn('src/main/services', '.ts').map((f) => f.replace(/\.ts$/, ''))
+    const missing = services.filter((name) => !new RegExp(`(^|[\\s,(])${name}([\\s,(]|$)`).test(layout))
+    expect(missing, 'Services missing from the services/ line of the layout in AGENTS.md').toEqual([])
   })
 })
