@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
 import { SOURCE_KIND_LABELS, type AiRun, type ImportRequest, type ImportResult, type SourceItem, type SourceKind } from '@shared/types'
-import { buildExtractionContext } from '../ai/context'
+import { buildExtractionContext, type ExtractionContext } from '../ai/context'
 import type { AiProvider } from '../ai/provider'
 import { validateSuggestions, type DroppedSuggestion, type SuggestionDraft } from '../ai/schema'
 import { nowIso, transaction } from '../db'
@@ -151,18 +151,28 @@ export class SourceService {
     return item
   }
 
-  /** Runs (or re-runs) extraction for a source. Pending suggestions from an earlier run are replaced. */
-  async extract(sourceId: number): Promise<ImportResult> {
+  /** The open tasks, projects, and people as the AI would be sent them now. */
+  extractionContext(): ExtractionContext {
+    return buildExtractionContext(this.db, this.userName())
+  }
+
+  /**
+   * Runs (or re-runs) extraction for a source. Pending suggestions from an earlier run are replaced.
+   * `sent` is what the AI is sent instead of the current tasks, projects, and people: a mail run
+   * passes the same one for every conversation so Claude can cache it. Answers are always checked
+   * against the current ones, so an id that no longer exists is dropped.
+   */
+  async extract(sourceId: number, sent?: ExtractionContext): Promise<ImportResult> {
     const row = this.db.prepare('SELECT kind, title, from_name, occurred_at, content, auto_named, mail_meta FROM source_items WHERE id = ?').get(sourceId) as Record<string, unknown> | undefined
     if (!row) throw new Error(`Source ${sourceId} not found`)
-    const ctx = buildExtractionContext(this.db, this.userName())
+    const ctx = this.extractionContext()
     let runId: number | null = null
     try {
       // Inside the try: a misconfigured provider (e.g. no API key) is reported on the source like any other failure.
       const provider = this.provider()
       runId = this.aiLog.startRun(sourceId, provider.label)
       const raw = await provider.extract(
-        ctx,
+        sent ?? ctx,
         {
           kind: row.kind as SourceKind,
           title: String(row.title),

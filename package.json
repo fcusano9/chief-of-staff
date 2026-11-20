@@ -18,6 +18,7 @@
     "test": "vitest run",
     "docs": "vitest run tests/docs.test.ts -u",
     "bench:ai": "vitest run --config bench/vitest.config.ts",
+    "bench:key": "powershell -NoProfile -ExecutionPolicy Bypass -File bench/save-key.ps1",
     "install:win": "electron-vite build && electron-builder --win --dir \"-c.directories.output=%LOCALAPPDATA%/Programs/Chief of Staff (build)\"",
     "package:win": "electron-vite build && electron-builder --win",
     "package:mac": "electron-vite build && electron-builder --mac"

@@ -157,12 +157,16 @@ export class MailService {
 
   private async run(importId: number, chosen: PlannedConversation[]): Promise<void> {
     try {
+      // One set of open tasks, projects, and people for the whole run, so every request starts the
+      // same way and Claude reads that part from its cache. Changes made during the run (such as an
+      // AI priority change from an earlier conversation) are sent from the next run on.
+      const sent = this.sources.extractionContext()
       for (const c of chosen) {
         if (this.stopRequested) break
         this.job.current = c.subject
         try {
           await this.reader?.fillBodies?.(c.messages)
-          const result = await this.sources.extract(this.save(importId, c))
+          const result = await this.sources.extract(this.save(importId, c), sent)
           this.job.suggestions += result.suggestionsCreated
           if (result.source.estimatedCost != null) this.job.estimatedCost = (this.job.estimatedCost ?? 0) + result.source.estimatedCost
           if (result.error) this.job.failed++

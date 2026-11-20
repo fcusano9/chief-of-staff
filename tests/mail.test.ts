@@ -349,6 +349,26 @@ describe('mail import end to end (demo AI, fake Outlook)', () => {
     expect(mail.imports()[0]!.conversations.map((s) => s.estimatedCost)).toEqual([expect.closeTo(0.06), expect.closeTo(0.06)])
   })
 
+  it('sends every conversation in a run the same tasks, projects, and people, so Claude can cache them', async () => {
+    const seen: ExtractionContext[] = []
+    class Recording extends DemoProvider {
+      override extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog) {
+        seen.push(ctx)
+        // A change made while the run goes on (here, a new task) waits for the next run.
+        if (seen.length === 1) tasks.save({ id: 0, title: 'Added during the run', notes: null, status: 'open', dueDate: null, projectId: null, requesterId: null, priorityOverride: null, followUpCount: 0, waitingOn: null, subtasks: [] })
+        return super.extract(ctx, source, log)
+      }
+    }
+    sources = new SourceService(db, () => new Recording(), () => ME)
+    mail = new MailService(db, sources, outlook, () => ME, () => 'Claude', () => now)
+    outlook.mailbox = box([msg({ conversationId: 'A', body: 'Can you confirm by Friday?' }), msg({ conversationId: 'B', subject: 'Spec', body: 'Can you review the spec?' })])
+    mail.read((await mail.check(since.toISOString())).id, ['A', 'B'])
+    expect((await finished()).done).toBe(2)
+    expect(seen).toHaveLength(2)
+    expect(seen[1]).toBe(seen[0])
+    expect(seen[1]!.tasks.map((t) => t.title)).not.toContain('Added during the run')
+  })
+
   it('reads a skipped conversation when chosen with "Read anyway"', async () => {
     outlook.mailbox = box([msg({ conversationId: 'N', listUnsubscribe: true, body: 'Can you take a look at this?' })])
     const check = await mail.check(since.toISOString())

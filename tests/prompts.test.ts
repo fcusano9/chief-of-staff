@@ -132,7 +132,8 @@ describe('every AI request matches the saved snapshot', () => {
 describe('prompt safety and limits', () => {
   /** The system prompt of a Claude request, or the system message of an Ollama one. */
   const systemOf = (r: unknown) => {
-    const req = r as { system?: string; messages: { role: string; content: string }[] }
+    const req = r as { system?: string | { text: string }[]; messages: { role: string; content: string }[] }
+    if (Array.isArray(req.system)) return req.system.map((b) => b.text).join('\n')
     return req.system ?? req.messages.find((m) => m.role === 'system')!.content
   }
   const every: Record<string, unknown> = {
