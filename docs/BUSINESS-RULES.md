@@ -2,7 +2,7 @@
 
 Every rule the app follows, on one page: how tasks are scored and listed, what Review does, how mail, meetings, the briefing, the weekly review, and backups behave. It says what the code does today. The rules for the AI itself (what it's sent, what it may answer, its limits) are in [AI-RULES.md](AI-RULES.md), and the reasons behind each choice are in [DECISIONS.md](DECISIONS.md).
 
-**Keep this file current.** Any change to a rule below updates this page in the same PR. Then run `npm run docs`, which rebuilds the interactive guide ([architecture.html](architecture.html)); `tests/docs.test.ts` fails until you do.
+**Keep this file current.** Any change to a rule below updates this page in the same PR. Then run `npm run docs`, which rebuilds the interactive guide ([ARCHITECTURE.html](ARCHITECTURE.html)); `tests/docs.test.ts` fails until you do.
 
 ## Principles
 
@@ -34,7 +34,7 @@ Every rule the app follows, on one page: how tasks are scored and listed, what R
 
 ## Priority score
 
-The score runs from 0 to 100 and is worked out by the app from three signals. The AI can only nudge it, and a score set by hand always wins. The Priority score tab of the [interactive guide](architecture.html) is a calculator that uses the same formula.
+The score runs from 0 to 100 and is worked out by the app from three signals. The AI can only nudge it, and a score set by hand always wins. The Priority score tab of the [interactive guide](ARCHITECTURE.html) is a calculator that uses the same formula.
 
 | Rule | Detail | Where |
 |---|---|---|
