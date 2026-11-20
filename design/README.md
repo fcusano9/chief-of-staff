@@ -8,8 +8,9 @@ Mockups are a record of what was approved at the time and aren't updated afterwa
 
 | Mockup | Added | Status |
 |---|---|---|
-| [merge-tasks](merge-tasks.html) | Nov 17 | Current |
+| [model-test](model-test.html) | Nov 19 | Current: model tests and Effort (Developer Tools) |
 | [reply-all](reply-all.html) | Nov 18 | Current |
+| [merge-tasks](merge-tasks.html) | Nov 17 | Current |
 | [calendar-today](calendar-today.html) | Nov 15 | Current (layout A was chosen) |
 | [tasks-page-calmer](tasks-page-calmer.html) | Nov 13 | Current: project chips, grouped lists, task editor's Adjust |
 | [ai-providers-separation](ai-providers-separation.html) | Nov 13 | Current: each AI provider in its own box in Settings |

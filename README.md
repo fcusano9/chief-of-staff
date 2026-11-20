@@ -51,7 +51,7 @@ npm run dev           # run with hot reload, using a separate "Chief of Staff (d
 npm run demo:data     # fill the dev folder with made-up data (existing dev data is moved aside)
 npm test              # unit and data tests
 npm run typecheck
-npm run docs          # rebuild the generated part of docs/architecture.html after changing a rule, table, or IPC call
+npm run docs          # rebuild the generated part of docs/ARCHITECTURE.html after changing a rule, table, or IPC call
 npm run build         # build into out/; npm start runs it
 npm run e2e           # build, then click through the real app (slow; see e2e/README.md)
 npm run bench:ai      # compare AI models on sample imports (see bench/README.md)
@@ -99,7 +99,7 @@ The tag must match `package.json`, or the workflow stops. To build without relea
 
 ## Contributing
 
-Start with [AGENTS.md](AGENTS.md) (rules, architecture, and how to make common changes), then [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/DECISIONS.md](docs/DECISIONS.md). For a visual tour, open [docs/architecture.html](docs/architecture.html) in a browser.
+Start with [AGENTS.md](AGENTS.md) (rules, architecture, and how to make common changes), then [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/DECISIONS.md](docs/DECISIONS.md). For a visual tour, open [docs/ARCHITECTURE.html](docs/ARCHITECTURE.html) in a browser.
 
 ## License
 

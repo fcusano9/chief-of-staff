@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { CLAUDE_MODELS, DEFAULT_SETTINGS, DENSITIES, type AppSettings } from '@shared/types'
+import { CLAUDE_EFFORTS, CLAUDE_MODELS, DEFAULT_SETTINGS, DENSITIES, LOCAL_REASONINGS, type AppSettings } from '@shared/types'
 
 /** JSON settings file next to the database. Unknown or missing fields fall back to defaults. */
 export class SettingsStore {
@@ -39,6 +39,10 @@ export class SettingsStore {
       backupsToKeep: Math.max(1, Math.round(settings.backupsToKeep)),
       backupFolder: settings.backupFolder?.trim() || null,
       replyStyle: String(settings.replyStyle ?? '').slice(0, 1000),
+      devTools: settings.devTools === true,
+      claudeEffort: CLAUDE_EFFORTS.some((e) => e.id === settings.claudeEffort) ? settings.claudeEffort : DEFAULT_SETTINGS.claudeEffort,
+      localReasoning: LOCAL_REASONINGS.some((e) => e.id === settings.localReasoning) ? settings.localReasoning : DEFAULT_SETTINGS.localReasoning,
+      localPasses: settings.localPasses === 'single' ? 'single' : 'split',
       mailAccounts: Array.isArray(settings.mailAccounts) ? [...new Set(settings.mailAccounts.map(String).filter(Boolean))].slice(0, 20) : [],
     }
     mkdirSync(dirname(this.path), { recursive: true })

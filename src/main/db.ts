@@ -387,6 +387,61 @@ export const MIGRATIONS: Migration[] = [
   ALTER TABLE ai_calls ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE ai_calls ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0;
   `,
+  // Model tests (Settings → Developer Tools): past imports re-run on several models and effort
+  // levels, kept with the user's marks until the test is deleted. Nothing here goes to Review.
+  // A run belongs to one import; deleting the import deletes its runs.
+  `
+  CREATE TABLE model_tests (
+    id INTEGER PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    models TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'running'
+  );
+  CREATE TABLE model_test_runs (
+    id INTEGER PRIMARY KEY,
+    test_id INTEGER NOT NULL REFERENCES model_tests(id) ON DELETE CASCADE,
+    source_id INTEGER NOT NULL REFERENCES source_items(id) ON DELETE CASCADE,
+    model_index INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    started_at TEXT,
+    duration_ms INTEGER,
+    error TEXT,
+    raw_output TEXT,
+    dropped_output TEXT
+  );
+  CREATE INDEX ix_model_test_runs_test ON model_test_runs(test_id);
+  CREATE INDEX ix_model_test_runs_source ON model_test_runs(source_id);
+  CREATE TABLE model_test_suggestions (
+    id INTEGER PRIMARY KEY,
+    run_id INTEGER NOT NULL REFERENCES model_test_runs(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    title TEXT NOT NULL,
+    details TEXT NOT NULL,
+    due_date TEXT,
+    project TEXT,
+    person TEXT,
+    evidence TEXT NOT NULL,
+    mark TEXT
+  );
+  CREATE INDEX ix_model_test_suggestions_run ON model_test_suggestions(run_id);
+  CREATE TABLE model_test_calls (
+    id INTEGER PRIMARY KEY,
+    run_id INTEGER NOT NULL REFERENCES model_test_runs(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    request TEXT NOT NULL,
+    response TEXT,
+    error TEXT,
+    started_at TEXT NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_read_tokens INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX ix_model_test_calls_run ON model_test_calls(run_id);
+  `,
 ]
 
 /** Adds each project's status brief to the end of its Updates, dated when it was written, then clears it. */

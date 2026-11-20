@@ -509,9 +509,9 @@ window.COS_MODEL = {
       "plain": "The queue of AI suggestions. Shown in the top bar only while it has items.",
       "files": [{ "path": "src/renderer/src/screens/ReviewScreen.tsx", "names": ["ReviewScreen"] }], "screen": "review", "rules": ["b-import-and-review"], "flows": ["accept"] },
     { "id": "ui-settings", "zone": "ui", "x": 24, "y": 468, "w": 156, "h": 44, "label": "Settings", "hint": "AI, backups, look", "sub": "SettingsScreen.tsx",
-      "plain": "Appearance, priority weights, keyboard shortcuts, backups and restore, the AI model and providers, and, on a Mac, Apple Mail accounts and Apple Calendar calendars.",
-      "files": [{ "path": "src/renderer/src/screens/SettingsScreen.tsx", "names": ["SettingsScreen", "SHORTCUTS"] }, { "path": "src/renderer/src/components/AiSettings.tsx" }],
-      "screen": "settings", "rules": ["b-settings-limits", "b-ai-choice", "b-data-safety"], "flows": ["backup"] },
+      "plain": "Appearance, priority weights, keyboard shortcuts, backups and restore, the AI model and providers, Developer Tools (Effort and the model test), and, on a Mac, Apple Mail accounts and Apple Calendar calendars.",
+      "files": [{ "path": "src/renderer/src/screens/SettingsScreen.tsx", "names": ["SettingsScreen", "SHORTCUTS"] }, { "path": "src/renderer/src/components/AiSettings.tsx" }, { "path": "src/renderer/src/screens/ModelTestScreen.tsx", "names": ["ModelTestScreen"] }],
+      "screen": "settings", "rules": ["b-settings-limits", "b-ai-choice", "b-data-safety", "b-developer-tools-and-model-tests"], "flows": ["backup"] },
     { "id": "ui-ailog", "zone": "ui", "x": 24, "y": 524, "w": 156, "h": 44, "label": "AI log & spending", "hint": "What was sent, the cost", "sub": "AiLogScreen.tsx",
       "plain": "The exact requests and answers behind an import, and the estimated Claude costs by month, purpose, and model.",
       "files": [{ "path": "src/renderer/src/screens/AiLogScreen.tsx", "names": ["AiLogScreen"] }, { "path": "src/renderer/src/screens/AiSpendingScreen.tsx", "names": ["AiSpendingScreen"] }],
@@ -582,6 +582,12 @@ window.COS_MODEL = {
       "plain": "Adds a row for every paid Claude request (time, purpose, model, tokens) and estimates costs from the list prices built into the app. Never pruned.",
       "files": [{ "path": "src/main/services/usage.ts", "names": ["UsageService", "spending"] }, { "path": "src/shared/pricing.ts", "names": ["CLAUDE_PRICES", "estimateCost"] }],
       "ipc": ["usage.spending"], "tables": ["ai_usage"], "rules": ["b-ai-spending"] },
+    { "id": "svc-modeltest", "zone": "main", "x": 816, "y": 434, "w": 150, "h": 44, "label": "Model tests", "hint": "Compare models", "sub": "ModelTestService", "tags": ["db", "ai"],
+      "plain": "Re-runs past imports on several models and effort levels (Developer Tools), giving each the same input rebuilt as it was when the import came in. Nothing goes to Review; the user marks what each model found.",
+      "points": ["Up to 6 models and 20 imports per test; one test at a time.", "Kept with the user's marks and every AI request until deleted."],
+      "files": [{ "path": "src/main/services/model-tests.ts", "names": ["ModelTestService", "start", "estimate"] }, { "path": "src/main/ai/context.ts", "names": ["buildExtractionContext"] }, { "path": "src/main/ai/provider.ts", "names": ["effortOf"] }],
+      "ipc": ["modelTests.sources", "modelTests.sourceText", "modelTests.estimate", "modelTests.start", "modelTests.status", "modelTests.stop", "modelTests.list", "modelTests.get", "modelTests.mark", "modelTests.delete", "modelTests.aiLog"],
+      "tables": ["model_tests", "model_test_runs", "model_test_suggestions", "model_test_calls"], "rules": ["b-developer-tools-and-model-tests", "a-model-tests-settings-developer-tools", "a-effort-settings-ai-with-developer-tools-on"] },
 
     { "id": "svc-briefing", "zone": "main", "x": 816, "y": 80, "w": 150, "h": 44, "label": "Daily briefing", "hint": "On click only", "sub": "BriefingService", "tags": ["db", "ai"],
       "plain": "Writes the briefing on Today when the user clicks: a summary, Do next, Follow up, and New. Items always come from real tasks; the AI only picks them and writes the notes.",
@@ -863,6 +869,7 @@ window.COS_MODEL = {
     { "id": "import", "label": "Import & Review", "x": 608, "y": 36, "w": 380, "h": 200, "color": "ui" },
     { "id": "mail", "label": "Mail", "x": 608, "y": 252, "w": 380, "h": 92, "color": "mail" },
     { "id": "spending", "label": "Spending", "x": 608, "y": 360, "w": 188, "h": 92, "color": "store" },
+    { "id": "modeltests", "label": "Model tests", "x": 608, "y": 468, "w": 380, "h": 146, "color": "ai" },
     { "id": "briefings", "label": "Briefings & weekly", "x": 1004, "y": 36, "w": 188, "h": 362, "color": "ai" }
   ],
   "tables": {
@@ -885,7 +892,11 @@ window.COS_MODEL = {
     "ai_calls": { "group": "import", "x": 816, "y": 180, "label": "AI requests", "purpose": "Each request in a run, exactly as sent and received, with timing and tokens.", "writers": ["svc-ailog"] },
     "mail_imports": { "group": "mail", "x": 620, "y": 288, "label": "Mail reads", "purpose": "One row per mail Read: where it started, when it was checked and finished, and whether it completed.", "writers": ["svc-mail"] },
     "mail_messages": { "group": "mail", "x": 816, "y": 288, "label": "Messages read", "purpose": "Every email read, by its Internet message id, so none is read twice. Also used to find the email a draft reply answers.", "writers": ["svc-mail"] },
-    "ai_usage": { "group": "spending", "x": 620, "y": 396, "label": "Claude usage", "purpose": "One row per paid Claude request: when, what for, which model, and how many tokens. Never pruned, so monthly totals stay right.", "writers": ["svc-usage", "svc-ailog", "svc-briefing", "svc-weekly"] },
+    "ai_usage": { "group": "spending", "x": 620, "y": 396, "label": "Claude usage", "purpose": "One row per paid Claude request: when, what for, which model, and how many tokens. Never pruned, so monthly totals stay right.", "writers": ["svc-usage", "svc-ailog", "svc-briefing", "svc-weekly", "svc-modeltest"] },
+    "model_tests": { "group": "modeltests", "x": 620, "y": 504, "label": "Model tests", "purpose": "Each model test: when it ran, the models and effort levels it compared, and whether it finished or was stopped.", "writers": ["svc-modeltest"] },
+    "model_test_runs": { "group": "modeltests", "x": 816, "y": 504, "label": "Test runs", "purpose": "One model on one import in a test: its status, time, error, the raw answer, and what the checks dropped. Deleted with the import.", "writers": ["svc-modeltest"] },
+    "model_test_suggestions": { "group": "modeltests", "x": 620, "y": 558, "label": "Test suggestions", "purpose": "Each suggestion a model made in a test, as Review would show it, and the user's mark (accepted, rejected, or none).", "writers": ["svc-modeltest"] },
+    "model_test_calls": { "group": "modeltests", "x": 816, "y": 558, "label": "Test requests", "purpose": "Each AI request in a test run, exactly as sent and received, with timing and tokens.", "writers": ["svc-modeltest"] },
     "briefings": { "group": "briefings", "x": 1016, "y": 72, "label": "Briefings", "purpose": "Every daily briefing, with its sections as JSON and the titles as they were.", "writers": ["svc-briefing"] },
     "briefing_ai_calls": { "group": "briefings", "x": 1016, "y": 126, "label": "Briefing requests", "purpose": "The AI requests behind the newest 5 briefings.", "writers": ["svc-briefing"] },
     "weekly_meta": { "group": "briefings", "x": 1016, "y": 198, "label": "Weekly start", "purpose": "The week the weekly review began; earlier weeks are partly recorded.", "writers": ["svc-weekly"] },
@@ -970,8 +981,8 @@ window.COS_MODEL = {
       "files": [{ "path": "src/renderer/src/screens/ReviewScreen.tsx" }], "rules": ["b-import-and-review"] },
     { "id": "settings", "label": "Settings", "group": "other", "key": "",
       "plain": "Appearance, priority weights, keyboard shortcuts, backups and restore, the AI, and, on a Mac, Apple Mail accounts and Apple Calendar calendars.",
-      "sketch": [["**Appearance** · theme · density", "**Priority weights**"], ["**AI** · name · model · Claude · Ollama · writing style", "**Backups** · back up now · restore"], ["**Apple Mail** (Mac) · **Apple Calendar** (Mac)", "**Keyboard shortcuts**"]],
-      "shows": ["One model picker lists Basic, the Claude models once a key is saved, and every Ollama model.", "Restore lists only usable backups."],
+      "sketch": [["**Appearance** · theme · density", "**Priority weights**"], ["**AI** · name · model · Effort · Claude · Ollama · writing style", "**Backups** · back up now · restore"], ["**Apple Mail** (Mac) · **Apple Calendar** (Mac)", "**Developer Tools** · model test"], ["**Keyboard shortcuts**"]],
+      "shows": ["One model picker lists Basic, the Claude models once a key is saved, and every Ollama model.", "Effort shows under Model only while Developer Tools is on.", "Restore lists only usable backups."],
       "keys": [["Ctrl K", "Palette: theme, density, back up"]],
       "calls": ["settings.get", "settings.save", "backup.now", "backup.openFolder", "backup.list", "backup.restore", "ai.status", "ai.setKey", "ai.test", "ai.choices", "ollama.status", "ollama.install", "ollama.cancelInstall", "ollama.start", "ollama.pull", "ollama.cancelPull", "ollama.delete", "mail.accounts", "usage.spending", "calendar.week", "calendar.calendars", "calendar.refresh"],
       "files": [{ "path": "src/renderer/src/screens/SettingsScreen.tsx" }, { "path": "src/renderer/src/components/AiSettings.tsx" }, { "path": "src/renderer/src/components/ModelMenu.tsx" }, { "path": "src/renderer/src/components/RestoreBackups.tsx" }, { "path": "src/renderer/src/components/AppleMailSettings.tsx" }, { "path": "src/renderer/src/components/AppleCalendarSettings.tsx" }], "rules": ["b-settings-limits", "b-ai-choice", "b-data-safety"] },
@@ -988,7 +999,14 @@ window.COS_MODEL = {
       "shows": ["Estimates from built-in list prices; the Anthropic Console has the real figure."],
       "keys": [],
       "calls": ["usage.spending"],
-      "files": [{ "path": "src/renderer/src/screens/AiSpendingScreen.tsx" }], "rules": ["b-ai-spending"] }
+      "files": [{ "path": "src/renderer/src/screens/AiSpendingScreen.tsx" }], "rules": ["b-ai-spending"] },
+    { "id": "modeltest", "label": "Model test", "group": "other", "key": "",
+      "plain": "Opened from Settings → Developer Tools: past tests, a new test, and each test's results.",
+      "sketch": [["**Past tests** · New test"], ["Imports · Models and effort · estimate · Run test"], ["One column per model · accepted · rejected · time · cost", "**Summary**"]],
+      "shows": ["Every model in a test gets the same input, rebuilt as it was when each import came in.", "Nothing goes to Review; the user marks each suggestion."],
+      "keys": [["↑ ↓", "Move through past tests"], ["↵", "Open a test"], ["Ctrl K", "Palette: Model test"]],
+      "calls": ["modelTests.sources", "modelTests.sourceText", "modelTests.estimate", "modelTests.start", "modelTests.status", "modelTests.stop", "modelTests.list", "modelTests.get", "modelTests.mark", "modelTests.delete", "modelTests.aiLog", "ai.choices"],
+      "files": [{ "path": "src/renderer/src/screens/ModelTestScreen.tsx" }], "rules": ["b-developer-tools-and-model-tests", "a-model-tests-settings-developer-tools"] }
   ],
   "globalKeys": [["Ctrl K", "Command palette"], ["N", "New task (new waiting item on Waiting)"], ["G then T K W V P E R I", "Go to Today, Tasks, Waiting, Weekly, Projects, People, Review, Import"], ["← →", "Previous or next tab"], ["/", "Search the list"]],
 
@@ -1035,9 +1053,9 @@ window.COS_MODEL = {
 window.COS_GENERATED = {
  "facts": {
   "version": "1.0.0",
-  "schemaVersion": 21,
-  "channelCount": 92,
-  "tableCount": 26,
+  "schemaVersion": 22,
+  "channelCount": 103,
+  "tableCount": 30,
   "priority": {
    "dueHorizonDays": 14,
    "staleHorizonDays": 14,
@@ -1143,7 +1161,18 @@ window.COS_GENERATED = {
   "weekly.writeReflection",
   "weekly.isWriting",
   "weekly.aiCalls",
-  "usage.spending"
+  "usage.spending",
+  "modelTests.sources",
+  "modelTests.sourceText",
+  "modelTests.estimate",
+  "modelTests.start",
+  "modelTests.status",
+  "modelTests.stop",
+  "modelTests.list",
+  "modelTests.get",
+  "modelTests.mark",
+  "modelTests.delete",
+  "modelTests.aiLog"
  ],
  "schema": [
   {
@@ -1679,6 +1708,281 @@ window.COS_GENERATED = {
      "onDelete": "SET NULL"
     }
    ]
+  },
+  {
+   "name": "model_test_calls",
+   "columns": [
+    {
+     "name": "id",
+     "type": "INTEGER",
+     "required": false,
+     "key": true
+    },
+    {
+     "name": "run_id",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "purpose",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "endpoint",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "request",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "response",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "error",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "started_at",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "duration_ms",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "input_tokens",
+     "type": "INTEGER",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "output_tokens",
+     "type": "INTEGER",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "cache_write_tokens",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "cache_read_tokens",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    }
+   ],
+   "links": [
+    {
+     "column": "run_id",
+     "table": "model_test_runs",
+     "onDelete": "CASCADE"
+    }
+   ]
+  },
+  {
+   "name": "model_test_runs",
+   "columns": [
+    {
+     "name": "id",
+     "type": "INTEGER",
+     "required": false,
+     "key": true
+    },
+    {
+     "name": "test_id",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "source_id",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "model_index",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "started_at",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "duration_ms",
+     "type": "INTEGER",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "error",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "raw_output",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "dropped_output",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    }
+   ],
+   "links": [
+    {
+     "column": "source_id",
+     "table": "source_items",
+     "onDelete": "CASCADE"
+    },
+    {
+     "column": "test_id",
+     "table": "model_tests",
+     "onDelete": "CASCADE"
+    }
+   ]
+  },
+  {
+   "name": "model_test_suggestions",
+   "columns": [
+    {
+     "name": "id",
+     "type": "INTEGER",
+     "required": false,
+     "key": true
+    },
+    {
+     "name": "run_id",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "position",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "kind",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "title",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "details",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "due_date",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "project",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "person",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    },
+    {
+     "name": "evidence",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "mark",
+     "type": "TEXT",
+     "required": false,
+     "key": false
+    }
+   ],
+   "links": [
+    {
+     "column": "run_id",
+     "table": "model_test_runs",
+     "onDelete": "CASCADE"
+    }
+   ]
+  },
+  {
+   "name": "model_tests",
+   "columns": [
+    {
+     "name": "id",
+     "type": "INTEGER",
+     "required": false,
+     "key": true
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "models",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "required": true,
+     "key": false
+    }
+   ],
+   "links": []
   },
   {
    "name": "next_actions",
@@ -2633,7 +2937,7 @@ window.COS_GENERATED = {
     },
     {
      "type": "p",
-     "html": "\u003cstrong>Keep this file current.\u003c/strong> Any change to a rule below updates this page in the same PR. Then run \u003ccode>npm run docs\u003c/code>, which rebuilds the interactive guide (\u003ca href=\"#overview\">architecture.html\u003c/a>); \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/tests/docs.test.ts\">\u003ccode>tests/docs.test.ts\u003c/code>\u003c/a> fails until you do."
+     "html": "\u003cstrong>Keep this file current.\u003c/strong> Any change to a rule below updates this page in the same PR. Then run \u003ccode>npm run docs\u003c/code>, which rebuilds the interactive guide (\u003ca href=\"#overview\">ARCHITECTURE.html\u003c/a>); \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/tests/docs.test.ts\">\u003ccode>tests/docs.test.ts\u003c/code>\u003c/a> fails until you do."
     }
    ],
    "sections": [
@@ -3581,7 +3885,7 @@ window.COS_GENERATED = {
        "rows": [
         [
          "What's counted",
-         "Successful Claude requests: imports, daily briefings, weekly reflections, person briefs, status cards, and draft replies. Basic and Ollama are free and never recorded. The record is never pruned, unlike the AI logs.",
+         "Successful Claude requests: imports, daily briefings, weekly reflections, person briefs, status cards, draft replies, and model tests. Basic and Ollama are free and never recorded. The record is never pruned, unlike the AI logs.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/usage.ts\">\u003ccode>src/main/services/usage.ts\u003c/code>\u003c/a>"
         ],
         [
@@ -3593,6 +3897,63 @@ window.COS_GENERATED = {
          "Where it's shown",
          "The AI spending screen (this month, the last 30 days, by purpose, and by model), each AI log, Recent imports, and the mail card's total.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/renderer/src/screens/AiSpendingScreen.tsx\">\u003ccode>src/renderer/src/screens/AiSpendingScreen.tsx\u003c/code>\u003c/a>"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "id": "b-developer-tools-and-model-tests",
+     "title": "Developer Tools and model tests",
+     "level": 2,
+     "blocks": [
+      {
+       "type": "table",
+       "head": [
+        "Rule",
+        "Detail",
+        "Where"
+       ],
+       "rows": [
+        [
+         "Developer Tools",
+         "A switch in Settings, off by default, in the installed app too, so tests use real imports. On, it shows Effort under Model and the model test. Off, Effort is hidden and ignored but kept for next time.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/ai/provider.ts\">\u003ccode>src/main/ai/provider.ts\u003c/code>\u003c/a> · \u003ccode>effortOf\u003c/code>"
+        ],
+        [
+         "Opening it",
+         "Settings → Developer Tools → Open model test, or &quot;Model test&quot; in Ctrl+K while Developer Tools is on. It opens on Past tests.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/renderer/src/screens/ModelTestScreen.tsx\">\u003ccode>src/renderer/src/screens/ModelTestScreen.tsx\u003c/code>\u003c/a>"
+        ],
+        [
+         "Setting one up",
+         "Pick past imports (newest first, with search; mail conversations too) and models (Claude models once a key is saved, and downloaded Ollama models; not Basic). Up to 6 models and 20 imports; the same model can appear at different effort levels, but not twice at the same one. An estimate shows before Run test.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/model-tests.ts\">\u003ccode>src/main/services/model-tests.ts\u003c/code>\u003c/a> · \u003ccode>start\u003c/code>"
+        ],
+        [
+         "The estimate",
+         "Each Claude run's prompt, plus the output that model has averaged on past imports and tests. With no past answers it says &quot;at least&quot;. Effort isn't counted beyond that history.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/model-tests.ts\">\u003ccode>src/main/services/model-tests.ts\u003c/code>\u003c/a> · \u003ccode>estimate\u003c/code>"
+        ],
+        [
+         "One at a time",
+         "One test runs at a time. Its progress shows in the status bar, and the user can leave the screen. Stop keeps finished runs; the rest show as Not run. A test cut off by closing the app is marked Stopped.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/model-tests.ts\">\u003ccode>src/main/services/model-tests.ts\u003c/code>\u003c/a>"
+        ],
+        [
+         "Results",
+         "One column per model, with its time, estimated cost, and how many suggestions the user accepted and rejected. Clicking a suggestion marks it accepted, then rejected, then neither. Marks are saved at once. The column with the most accepted has a green edge. The same suggestion in two columns is marked separately. A failed run shows its error.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/renderer/src/screens/ModelTestScreen.tsx\">\u003ccode>src/renderer/src/screens/ModelTestScreen.tsx\u003c/code>\u003c/a>"
+        ],
+        [
+         "Summary",
+         "Per model across all the test's imports: accepted, rejected, accepted compared with the best model, average time and cost per import, unmarked, and failed.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/renderer/src/screens/ModelTestScreen.tsx\">\u003ccode>src/renderer/src/screens/ModelTestScreen.tsx\u003c/code>\u003c/a> · \u003ccode>Summary\u003c/code>"
+        ],
+        [
+         "Keeping and deleting",
+         "Tests are kept until deleted (two-click Delete). Deleting an import removes it from its tests.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/db.ts\">\u003ccode>src/main/db.ts\u003c/code>\u003c/a>"
         ]
        ]
       }
@@ -3717,6 +4078,11 @@ window.COS_GENERATED = {
          "Look",
          "Theme: system, light, or dark. Density: Compact, Comfortable (the default), or Spacious.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/types.ts\">\u003ccode>src/shared/types.ts\u003c/code>\u003c/a> · \u003ccode>DENSITIES\u003c/code>"
+        ],
+        [
+         "Effort",
+         "Claude: one of Default, Low, Medium, High, Extra, or Max; anything else becomes Default. Ollama: Low, Medium, or High, and Split or Single passes. Used only while Developer Tools is on.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/settings.ts\">\u003ccode>src/main/services/settings.ts\u003c/code>\u003c/a> · \u003ccode>save\u003c/code>"
         ]
        ]
       }
@@ -4014,15 +4380,91 @@ window.COS_GENERATED = {
         ],
         [
          "✅ Local model passes",
-         "Ollama runs split passes at low reasoning: (1) tasks, updates, done, waiting on, status cards, priority changes, and the item's name and type; (2) projects, people, and context; (3) linking new tasks to new projects and people. Each request times out after \u003cstrong>6 minutes\u003c/strong>."
+         "Ollama runs split passes at low reasoning (both can be changed with Effort and Passes, below): (1) tasks, updates, done, waiting on, status cards, priority changes, and the item's name and type; (2) projects, people, and context; (3) linking new tasks to new projects and people. Each request times out after \u003cstrong>6 minutes\u003c/strong>."
         ],
         [
          "✅ Claude settings",
-         "Medium effort, refusal fallback on (Opus and Sonnet)."
+         "Medium effort (unless Effort says otherwise, below), refusal fallback on (Opus and Sonnet)."
         ],
         [
          "✅ AI log",
          "The last \u003cstrong>5 runs\u003c/strong> per import, deleted with the import."
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "id": "a-effort-settings-ai-with-developer-tools-on",
+     "title": "Effort (Settings → AI, with Developer Tools on)",
+     "level": 2,
+     "blocks": [
+      {
+       "type": "table",
+       "head": [
+        "Rule",
+        "Detail"
+       ],
+       "rows": [
+        [
+         "✅ Only with Developer Tools",
+         "Effort shows under Model only while Settings → Developer Tools is on. Off, every request uses the defaults below, whatever was chosen."
+        ],
+        [
+         "✅ Claude",
+         "Default, Low, Medium, High, Extra, or Max (Anthropic's low, medium, high, xhigh, and max). \u003cstrong>Default\u003c/strong> keeps each feature's own level: Medium for imports, Low for briefings, status cards, draft replies, person briefs, and the weekly reflection. Any other level is used for every Claude request."
+        ],
+        [
+         "✅ Room to think",
+         "Thinking counts toward each request's output cap, so High raises small caps to \u003cstrong>16,000\u003c/strong> tokens, Extra to \u003cstrong>32,000\u003c/strong>, and Max to \u003cstrong>64,000\u003c/strong> (\u003ccode>CLAUDE_EFFORT_MIN_TOKENS\u003c/code>). Requests that may run past 10 minutes get a longer time-out (\u003ccode>claudeTimeoutMs\u003c/code>)."
+        ],
+        [
+         "✅ Ollama",
+         "Effort (Low, Medium, or High reasoning) for every request, and Passes (Split or Single) for imports. Defaults: Low and Split."
+        ],
+        [
+         "✅ Basic",
+         "No Effort setting."
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "id": "a-model-tests-settings-developer-tools",
+     "title": "Model tests (Settings → Developer Tools)",
+     "level": 2,
+     "blocks": [
+      {
+       "type": "table",
+       "head": [
+        "Rule",
+        "Detail"
+       ],
+       "rows": [
+        [
+         "✅ When",
+         "Only when the user runs one: past imports re-run on up to \u003cstrong>6\u003c/strong> models and effort levels, up to \u003cstrong>20\u003c/strong> imports per test."
+        ],
+        [
+         "✅ Same input for every model",
+         "Each import's open tasks, projects, and people are rebuilt as they were when it was imported, once per test (\u003ccode>buildExtractionContext\u003c/code> with \u003ccode>asOf\u003c/code>). Left out: tasks, projects, and people created then or later (people only when an import created them), updates dated after that day or from that import, and every AI priority change. Tasks finished since count as open. Not undone: later edits to titles, dates, and projects, and deleted or merged tasks."
+        ],
+        [
+         "✅ Output",
+         "Each model's suggestions, after the same checks as an import. Nothing goes to Review, and no task, card, or priority changes. The user marks each suggestion accepted or rejected."
+        ],
+        [
+         "✅ Where data goes",
+         "As for imports: Claude models send each import to Anthropic."
+        ],
+        [
+         "✅ AI log",
+         "Every request and response, kept with the test until it's deleted. Claude requests count in AI spending as Model tests."
+        ],
+        [
+         "✅ Order",
+         "Claude runs \u003cstrong>3\u003c/strong> at a time, then Ollama runs one at a time, grouped by model. Stop finishes the requests already sent."
         ]
        ]
       }
@@ -5041,7 +5483,7 @@ var PriorityCalc = (function () {
       '<div class="files-out">' + M.files.map(function (f) { return '<div class="card where-card"><div class="who"><h3 class="mono">' + esc(f.name) + '</h3></div><span class="faint" style="font-size:12px">' + esc(f.where) + '</span><p class="muted">' + tx(f.text) + '</p></div>' }).join('') + '</div>'
     var zones = M.dataGroups.map(function (g) { return { id: g.id, color: g.color, label: g.label, x: g.x, y: g.y, w: g.w, h: g.h } })
     dataDiagram = makeDiagram($('#data-canvas'), {
-      w: 1210, h: 520, label: 'Database tables', devLabels: true, barHost: $('#v-data .legend'), zones: zones, nodes: tableNodes(), edges: tableEdges(),
+      w: 1210, h: 640, label: 'Database tables', devLabels: true, barHost: $('#v-data .legend'), zones: zones, nodes: tableNodes(), edges: tableEdges(),
       onPick: function (id) { go('data', id === dataSelected ? '' : hashId(id)) },
       onHover: function (id) { if (id) dataDiagram.focusNode(id); else if (dataSelected) dataDiagram.focusNode(dataSelected); else dataDiagram.clear() }
     })

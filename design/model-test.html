@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Model test</title>
+<style>
+:root {
+  --bg: #fafafa; --surface: #fff; --hover: #f2f2f3; --sel: #ebebee;
+  --border: #e7e7ea; --border-strong: #d4d4d8; --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --accent: #5b5bd6; --accent-bg: #ededfc; --danger: #d93a3a; --warn: #b7791f; --ok: #2f855a;
+  --font: Inter, system-ui, sans-serif; --mono: ui-monospace, 'JetBrains Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+    --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+    --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d10; --surface: #131317; --hover: #1c1c22; --sel: #24242c;
+  --border: #25252c; --border-strong: #33333c; --text: #ececf0; --muted: #8d8d98; --faint: #5c5c66;
+  --accent: #8b8bf5; --accent-bg: #25254a; --danger: #f26d6d; --warn: #e0a84a; --ok: #5cc28c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; display: grid; grid-template-rows: 44px auto minmax(0, 1fr); }
+button, input, select { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 14px; white-space: nowrap; }
+.logo b { width: 20px; height: 20px; border-radius: 6px; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 10px; }
+.tab { border: 0; background: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.tab.on { color: var(--text); background: var(--sel); }
+.spacer { flex: 1; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .mono { font-family: var(--mono); }
+.row { display: flex; align-items: center; gap: 8px; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; min-height: 28px; flex-wrap: wrap; }
+h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+.label { font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+.pill { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.pill.on { color: var(--text); border-color: var(--border-strong); background: var(--sel); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 28px; border-bottom: 1px dashed var(--border-strong); background: var(--bg); }
+.controls .grp { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.controls .grp > span { font-size: 11px; color: var(--faint); margin-right: 2px; text-transform: uppercase; letter-spacing: .04em; }
+.page { overflow: auto; padding: 22px 28px 60px; }
+.grid { display: grid; gap: 12px; }
+.card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px 12px; }
+.card-title { font-weight: 500; margin-bottom: 8px; }
+.field { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: center; margin: 6px 0; }
+.inp { border: 1px solid var(--border-strong); border-radius: 6px; padding: 4px 8px; background: var(--surface); }
+select.inp { padding-right: 24px; }
+.new { box-shadow: 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent-bg) 45%, var(--surface)); }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 500; font-size: 12px; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--sel); color: var(--muted); white-space: nowrap; }
+.tag.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.tag.warn { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+.tag.acc { background: var(--accent-bg); color: var(--accent); }
+.switch { width: 30px; height: 18px; border-radius: 9px; background: var(--border-strong); position: relative; border: 0; cursor: pointer; flex: none; }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .12s; }
+.switch.on { background: var(--accent); }
+.switch.on::after { left: 14px; }
+.notes { margin-top: 26px; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 12px 16px; color: var(--muted); max-width: 960px; }
+.notes h3 { margin: 0 0 6px; font-size: 12px; color: var(--text); }
+.notes li { margin: 3px 0; }
+.split { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+.list-row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.list-row:hover { background: var(--hover); }
+.list-row.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.list-row .t { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-row .s { font-size: 11px; color: var(--faint); }
+.model-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px 28px; gap: 8px; align-items: center; margin: 6px 0; }
+.cols { display: grid; gap: 10px; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); overflow-x: auto; padding-bottom: 6px; }
+.col { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+.col-head { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.col-head .m { font-weight: 600; }
+.col-stats { display: flex; gap: 10px; font: 12px var(--mono); color: var(--muted); margin-top: 2px; flex-wrap: wrap; }
+.score { font: 600 12px var(--mono); color: var(--ok); }
+.sugg { display: flex; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.sugg:last-child { border-bottom: 0; }
+.sugg:hover { background: var(--hover); }
+.sugg .box { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 4px; flex: none; margin-top: 2px; display: grid; place-items: center; font-size: 11px; color: transparent; }
+.sugg.yes .box { background: var(--ok); border-color: var(--ok); color: #fff; }
+.sugg.no { opacity: .55; }
+.sugg.no .box { color: var(--danger); border-color: var(--danger); }
+.sugg .k { font-size: 11px; color: var(--faint); }
+.sugg .d { font-size: 11px; color: var(--muted); }
+.progress { height: 4px; border-radius: 2px; background: var(--sel); overflow: hidden; margin-top: 6px; }
+.progress > div { height: 100%; background: var(--accent); }
+.info { position: relative; color: var(--muted); cursor: help; font-size: 14px; }
+.info .tip { display: none; position: absolute; left: 50%; bottom: 140%; transform: translateX(-50%); width: 280px; padding: 8px 10px; border-radius: 6px; background: var(--text); color: var(--bg); font-size: 12px; line-height: 1.45; z-index: 5; }
+.info:hover .tip, .info:focus .tip { display: block; }
+.new-field { border-radius: 6px; box-shadow: 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent-bg) 45%, var(--surface)); padding: 4px 6px; margin: 6px -6px; }
+.past-row { cursor: pointer; }
+.past-row:hover td { background: var(--hover); }
+.best { box-shadow: inset 0 0 0 1px var(--ok); }
+@media (max-width: 900px) { .split, .two { grid-template-columns: minmax(0, 1fr) !important; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>CS</b><span>Chief of Staff</span></div>
+  <button class="tab">Today</button><button class="tab">Tasks</button><button class="tab">Waiting</button><button class="tab">Weekly</button>
+  <button class="tab">Projects</button><button class="tab">People</button>
+  <div class="spacer"></div>
+  <button class="tab on">Settings</button>
+  <button class="btn ghost" id="theme">◐ Theme</button>
+</div>
+
+<div class="controls">
+  <div class="grp"><span>Mockup</span><button class="pill" data-v="before">Before (today)</button><button class="pill" data-v="after">After</button></div>
+  <div class="grp" id="screenGrp"><span>Screen</span>
+    <button class="pill" data-s="settings">Settings → AI</button>
+    <button class="pill" data-s="setup">Model test: set up</button>
+    <button class="pill" data-s="running">Running</button>
+    <button class="pill" data-s="results">Results</button>
+    <button class="pill" data-s="summary">Summary</button>
+    <button class="pill" data-s="past">Past tests</button>
+  </div>
+  <div class="grp" id="modelGrp"><span>Model</span><button class="pill" data-m="claude">Claude</button><button class="pill" data-m="ollama">Ollama</button><button class="pill" data-m="basic">Basic</button></div>
+</div>
+
+<div class="page" id="page"></div>
+
+<script>
+const $ = (s) => document.querySelector(s)
+const state = { v: 'after', s: 'settings', dev: true, model: 'claude', effort: 'Default', ollamaReasoning: 'Low', imp: 0 }
+
+const IMPORTS = [
+  { title: 'Email from Dana Ruiz: Q1 dealer pricing', kind: 'Email', date: 'Nov 17', made: 4 },
+  { title: 'Teams chat: Portal launch checklist', kind: 'Teams chat', date: 'Nov 14', made: 3 },
+  { title: 'Weekly product sync transcript', kind: 'Meeting', date: 'Nov 12', made: 6 },
+  { title: 'Copilot summary: Vendor onboarding call', kind: 'Copilot', date: 'Nov 10', made: 2 },
+  { title: 'Email from Sam Okafor: Warranty question', kind: 'Email', date: 'Nov 6', made: 1 },
+]
+const MODELS = [
+  { m: 'Claude Opus 5.5', e: 'Medium', time: '24 s', cost: 0.071 },
+  { m: 'Claude Sonnet 5.5', e: 'Medium', time: '15 s', cost: 0.034 },
+  { m: 'Claude Sonnet 5.5', e: 'Low', time: '9 s', cost: 0.021 },
+  { m: 'Claude Haiku 5.5', e: 'Medium', time: '6 s', cost: 0.002 },
+  { m: 'Ollama gpt-oss:20b', e: 'Low', time: '41 s', cost: 0 },
+]
+// Suggestions per model column for the selected import. yes/no/null = ticked, rejected, not marked.
+const S = (k, t, d) => ({ k, t, d, mark: null })
+const RESULTS = [
+  [S('New task', 'Send Dana the revised Q1 dealer price list', 'Due Fri, Nov 21 · Dealer pricing'), S('Update', 'Dealer pricing: Dana needs final numbers before the board review', 'On project'), S('Waiting on', 'Finance to approve the 3% regional discount', 'Waiting on Priya Shah'), S('New task', 'Book a pricing review with sales leads', 'Due Mon, Nov 24')],
+  [S('New task', 'Send Dana the revised Q1 dealer price list', 'Due Fri, Nov 21 · Dealer pricing'), S('Waiting on', 'Finance to approve the regional discount', 'Waiting on Priya Shah'), S('New task', 'Book a pricing review with sales leads', 'No due date')],
+  [S('New task', 'Send revised price list to Dana', 'Due Fri, Nov 21'), S('Update', 'Dealer pricing: board review coming up', 'On project')],
+  [S('New task', 'Send Dana the price list', 'Due Nov 21'), S('New task', 'Reply to Dana', 'No due date'), S('New person', 'Dana Ruiz', 'Already in People')],
+  [S('New task', 'Send Dana the revised Q1 price list', 'Due Fri, Nov 21 · Dealer pricing'), S('Waiting on', 'Finance approval on regional discount', 'Waiting on Priya Shah'), S('Update', 'Dealer pricing: final numbers due before board review', 'On project')],
+]
+// Preset marks so the score is visible straight away
+;[[0, [1, 1, 1, 1]], [1, [1, 1, 1]], [2, [1, 1]], [3, [1, 0, 0]], [4, [1, 1, 1]]].forEach(([c, ms]) => ms.forEach((v, i) => (RESULTS[c][i].mark = v ? 'yes' : 'no')))
+
+const money = (n) => (n === 0 ? 'Free' : n < 0.01 ? '<$0.01' : '$' + n.toFixed(3))
+const pills = () => {
+  document.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === state.v))
+  document.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', b.dataset.s === state.s))
+  document.querySelectorAll('[data-m]').forEach((b) => b.classList.toggle('on', b.dataset.m === state.model))
+  $('#screenGrp').style.display = state.v === 'before' ? 'none' : ''
+  $('#modelGrp').style.display = state.v === 'after' && state.s === 'settings' ? '' : 'none'
+}
+
+const SPLIT_INFO = 'Split: the model reads each import a few times, looking for a few kinds of suggestion each time. Slower, finds more. Single: one read for everything. Faster, finds less. Only imports use passes.'
+const CLAUDE_EFFORT_INFO = 'How long Claude thinks before answering. Higher is slower, costs more, and is usually more careful. Default uses Medium for imports and Low for everything else (briefings, status cards, draft replies, person briefs, and the weekly reflection). Any other level is used for everything.'
+const OLLAMA_EFFORT_INFO = 'How long the model thinks before answering. Higher is slower and usually more careful. Low is the default.'
+const MODEL_LABEL = { claude: '✳ Claude Opus 5.5', ollama: '◎ Ollama gpt-oss:20b', basic: 'Basic' }
+const CLAUDE_LEVELS = ['Default', 'Low', 'Medium', 'High', 'Extra', 'Max']
+const OLLAMA_LEVELS = ['Low', 'Medium', 'High']
+const info = (text) => `<span class="info" tabindex="0">ⓘ<span class="tip">${text}</span></span>`
+const select = (opts, sel, w) => `<select class="inp" style="width:${w}px">${opts.map((o) => `<option ${o === sel ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+
+function effortField() {
+  if (state.v === 'before' || !state.dev || state.model === 'basic') return ''
+  if (state.model === 'claude') return `<div class="field new-field"><span>Effort</span><span class="row">${select(CLAUDE_LEVELS, state.effort, 160)}${info(CLAUDE_EFFORT_INFO)}</span></div>`
+  return `<div class="field new-field"><span>Effort</span><span class="row">${select(OLLAMA_LEVELS, state.ollamaReasoning, 160)}${info(OLLAMA_EFFORT_INFO)}</span></div>
+    <div class="field new-field"><span>Passes</span><span class="row">${select(['Split', 'Single'], 'Split', 160)}${info(SPLIT_INFO)}</span></div>`
+}
+
+function settings() {
+  const ai = `<div class="card"><div class="card-title">AI</div>
+    <div class="field"><span>Your name</span><input class="inp" value="Frank" /></div>
+    <div class="field"><span>Model</span><button class="inp" style="text-align:left">${MODEL_LABEL[state.model]} <span class="faint" style="float:right">▾</span></button></div>
+    ${effortField()}
+    <div class="field"><span>Writing style for draft replies</span><input class="inp" value="Short, friendly, no sign-off" /></div></div>`
+  const appearance = `<div class="card"><div class="card-title">Appearance</div><div class="field"><span>Density</span><span class="row"><button class="pill">Compact</button><button class="pill on">Comfortable</button><button class="pill">Spacious</button></span></div></div>`
+  if (state.v === 'before') return `<div class="grid" style="max-width:760px">${ai}${appearance}
+    <div class="notes"><h3>Today</h3><ul><li>Claude uses medium effort for imports and low for everything else. Ollama uses low reasoning, with split passes for imports. There's no way to change either, or to compare models on real imports.</li></ul></div></div>`
+  const devBody = state.dev ? `<div class="field"><span>Model test</span><span><button class="btn" data-go="past">Open model test</button></span></div>` : ''
+  return `<div class="grid" style="max-width:760px">${ai}${appearance}
+    <div class="card new"><div class="row" style="margin-bottom:${state.dev ? 8 : 0}px"><span class="card-title" style="margin:0">Developer Tools</span><div class="spacer"></div><button class="switch ${state.dev ? 'on' : ''}" data-dev aria-label="Developer Tools"></button></div>${devBody}</div>
+    <div class="notes"><h3>Notes</h3><ul>
+      <li>New <b>Developer Tools</b> card at the bottom of Settings, off by default. Turning it on shows <b>Effort</b> in the AI card and the model test. It works in the installed app, so tests use real imports. Use the Model pills above to see Effort change with the model.</li>
+      <li><b>Effort</b> sits under Model and applies to every AI use: imports, briefings, status cards, draft replies, person briefs, and the weekly reflection.
+        <ul><li><b>Claude:</b> Default, Low, Medium, High, Extra, or Max. Default keeps today's levels (Medium for imports, Low for everything else). Any other level is used for everything. ⓘ explains this on hover. Low to Max are Anthropic's five levels (low, medium, high, xhigh, max), with friendlier names.</li>
+        <li><b>Ollama:</b> Effort (Low, Medium, or High) for everything, and a separate <b>Passes</b> line (Split or Single), which only imports use. Each has an ⓘ.</li>
+        <li><b>Basic:</b> no Effort setting.</li></ul></li>
+      <li>Turning Developer Tools off hides Effort and goes back to Default (Claude), or Low effort with Split passes (Ollama). Your choice is kept for when you turn it back on.</li>
+      <li>"Model test" is also in Ctrl+K while Developer Tools is on. No keyboard shortcut.</li>
+    </ul></div></div>`
+}
+
+function setup() {
+  const imports = IMPORTS.map((im, i) => `<label class="list-row"><input type="checkbox" ${i < 3 ? 'checked' : ''} style="margin-top:3px" /><div style="min-width:0"><div class="t">${im.title}</div><div class="s">${im.kind} · ${im.date} · ${im.made} accepted</div></div></label>`).join('')
+  const rows = MODELS.map((m) => `<div class="model-row"><select class="inp"><option>${m.m}</option></select><select class="inp"><option>${m.e}</option></select><button class="btn ghost sm" title="Remove">✕</button></div>`).join('')
+  return `<div class="head"><button class="btn ghost" data-go="settings">← Settings</button><h1>Model test</h1><div class="spacer"></div><button class="btn sm" data-go="past">Past tests (3)</button></div>
+  <div class="split">
+    <div class="card"><div class="row" style="margin-bottom:6px"><span class="card-title" style="margin:0">Imports</span><div class="spacer"></div><span class="label">3 selected</span></div>
+      <input class="inp" placeholder="Search imports" style="width:100%;margin-bottom:6px" />${imports}</div>
+    <div class="grid">
+      <div class="card"><div class="card-title">Models</div>
+        <div class="model-row label" style="margin:0"><span>Model</span><span>Effort</span><span></span></div>${rows}
+        <div class="row" style="margin-top:4px"><button class="btn sm">+ Add model</button><span class="label">5 of 6</span></div></div>
+      <div class="card row" style="flex-wrap:wrap"><span>3 imports × 5 models = 15 runs</span><span class="muted">· est. $0.38</span><div class="spacer"></div>
+<button class="btn primary" data-go="running">Run test</button></div>
+    </div>
+  </div>
+  <div class="notes"><h3>Notes</h3><ul>
+    <li>Pick past imports on the left (Recent imports, newest first, with search) and the models on the right. A model can appear more than once at different effort levels. Claude rows offer Low to Max. Ollama rows offer Low, Medium, and High, plus a Single pass option (for example "Low · Single"). Basic isn't offered.</li>
+    <li>Each import's task list, projects, and people are rebuilt as they were when it was imported, once per test. Every model gets exactly the same input.</li>
+    <li>Nothing goes to Review and no task, project, or person changes. Claude requests count in AI spending as "Model test".</li>
+    <li>Up to 6 models per test. More columns get too narrow to compare, and the cost adds up fast (6 models × 5 imports is 30 runs). At 6, "+ Add model" is greyed out.</li>
+    <li>The estimate uses each import's size and the list prices in the app. Ollama models run one at a time, after the Claude runs.</li>
+    <li>Tests are kept, with your marks, so you can come back to them (Past tests). They're deleted with Delete on the test.</li>
+  </ul></div>`
+}
+
+function running() {
+  const rows = MODELS.map((m, i) => {
+    const done = i < 3 ? 3 : i === 3 ? 2 : 0
+    return `<tr><td>${m.m}</td><td>${m.e}</td><td class="n">${done} of 3</td><td style="width:160px"><div class="progress"><div style="width:${(done / 3) * 100}%"></div></div></td><td class="n">${done ? money(m.cost * done) : ''}</td></tr>`
+  }).join('')
+  return `<div class="head"><button class="btn ghost" data-go="settings">← Settings</button><h1>Model test</h1><span class="tag acc">Running · 11 of 15</span><div class="spacer"></div><button class="btn">Stop</button></div>
+  <div class="card" style="max-width:760px"><table><thead><tr><th>Model</th><th>Effort</th><th class="n">Imports</th><th></th><th class="n">Cost</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="notes"><h3>Notes</h3><ul><li>You can leave this screen while it runs, and the status bar shows progress. Stop keeps finished results. A failed run shows its error in its column and doesn't stop the others.</li></ul></div>`
+}
+
+function results() {
+  const imp = IMPORTS[state.imp]
+  const tabs = IMPORTS.slice(0, 3).map((im, i) => `<button class="pill ${i === state.imp ? 'on' : ''}" data-imp="${i}">${im.title.length > 34 ? im.title.slice(0, 33) + '…' : im.title}</button>`).join('')
+  const counts = RESULTS.map((col) => col.filter((s) => s.mark === 'yes').length)
+  const top = Math.max(...counts)
+  const cols = MODELS.map((m, c) => {
+    const col = RESULTS[c]
+    const yes = counts[c], no = col.filter((s) => s.mark === 'no').length
+    return `<div class="col ${yes === top ? 'best' : ''}"><div class="col-head"><div class="m">${m.m}</div><div class="col-stats"><span>${m.e}</span><span>${m.time}</span><span>${money(m.cost)}</span></div>
+      <div class="row" style="margin-top:4px"><span class="score">${yes} accepted</span><span class="mono" style="font-size:12px;color:var(--danger)">${no} rejected</span><span class="label">of ${col.length}</span></div></div>
+      ${col.map((s, i) => `<div class="sugg ${s.mark ?? ''}" data-c="${c}" data-i="${i}"><span class="box">${s.mark === 'no' ? '✕' : '✓'}</span><div style="min-width:0"><div class="k">${s.k}</div><div>${s.t}</div><div class="d">${s.d}</div></div></div>`).join('')}</div>`
+  }).join('')
+  return `<div class="head"><button class="btn ghost" data-go="past">← Past tests</button><h1>Model test</h1><span class="faint">Nov 19, 10:42</span><div class="spacer"></div><button class="btn sm" data-go="summary">Summary</button><button class="btn sm">Delete</button></div>
+  <div class="row" style="flex-wrap:wrap;margin-bottom:10px">${tabs}</div>
+  <div class="row label" style="margin-bottom:8px"><span>${imp.kind} · ${imp.date}</span><span>· ${imp.made} accepted at import</span><span>· Input rebuilt as of ${imp.date}</span><div class="spacer"></div><button class="btn ghost sm">Show text</button></div>
+  <div class="cols">${cols}</div>
+  <div class="notes"><h3>Notes</h3><ul>
+    <li>One column per model and effort, each with its time, cost, and score. Click a suggestion to mark it accepted ✓, click again to mark it rejected ✕, and a third time to clear it. The column with the most accepted gets a green edge. Try clicking.</li>
+    <li>Marks are saved as you go. The same suggestion in two columns is marked separately: the app doesn't try to match suggestions across models.</li>
+    <li>Suggestions show as they would in Review (kind, title, due date, project, person), after the app's usual checks. Dropped ones aren't shown. Each column's AI log is one click from its header (not drawn).</li>
+    <li>"Show text" opens the import's text, so you can judge what a model missed.</li>
+  </ul></div>`
+}
+
+function summary() {
+  const data = [
+    ['Claude Opus 5.5', 'Medium', 12, 1, '23 s', 0.068],
+    ['Claude Sonnet 5.5', 'Medium', 11, 1, '14 s', 0.033],
+    ['Claude Sonnet 5.5', 'Low', 8, 2, '9 s', 0.020],
+    ['Claude Haiku 5.5', 'Medium', 6, 5, '6 s', 0.002],
+    ['Ollama gpt-oss:20b', 'Low', 10, 2, '44 s', 0],
+  ]
+  const top = Math.max(...data.map((d) => d[2]))
+  return `<div class="head"><button class="btn ghost" data-go="results">← Results</button><h1>Model test summary</h1><span class="faint">3 imports · Nov 19, 10:42</span></div>
+  <div class="card" style="max-width:860px"><table><thead><tr><th>Model</th><th>Effort</th><th class="n">Accepted</th><th class="n">Rejected</th><th class="n">vs best</th><th class="n">Avg time</th><th class="n">Avg cost per import</th><th class="n">Unmarked</th></tr></thead><tbody>
+    ${data.map((d) => `<tr><td>${d[0]}</td><td>${d[1]}</td><td class="n" style="color:var(--ok)">${d[2]}</td><td class="n" style="color:var(--danger)">${d[3]}</td><td class="n">${Math.round((d[2] / top) * 100)}%</td><td class="n">${d[4]}</td><td class="n">${money(d[5])}</td><td class="n faint">0</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="notes"><h3>Notes</h3><ul>
+    <li>Totals across every import in the test. "vs best" is each model's accepted count compared with the model that got the most. It's the closest thing to "how much did it find" without an answer key.</li>
+    <li>"Unmarked" counts suggestions you haven't marked yet, so you can tell a score isn't final.</li>
+    <li>In this example, Sonnet 5.5 at medium finds about as much as Opus for half the cost. That's the comparison this screen is for.</li>
+  </ul></div>`
+}
+
+function past() {
+  const tests = [
+    ['Nov 19, 10:42', 3, ['Opus 5.5 · Medium', 'Sonnet 5.5 · Medium', 'Sonnet 5.5 · Low', 'Haiku 5.5 · Medium', 'gpt-oss:20b · Low'], 0, 'Sonnet 5.5 · Medium', 0.38],
+    ['Nov 12, 16:05', 5, ['Sonnet 5.5 · Low', 'Sonnet 5.5 · Medium', 'Haiku 5.5 · Medium'], 4, 'Sonnet 5.5 · Medium', 0.41],
+    ['Nov 3, 09:20', 2, ['Opus 5.5 · Medium', 'Opus 5.5 · High', 'Opus 5.5 · Extra'], 11, 'Opus 5.5 · High', 0.52],
+  ]
+  return `<div class="head"><button class="btn ghost" data-go="settings">← Settings</button><h1>Past tests</h1><div class="spacer"></div><button class="btn primary" data-go="setup">New test</button></div>
+  <div class="card" style="max-width:960px"><table><thead><tr><th>Run</th><th class="n">Imports</th><th>Models</th><th>Most accepted</th><th class="n">Unmarked</th><th class="n">Cost</th><th></th></tr></thead><tbody>
+    ${tests.map((t, i) => `<tr class="past-row" data-go="results"><td style="white-space:nowrap">${t[0]}</td><td class="n">${t[1]}</td><td>${t[2].map((m) => `<span class="tag" style="margin:0 4px 3px 0;display:inline-block">${m}</span>`).join('')}</td><td style="white-space:nowrap">${t[4]}</td><td class="n ${t[3] ? '' : 'faint'}">${t[3]}</td><td class="n">$${t[5].toFixed(2)}</td><td><button class="btn ghost sm" data-del="${i}">${state.del === i ? 'Delete?' : 'Delete'}</button></td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="notes"><h3>Notes</h3><ul>
+    <li>Opening Model test from Settings or Ctrl+K lands here, newest first. New test opens the set-up screen. Click a row to open its results.</li>
+    <li>"Most accepted" is the model and effort with the most accepted suggestions so far. "Unmarked" is how many suggestions you haven't marked yet, so you can see which tests aren't finished.</li>
+    <li>Delete is the usual two-click confirm. Tests are kept until you delete them. They hold only the suggestions and your marks, not a copy of the imports' text, so deleting an import removes it from its tests too.</li>
+    <li>Up/Down and Enter work in the list, like other lists.</li>
+  </ul></div>`
+}
+
+function render() {
+  pills()
+  if (state.v === 'before') state.s = 'settings'
+  const fn = { settings, setup, running, results, summary, past }[state.s]
+  $('#page').innerHTML = fn()
+}
+
+document.addEventListener('click', (e) => {
+  const del = e.target.closest('[data-del]')
+  if (del) { const i = Number(del.dataset.del); state.del = state.del === i ? null : i; render(); return }
+  const t = e.target.closest('[data-v],[data-s],[data-m],[data-go],[data-dev],[data-imp],.sugg,#theme')
+  if (!t) return
+  if (t.id === 'theme') { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark'; return }
+  if (t.dataset.v) state.v = t.dataset.v
+  if (t.dataset.s) state.s = t.dataset.s
+  if (t.dataset.m) state.model = t.dataset.m
+  if (t.dataset.go) state.s = t.dataset.go
+  if (t.dataset.dev !== undefined) state.dev = !state.dev
+  if (t.dataset.imp) state.imp = Number(t.dataset.imp)
+  if (t.classList.contains('sugg')) {
+    const s = RESULTS[t.dataset.c][t.dataset.i]
+    s.mark = s.mark === null ? 'yes' : s.mark === 'yes' ? 'no' : null
+  }
+  render()
+})
+render()
+</script>
+</body>
+</html>

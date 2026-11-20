@@ -31,7 +31,7 @@ The app is for people who track work in Microsoft To Do and OneNote and use M365
 | 5 | Knowledge archive | Planned |
 | 6 | Graph and Copilot connectors | Blocked on IT approval |
 
-**Also built outside the milestones:** simpler text import with AI-named imports and the Copilot Prompt Generator ([COPILOT-PROMPTS.md](COPILOT-PROMPTS.md), Nov 9), merging two tasks or waiting items (Nov 17), and Claude prompt caching for imports (Nov 19).
+**Also built outside the milestones:** simpler text import with AI-named imports and the Copilot Prompt Generator ([COPILOT-PROMPTS.md](COPILOT-PROMPTS.md), Nov 9), merging two tasks or waiting items (Nov 17), Claude prompt caching for imports (Nov 19), and model tests with the Effort setting behind Developer Tools (Nov 19, issue #67: re-run past imports on up to 6 models and effort levels, and compare what the user accepts, the cost, and the time).
 
 ## Milestone 3: priorities and briefings
 
@@ -93,7 +93,7 @@ Built and covered by tests, but not yet tried for real:
   - Whether a draft saved to Apple Mail shows in Outlook's Drafts.
   - Installing from the `.dmg` by hand.
   - An e2e suite for Apple Mail (the fixture can act as Apple Mail with `COS_MAIL_APP=apple-mail`; only `calendar.mjs` uses it so far).
-- **Other:** a real Copilot answer keeping the marker line; the Ollama install flow end to end.
+- **Other:** a real Copilot answer keeping the marker line; the Ollama install flow end to end; model tests and Effort with a real Claude key or Ollama (tested only with fakes).
 
 ## Later: in-app updates (not scheduled)
 

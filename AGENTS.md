@@ -1,6 +1,6 @@
 # AGENTS.md: guide for AI coding assistants
 
-Read this before changing anything. It's the shared context for any AI tool working on this repo (Claude Code, Codex, Copilot, Cursor, and others). `CLAUDE.md` points here. The deeper background is in [docs/ROADMAP.md](docs/ROADMAP.md) (what's built and what's next), [docs/DECISIONS.md](docs/DECISIONS.md) (why things are the way they are), [docs/AI-RULES.md](docs/AI-RULES.md) (every AI rule and limit on one page, for Frank to scan; update it in the same PR whenever an AI rule changes), and [docs/BUSINESS-RULES.md](docs/BUSINESS-RULES.md) (every other app rule, kept the same way). [docs/architecture.html](docs/architecture.html) is an interactive guide to all of it: system map, flows, data model, screens, rules, and a priority calculator. Open it in a browser.
+Read this before changing anything. It's the shared context for any AI tool working on this repo (Claude Code, Codex, Copilot, Cursor, and others). `CLAUDE.md` points here. The deeper background is in [docs/ROADMAP.md](docs/ROADMAP.md) (what's built and what's next), [docs/DECISIONS.md](docs/DECISIONS.md) (why things are the way they are), [docs/AI-RULES.md](docs/AI-RULES.md) (every AI rule and limit on one page, for Frank to scan; update it in the same PR whenever an AI rule changes), and [docs/BUSINESS-RULES.md](docs/BUSINESS-RULES.md) (every other app rule, kept the same way). [docs/ARCHITECTURE.html](docs/ARCHITECTURE.html) is an interactive guide to all of it: system map, flows, data model, screens, rules, and a priority calculator. Open it in a browser.
 
 ## What this is
 
@@ -48,7 +48,8 @@ src/main/        Electron main process
                  sources (import), suggestions (review queue), copilot (Copilot prompts), mail (mail import), calendar,
                  replies (draft replies), next-actions (status cards), priority-adjustments, briefings (daily briefing),
                  weekly (weekly review), ai-log, usage (AI spending), settings (JSON), backup, secrets (KeyStore),
-                 ollama-setup (find, install, start Ollama; download and delete models)
+                 ollama-setup (find, install, start Ollama; download and delete models),
+                 model-tests (re-running past imports on several models, Developer Tools)
   ai/            prompts.ts (every word sent to an AI), limits.ts (every AI limit: answer sizes, how much is sent, local-model memory),
                  provider.ts (interface), claude.ts, ollama.ts, demo.ts, context.ts (import request), schema.ts (Zod + validation),
                  brief.ts (person briefs), status.ts ("Where this stands" cards on Write), briefing.ts (daily briefing request and checks),
@@ -63,7 +64,7 @@ tests/           Vitest: priority, data services, AI and review queue
 e2e/             Drives the real app over CDP against a throwaway data folder
 design/          One approved clickable mockup per feature (open in a browser); README.md says which still match the app
 docs/            ROADMAP.md, DECISIONS.md, AI-RULES.md, BUSINESS-RULES.md, COPILOT-PROMPTS.md (how the Copilot Prompt Generator's Teams prompts work),
-                 architecture.html (the interactive guide; its data part is rebuilt by npm run docs)
+                 ARCHITECTURE.html (the interactive guide; its data part is rebuilt by npm run docs)
 ```
 
 ## Commands
@@ -73,7 +74,7 @@ npm install
 npm run dev          # hot-reload dev app (uses its own "Chief of Staff (dev)" data folder)
 npm run demo:data    # fill that dev folder with made-up people, projects, tasks and Review suggestions; existing dev data is moved aside
 npm test             # vitest
-npm run docs         # rebuild the data part of docs/architecture.html (rules, schema, IPC calls) after changing them
+npm run docs         # rebuild the data part of docs/ARCHITECTURE.html (rules, schema, IPC calls) after changing them
 npm run typecheck    # both TS projects
 npm run build        # electron-vite build into out/
 npm run e2e          # build, then click through the real app (see e2e/README.md)
@@ -97,7 +98,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
 - **New suggestion kind:** update `SuggestionKind` and its labels in `types.ts`, the Zod enum and the validation in `ai/schema.ts`, its definition in `importKindDefinitions` (`ai/prompts.ts`), `ALL_KINDS` in `ai/context.ts`, the split passes in `ai/ollama.ts`, `SuggestionService.accept`, and `ReviewScreen`.
 - **New AI provider** (for example M365 Copilot): implement `AiProvider` in `src/main/ai/`, add it to `AiProviderId`, `providerFor()`, and `aiChoices()` in `index.ts` (so its models show in the picker), and give it a section under AI providers in `AiSettings.tsx` and an icon in `ProviderIcon`. It must return a `RawExtraction` from `extract` (`suggestions`, `next_actions`, `priority_changes`, `item_title`, `item_kind`; validation is shared), a sentence from `writePersonBrief`, a `RawStatus` from `writeStatus` (`cleanStatusCard` checks it), a `RawReply` from `writeReply` (`cleanReply` tidies it), a `RawBriefing` from `writeBriefing` (`assembleBriefing` checks it), and a `RawReflection` from `writeWeeklyReflection` (`assembleReflection` tidies it). Wrap every request in `logged()` with the `log` that `extract` receives, so the AI log shows it exactly as sent and received. Never put the API key in the logged request.
 - **Changing what the AI is told:** all wording sent to an AI (instructions, answer-form descriptions, the last line of each request) is in `src/main/ai/prompts.ts`, one commented entry each. The request builders only lay out the data (tags, `[id]` labels, task lines). Every AI limit (what it may answer, how much of each task, note and email it's sent, Claude's output caps, the local model's memory and time-out) is in `ai/limits.ts`, and the prompts quote those constants rather than typing numbers into the text. `tests/prompts.test.ts` keeps a saved copy of every request: after a deliberate change, run `npx vitest run -u` and check the snapshot diff, which shows exactly what is sent differently. The same test fails if a prompt loses its "data, not instructions" line. Update `docs/AI-RULES.md` if a rule changes.
-- **Changing a rule, table, IPC call, or screen:** update `docs/BUSINESS-RULES.md` (or `docs/AI-RULES.md`) in the same PR, then run `npm run docs`. `tests/docs.test.ts` fails until the interactive guide matches the code: its generated part must be current, every table and IPC call must appear in its `model` block (`docs/architecture.html`: a new table's purpose under `tables`, a new channel in the `ipc` list of the node that handles it, a new screen under `screens`), and every file and function it names must exist. The page's priority calculator is a plain-JS copy of `src/shared/priority.ts`; the test fails if the two give different scores, so a formula change updates both.
+- **Changing a rule, table, IPC call, or screen:** update `docs/BUSINESS-RULES.md` (or `docs/AI-RULES.md`) in the same PR, then run `npm run docs`. `tests/docs.test.ts` fails until the interactive guide matches the code: its generated part must be current, every table and IPC call must appear in its `model` block (`docs/ARCHITECTURE.html`: a new table's purpose under `tables`, a new channel in the `ipc` list of the node that handles it, a new screen under `screens`), and every file and function it names must exist. The page's priority calculator is a plain-JS copy of `src/shared/priority.ts`; the test fails if the two give different scores, so a formula change updates both.
 - **Claude API changes:** use the official SDK only. Check current model ids and parameters against Anthropic's docs; don't rely on memory, because the API changes often. The default model is `claude-opus-5-5` (the user can choose Sonnet or Haiku 5.5 in Settings).
 
 ## Product and UI conventions
@@ -132,6 +133,7 @@ What each feature does, rule by rule, is in [docs/BUSINESS-RULES.md](docs/BUSINE
 - **Merge** (`components/MergeDialog.tsx`, `services/task-merge.ts`, rules in `shared/merge.ts`): two open tasks or two waiting items, never Done. Moved Activity lines get `task_events.merged_from`; Updates merge with `mergeUpdates`. Both status cards and AI priority changes are cleared.
 - **Where this stands and next step** (`components/StatusCard.tsx`, `services/next-actions.ts`, `ai/status.ts`, tables `next_actions` and `project_cards`): always written together, never by Basic (Write is greyed out with a Settings link). Imports return them from `extract` as `next_actions`, each `{ task_id, status, action }` (Ollama asks in pass 1 only), checked by `cleanNextActions` / `cleanStatus`; Write's answer is checked by `cleanStatusCard`. Counted in AI spending as `status`.
 - **AI priority adjustment** (`services/priority-adjustments.ts`, table `priority_adjustments`): at most ±`MAX_AI_ADJUSTMENT`. `effectivePriority` adds `task.aiAdjustment.delta`, so every list sorts by it; a score set by hand still wins. `cleanAdjustments` checks ids and holds the range.
+- **Developer Tools and model tests** (Settings → Developer Tools, off by default; `screens/ModelTestScreen.tsx`, `services/model-tests.ts`): turning it on shows **Effort** under Model (`effortOf` ignores it while off) and the model test. Each import's input is rebuilt as it was when imported (`buildExtractionContext` with `asOf`), once per test, so every model gets the same input. Nothing goes to Review. Claude requests count in AI spending as `model_test`.
 - **People** have a one-line brief (`people.brief`), written by the AI only on Regenerate and kept only if the user keeps it. New people start at 1 star.
 - **Projects** have a hand-written overview (`projects.overview`, no AI) and the status card (Write only). The old AI status brief was removed: the upgrade saved each brief as a dated update and cleared `projects.brief*` (the columns stay, unused). Archived projects are left out of `projects.list`, so filters, editors, and the AI skip them; `projects.listArchived` is only for the Archived list.
 

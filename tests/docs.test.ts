@@ -10,7 +10,7 @@ import { DUE_HORIZON_DAYS, FOLLOW_UP_BUSINESS_DAYS, NO_SIGNALS, scorePriority, S
 import { DEFAULT_SETTINGS, effectivePriority, type PriorityWeights } from '../src/shared/types'
 
 /*
- * The interactive guide, docs/architecture.html, is one file. Most of it is written by hand: the
+ * The interactive guide, docs/ARCHITECTURE.html, is one file. Most of it is written by hand: the
  * system map, flows, table purposes, screens and glossary (its "model" block). One region is built
  * from the code here: the business and AI rules (parsed from docs/BUSINESS-RULES.md and
  * docs/AI-RULES.md), the database schema (from the real migrations), the IPC channels, and a few
@@ -59,7 +59,7 @@ const REPO_PATH = /^(?:src|tests|e2e|docs|bench|scripts|design|\.github)\/[\w./-
 /** Where a link in docs/ points: the guide itself stays on the page, other repo files go to GitHub. */
 function linkTarget(url: string): string {
   if (/^[a-z]+:/i.test(url) || url.startsWith('#')) return url
-  if (url === 'architecture.html') return '#overview'
+  if (url === 'ARCHITECTURE.html') return '#overview'
   return REPO + posix.normalize(posix.join('docs', url))
 }
 
@@ -185,14 +185,14 @@ function generated() {
 function rebuild(page: string): string {
   const start = page.indexOf(START)
   const end = page.indexOf(END)
-  if (start < 0 || end < start) throw new Error(`docs/architecture.html must contain ${START} and ${END}`)
+  if (start < 0 || end < start) throw new Error(`docs/ARCHITECTURE.html must contain ${START} and ${END}`)
   const json = JSON.stringify(generated(), null, 1).replace(/</g, '\\u003c')
   return `${page.slice(0, start + START.length)}\n<script id="generated">\nwindow.COS_GENERATED = ${json}\n</script>\n${page.slice(end)}`
 }
 
 // ---------- The hand-written model ----------
 
-const page = () => read('docs/architecture.html')
+const page = () => read('docs/ARCHITECTURE.html')
 
 interface ModelNode {
   id: string
@@ -213,7 +213,7 @@ interface Model {
 
 function model(): Model {
   const m = /<script id="model">\s*window\.COS_MODEL = ([\s\S]*?)<\/script>/.exec(page())
-  if (!m) throw new Error('docs/architecture.html has no model block')
+  if (!m) throw new Error('docs/ARCHITECTURE.html has no model block')
   return JSON.parse(m[1]!) as Model
 }
 
@@ -238,9 +238,9 @@ function brokenRefs(text: string): string[] {
 
 // ---------- The tests ----------
 
-describe('docs/architecture.html', () => {
+describe('docs/ARCHITECTURE.html', () => {
   it('has its generated region up to date (run `npm run docs` after changing a rule, table, or IPC call)', async () => {
-    await expect(rebuild(page())).toMatchFileSnapshot('../docs/architecture.html')
+    await expect(rebuild(page())).toMatchFileSnapshot('../docs/ARCHITECTURE.html')
   })
 
   it('describes every database table, and only real ones', () => {
@@ -248,7 +248,7 @@ describe('docs/architecture.html', () => {
     const described = Object.keys(model().tables)
     expect(
       real.filter((t) => !described.includes(t)),
-      'Tables missing from the "tables" part of the model in docs/architecture.html: add each with a group and purpose',
+      'Tables missing from the "tables" part of the model in docs/ARCHITECTURE.html: add each with a group and purpose',
     ).toEqual([])
     expect(described.filter((t) => !real.includes(t)), 'Tables in the model that no longer exist').toEqual([])
   })
@@ -313,7 +313,7 @@ describe('the priority calculator on the page', () => {
   }
   const calc = (): Calc => {
     const m = /<script id="priority-calc">([\s\S]*?)<\/script>/.exec(page())
-    if (!m) throw new Error('docs/architecture.html has no priority-calc script')
+    if (!m) throw new Error('docs/ARCHITECTURE.html has no priority-calc script')
     return new Function(`${m[1]}\nreturn PriorityCalc`)() as Calc
   }
 
