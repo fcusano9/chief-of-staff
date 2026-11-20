@@ -1,6 +1,6 @@
 # Decision log
 
-Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
+Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later. When a later decision replaces part of an entry, the older entry says so with a **Later:** note rather than being rewritten.
 
 ### 2026-11-19 · Model tests and the Effort setting (Frank)
 Frank's choices for issue #67 (mockup `design/model-test.html`, approved after three rounds). The goal is to find the cheapest model and effort that doesn't make imports worse.
@@ -78,14 +78,14 @@ Pushing a version tag builds the Windows installer and the Mac disk image on Git
 
 ### 2026-11-06 · Draft replies: on the task, preview first, saved to Drafts only (Frank)
 Frank's choices, asked up front (mockup `design/draft-reply.html`, approved after three rounds):
-- **On the task only**, for tasks linked to an Outlook email (not in Review or on the import).
-- **Preview, then save:** nothing reaches Outlook until Save to Outlook Drafts. It is never sent; Open in Outlook shows the draft so Frank sends it himself. The task stays open; Activity notes it.
-- **The AI picks Reply or Reply all**, marked "AI pick" (Frank asked for less text than a reason), and he can switch. **Changed Nov 18 (Frank):** every draft is Reply all on the email answered, adding no one, and the switch and "AI pick" are gone (mockup `design/reply-all.html`). Replying all every time keeps the rules and the card simple; recipients can still be edited in the mail app.
-- **The first draft is the AI's alone.** Frank removed the note box from the first draft; Try again takes the optional note instead.
-- **Style:** one "Writing style for draft replies" note in Settings → AI (not learning from sent mail, which would send more of his mail to the AI).
-- **Mac:** the card says "Draft replies only work with Classic Outlook on Windows" (Frank's wording). Mac options were checked: Outlook MCP servers need Graph and IT approval like milestone 6; Apple Mail's Exchange link depends on EWS, which is being retired.
-- **Which email (changed the same day, Frank):** the draft is always a reply to the newest email in the conversation, sent or received, so every follow-up he sent stays in the chain. Outlook is asked for that email live when drafting and saving (not only what the app has read), and when it's his own, the AI writes a short follow-up nudge. Applies to every task, not just Waiting ones. **Nov 17 (issue #61, Frank):** the reply goes on the last email that included the person the task is with, the sender of the email the task was created from (not Asked by, which isn't always set or linked to an address). Automatic replies (out of office, or an Auto-Submitted header) don't count. An internal side discussion after it, without that person, is context for the AI, not the email answered.
+- **On the task only**, for tasks linked to an email (not in Review or on the import).
+- **Preview, then save:** nothing reaches the mail app until the user saves or opens the draft. It's never sent; the user sends it from Outlook. The task stays open; Activity notes it.
+- **The first draft is the AI's alone.** Frank removed the note box from the first draft; Try again takes an optional note instead.
+- **Style:** one "Writing style for draft replies" note in Settings → AI, not learning from sent mail (which would send more of his mail to the AI).
 - **Decided while building:** recipients come from Outlook itself (a reply object read and discarded), not the AI; missing facts become [placeholders]; drafts aren't stored in the app.
+- **Later, which email:** first the newest email in the conversation, asked of Outlook live so follow-ups stay in the chain, with a short follow-up nudge when it's the user's own. **Nov 17 (issue #61, Frank):** the last email that included the person the task is with, the sender of the email the task was created from (not Asked by, which isn't always set or linked to an address). Automatic replies don't count, and an internal side discussion after it is context, not the email answered.
+- **Later, recipients:** the AI first picked Reply or Reply all, marked "AI pick". **Nov 18 (Frank):** every draft is Reply all on the email answered, adding no one, with no switch (mockup `design/reply-all.html`). It keeps the rules and the card simple; recipients can still be edited in the mail app.
+- **Later, the Mac:** first the card said "Draft replies only work with Classic Outlook on Windows" (still shown when there's no mail app). Apple Mail support came on Nov 7.
 
 ### 2026-11-06 · All AI wording in one file, prompts.ts (Frank)
 Every string sent to an AI moved into `src/main/ai/prompts.ts`, with a comment on each entry saying what it's for, so prompts can be tuned in one place. Frank first asked for a key-value resource file; Markdown and TOML were considered, and a TypeScript file won because typos in names or placeholders become typecheck errors, limits come straight from the constants the code enforces, and comments show on hover. Every AI limit, including how much is sent and the local model's memory, moved into `src/main/ai/limits.ts` alongside it (Frank). Entries are whole blocks with placeholders rather than one key per phrase, so each instruction is read in context. A snapshot test (`tests/prompts.test.ts`) proved the move changed no request, and shows every later wording change in the PR diff.
@@ -121,7 +121,7 @@ Frank's choices, asked up front (mockup `design/priority-adjustment.html`, appro
 Frank's choices, asked up front (mockup `design/next-action.html`, approved):
 - **Written as part of a daily briefing or an import**, not on its own and with no Suggest button: the briefing writes one for each top priority, an import for each open task the item is about. Basic writes none (rules can't judge a next step).
 - **Shown on the card only**, never in Review. It's advice that changes nothing, like the briefing itself, so it doesn't need accepting. An import writes them when it runs, even if the user later rejects that import's suggestions; tasks the import proposes to mark done get none.
-- **One sentence plus why.** One per task; the newest replaces it.
+- **One sentence plus why.** One per task; the newest replaces it. **Later (Nov 6):** the why was dropped when "Where this stands" joined the card.
 - **Dismiss collapses it** to "Suggestion dismissed · Show" (Frank chose this over hiding it for good). A new suggestion shows again.
 - **Out of date** (proposed in the mockup, approved): when the task has an update dated a later day than the suggestion, the card says so in amber instead of hiding it. Updates are dated by day, so a same-day update doesn't count.
 - **Notes made taller** in the same change: about 6 lines. The earlier attempt (`.notes-inp`, Nov 4) never applied because `textarea.inp` is more specific.
@@ -129,7 +129,7 @@ Frank's choices, asked up front (mockup `design/next-action.html`, approved):
 ### 2026-11-05 · Weekly review: live lists, saved weeks, a reflection on click (Frank)
 Frank's choices, asked up front (mockup `design/weekly-review.html`, approved):
 - **Weeks run Sunday to Saturday.** The current week shows Sunday to today and updates as he works; every week is kept so he can go back to any of them. Its own **Weekly tab** next to Today (G then V; W was taken by Waiting).
-- **Four lists:** Completed, New, Slipping, Waiting on. **Slipping is overdue tasks only**; due dates that move aren't tracked (Frank chose not to start recording them).
+- **Four lists:** Completed, New, Slipping, Waiting on. **Slipping was overdue tasks only** at first. **Later the same day:** the Activity log added pushed-back due dates (see "Task Activity log").
 - **The reflection is for the user alone**, not a report for others: a summary, Went well, Slipped, Focus next. The lists update on their own with no AI; the reflection is written only when the user clicks, and says when tasks changed since. Text only; nothing goes to Review.
 - **Ended weeks are saved automatically** the first time the app runs after Saturday midnight, and never change after. The lists are rebuilt as they stood at Saturday midnight from task dates (a task finished on Sunday still counts as overdue that week), so opening the app a few days late doesn't change them much.
 - **Weeks before this feature** show Completed and New (from task dates) and mark Slipping and Waiting on as not recorded (Frank: "Yes, partly"). A week the app wasn't opened at all the week after is saved the same way; this was in the mockup notes and Frank approved it.
@@ -159,7 +159,7 @@ Frank wants to see what Claude costs as usage grows, so he can trim what's sent 
 ### 2026-11-04 · Simpler task editor: Notes, Updates and Activity (Frank)
 Frank found the task editor confusing (Notes, Task brief and Standing instructions overlapped, and "What the AI knows" claimed more than was sent). Mockup `design/task-editor-simplified.html`, approved after several rounds:
 - **Notes are his own**; the AI never writes them. **Updates** replace the task brief and the old status updates: everything learned from imports (status updates and context, each dated with its source) plus anything he adds. Tasks now work like projects and people.
-- **"History" is renamed "Updates"** on Projects and People too, because History clashed with the daily briefing's History. Each has a **Latest** card under the button (Frank asked for it everywhere). **Activity** keeps its name (Frank) and is a plain log: created and linked imports. Recording status and due-date changes is on the roadmap backlog, kept out of this change (Frank).
+- **"History" is renamed "Updates"** on Projects and People too, because History clashed with the daily briefing's History. Each has a **Latest** card under the button (Frank asked for it everywhere). **Activity** keeps its name (Frank) and is a plain log: created and linked imports. **Later (Nov 5):** it records every change (see "Task Activity log").
 - **Removed:** task standing instructions and "What the AI knows" (no AI read them), and the **In progress** status (nothing used it, and the AI couldn't set it; Frank). The "Suggested next action" placeholder stays (Frank).
 - **The AI sees task updates.** Each open task sends its latest updates on imports, to match new items to the right task (Frank's choice; more work text goes to Anthropic when Claude is selected). **Whole updates only, up to 300 characters** (Frank chose 300 over a larger limit for now; 600 could be compared with `bench:ai` later). People and projects switched to whole updates too, so nothing is cut mid-sentence. The daily briefing reads Notes and Updates (Frank), and Updates on waiting items.
 - **Migration (schema v11):** status updates become dated lines in each task's Updates, merged in date order with the old task brief; standing instructions become an undated "Standing instructions: …" line; In progress tasks become Open. The usual safety copy is taken first.
@@ -168,11 +168,11 @@ Frank found the task editor confusing (Notes, Task brief and Standing instructio
 Frank asked for a simpler way to choose the AI (mockup `design/ai-models-providers.html`, approved after two rounds). **Frank's choices:**
 - **One Model picker** replaces Provider + Model. It lists whatever is set up: Basic, Claude Opus / Sonnet / Haiku 5.5 once a key is saved, and every model in Ollama as "Ollama <name>" (no "(local)"; the group header says where it runs). The same menu opens from the AI button at the bottom right, which used to jump to Settings.
 - **AI providers** is where each one is set up. Claude: key, Save, Test connection. Ollama: found automatically; Install Ollama downloads and opens the official installer; Start Ollama starts an installed one; one model list shows each model as Not downloaded, Downloading or Downloaded, with a two-click Delete.
-- **Only tested models are offered for download**, a curated list Frank vets (today just gpt-oss:20b). Models installed outside the app still show, marked Not tested.
+- **Only tested models are offered for download**, a curated list Frank vets (gpt-oss:20b at first; Qwen 3.8 27B added Nov 5). Models installed outside the app still show, marked Not tested.
 - **"Demo AI" is now Basic** (it's real, not a demo), and Settings says it's simple rules, not actually AI.
 - Icons are the Claude and Ollama marks from Simple Icons (CC0).
 
-**Also decided:** if the chosen model becomes unusable, the app keeps the choice and shows it as unavailable rather than switching AI without asking. The installer only runs if its signature checks out, and nothing installs for a remote Ollama address. Settings fields are unchanged (`aiProvider`, `aiModel`, `localModel`), so nothing migrates. **Not verified:** the install flow end to end on Windows or Mac (Ollama was already installed on the Mac).
+**Also decided:** if the chosen model becomes unusable, the app keeps the choice and shows it as unavailable rather than switching AI without asking. The installer only runs if its signature checks out, and nothing installs for a remote Ollama address. Settings fields are unchanged (`aiProvider`, `aiModel`, `localModel`), so nothing migrates.
 
 ### 2026-11-04 · Daily briefing: on click only, ready for a schedule later (Frank)
 Frank's choices, asked up front (mockup `design/daily-briefing.html`, approved):
@@ -195,11 +195,11 @@ Claude on the same 15 cases, medium effort (rerun 2026-11-03): Opus 5.5 found 10
 
 ### 2026-11-03 · Waiting apart from Tasks, Done lists, search, People history (Frank)
 Frank asked for these after using the app day to day. The mockup `design/lists-waiting-done-search.html` was approved.
-- **Waiting is its own list.** Tasks shows open and in-progress items only. Waiting is the same screen showing only waiting-on items, longest waiting first, with the same project filters and editor. "New waiting item" (or N on that tab) starts as Waiting on. Today still shows both, as before.
+- **Waiting is its own list.** Tasks shows open items only. Waiting is the same screen showing only waiting-on items, longest waiting first, with the same project filters and editor. "New waiting item" (or N on that tab) starts as Waiting on. Today still shows both, as before.
 - **Done items:** an Open / Done switch on Tasks and Waiting, newest first, up to 200. Frank chose this over a separate tab or the Archive. Reopen puts an item back where it came from. To know which finished items were waiting on someone, `work_items.waited_on` (schema v9) records who, from the moment a waiting item is marked done. Items finished before this change count as tasks.
 - **"No deadline or urgency signals" isn't shown in lists.** The score is unchanged; the text added nothing (`NO_SIGNALS`).
 - **Search** on Tasks, Waiting, Projects and People, in the same toolbar spot, with / to jump to it. Tasks and Waiting search the database (title, notes, who it waits on); Projects (name, overview) and People (name, role, company, brief) filter the loaded list.
-- **People history matches Projects:** the text box became a History button and window (shared `HistoryWindow`). Saving a person no longer writes the history, so notes added in the window or from Review can't be overwritten.
+- **People history matches Projects:** the text box became a button and window. Saving a person no longer writes the history, so notes added in the window or from Review can't be overwritten. (Renamed Updates on Nov 4.)
 - **New people start at 1 star**, both added by hand and proposed by the AI (was 3).
 
 ### 2026-11-03 · Quieter Review, and person context updates role and company (Frank)
@@ -235,7 +235,6 @@ Frank wants the app to read his mail since the last import, find action items an
 
 **A change from the mockup:** the mockup also skipped conversations where the user replied last. Those are now read, because they're exactly where the user's sent asks are, and only "needs reply" is suppressed.
 
-**Not done yet:** draft replies, calendar, and a benchmark of real models on the new email cases (no Ollama or Claude key on the Windows PC).
 
 ### 2026-11-03 · Database versions 5–7 after parallel work
 The project overview (PR 9) and the AI log (PR 10) were built in parallel, and both added schema version 5. Frank's Windows database had already applied the AI log as version 5, from an installed development build.
@@ -252,7 +251,11 @@ Frank wants to see the exact prompts sent to the AI and the exact responses, so 
 - **Where it's shown:** an "AI log" page, opened from Import and Review, with tabs for Instructions, Message, Answer form, Response and Full request. The design was approved from a mockup.
 
 ### 2026-11-03 · Projects: hand-written overview, AI status brief, history in a window (Frank)
-Frank asked for a project overview under the name, like the People brief, and for the project brief to be a short, high-level status the AI writes from the full history of imports, with that history out of the way behind a button. **Frank's choices** (from the approved mockup `design/project-overview-brief.html`, after three rounds): the **overview** is one sentence (two at most) that he writes himself, because it rarely changes, so it has no Regenerate; a pencil icon (or clicking the text) edits it; it's in the softer muted color, and the project name is bigger (20px), so the two don't look alike; it also shows under each name in the list. The **project brief** is a status: where it stands with dated decisions, a "Next:" line and an "Open:" line, under 120 words. It works like the People brief: Regenerate shows a suggestion with Keep, Discard and Try again, Edit writes it by hand, nothing changes until Keep, and a "new notes since this brief" hint replaces automatic rewrites. The **History** button opens a window with every dated note, newest first, with new notes marked; Frank can add a note or edit it all as text there. **How it's stored:** `projects.overview`, and `projects.brief` with who wrote it, when, and the history it was written from (to count new notes). The history is the existing project `context_briefs.summary`, unchanged, so nothing was migrated: existing projects start with no overview or brief. Accepted "Project context" suggestions keep adding dated lines to the history. **What the AI reads on imports:** each project's name, overview, status brief (or the newest 400 characters of history when there's no brief) and standing instructions. Before, it read the first 400 characters of the brief box, which were the oldest notes. **Brief input:** the history (only the newest ~24,000 characters if it's very long, so it fits the local model), the open tasks with due dates, the overview, standing instructions and today's date. Claude writes it at low effort with structured output; Ollama and the demo AI implement the same `writeProjectBrief`.
+Frank asked for a project overview under the name, like the People brief, and a short AI-written status, with the full history out of the way behind a button (mockup `design/project-overview-brief.html`, approved after three rounds):
+- **The overview** is one sentence (two at most) that the user writes, because it rarely changes, so there's no Regenerate. A pencil icon (or clicking the text) edits it. It's in the softer muted color and the name is bigger, so the two don't look alike, and it shows under each name in the list.
+- **The project brief** was an AI status (where it stands, a "Next:" line, an "Open:" line) written on Regenerate and kept only on Keep. **Later:** removed on Nov 6 in favor of the "Where this stands" card; each brief was saved as a dated update.
+- **The History button** opened a window with every dated note, newest first. **Later:** renamed Updates on Nov 4.
+- **What imports read** changed from the first 400 characters of the brief box (the oldest notes) to the overview and the newest updates.
 
 ### 2026-11-03 · Data safety before full-time use (Frank)
 Frank asked whether updates could lose his data before moving his work into the app. Three safeguards were added:
@@ -263,7 +266,12 @@ Frank asked whether updates could lose his data before moving his work into the 
 Daily backups are now single self-contained files, and listing backups never writes to the backup folder. **Why:** an update bug should cost at most the changes since the safety copy, never everything. And an AI assistant running the app from source must never be able to touch real data.
 
 ### 2026-11-02 · People: company, filters, and a one-line brief apart from the context history (Frank)
-Frank asked for a Company field, filters on the People list, and a person brief that is just one sentence (two at most) on who someone is and what they do, while keeping the full history. **Frank's choices** (from the approved mockup `design/people-company-brief.html`): the brief is plain text right under the name with **Edit** and **Regenerate**; Regenerate shows the AI's sentence in place with Keep, Discard and Try again, and nothing changes until Keep; the AI writes a brief only when he clicks, with a "new notes since this brief" hint instead of automatic rewrites; filters are **Company** (including "No company") and **Open asks** (tasks they asked for, plus tasks waiting on them, matched by name); Company sits above Role; and the AI fills in Company for a new person only when the import states it. **How it's stored:** `people.brief` (plus who wrote it, when, and the history it was written from, to count new notes); the existing person brief summary is unchanged and is now labeled "Context history", so nothing was migrated or lost. **What the AI reads on imports:** each person's name, role, company and one-line brief, or the newest 300 characters of their history when there's no brief. Before, it read the first 200 characters, which were the oldest notes. Claude writes briefs at low effort with structured output; Ollama and the demo AI implement the same `writePersonBrief`.
+Frank asked for a Company field, filters on the People list, and a one-sentence brief on who someone is, while keeping the full history (mockup `design/people-company-brief.html`, approved):
+- **The brief** is plain text under the name with Edit and Regenerate. Regenerate shows the AI's sentence in place with Keep, Discard, and Try again; nothing changes until Keep. A "new notes since this brief" hint replaces automatic rewrites.
+- **Filters:** Company (including "No company") and Open asks (tasks they asked for, plus tasks waiting on them, matched by name). Company sits above Role.
+- **The AI fills in Company** for a new person only when the import states it.
+- **Stored** as `people.brief` with who wrote it, when, and the history it was written from (to count new notes). The old summary became the history, so nothing was lost. (Renamed Updates on Nov 4.)
+- **What imports read** changed from the first 200 characters of history (the oldest notes) to the one-line brief, or the newest 300 characters of history without one.
 
 ### 2026-11-02 · Local model: split passes and a calendar; Claude Opus as the yardstick
 Frank asked for better local results even if slower. Benchmarked on the M5 MacBook Pro against Claude Opus 5.5 (8 cases, 19 expected suggestions, same scoring):
@@ -277,19 +285,19 @@ Frank asked for better local results even if slower. Benchmarked on the M5 MacBo
 | + split passes and medium reasoning | 89% | 86% | 124 s | 173 s |
 | Claude Opus 5.5 | 100% | 100% | 7 s | 18 s |
 
-**Decided:** every prompt includes a three-week calendar (helps Claude too), and the local provider defaults to split passes at low reasoning: tasks, then projects/people/context, then a short pass that links new tasks to new projects and people. Medium reasoning is still an `OllamaOptions` setting for the benchmark. A "Thorough" choice in Settings was added, then removed at Frank's request (2026-11-03): one more suggestion in 19 wasn't worth three times the wait. No local setup broke a rule. "Must not" benchmark checks now look at titles only, because Opus's details mentioned other people's work and were wrongly flagged.
+**Decided:** every import prompt includes a three-week calendar (helps Claude too), and the local provider defaults to split passes at low reasoning: tasks, then projects/people/context, then a short pass that links new tasks to new projects and people. Medium reasoning is still an `OllamaOptions` setting for the benchmark. A "Thorough" choice in Settings was added, then removed at Frank's request (2026-11-03): one more suggestion in 19 wasn't worth three times the wait. No local setup broke a rule. "Must not" benchmark checks now look at titles only, because Opus's details mentioned other people's work and were wrongly flagged.
 
 ### 2026-11-02 · AI proposes new projects and people, and links tasks to them (Frank)
-Two new suggestion kinds, `new_project` and `new_person`, plus clearer instructions for context (brief) updates, which Review now labels "Project context" and "Person context". **Frank's choices:** projects only for named initiatives with their own goal or several pieces of work; people only if they ask Frank for something, he's waiting on them, or they own work he cares about; new people always start at 3 stars (the AI never guesses weight); and a task linked to a new project or person creates it when accepted, while rejecting the project or person just removes the link. Anything already in Projects or People, and Frank himself, is never proposed. Links are stored as suggestion ids (`projectSuggestionId`, `requesterSuggestionId`, `waitingOnSuggestionId`) and swapped for real ids when decided. **Benchmark (gpt-oss:20b):** finds new projects and people, but rarely links tasks to them on its own; Frank can link them in Edit. Moving the prompt-injection rule to the top was needed to keep it ignoring injected instructions with the longer prompt.
+Two new suggestion kinds, `new_project` and `new_person`, plus clearer instructions for context (brief) updates, which Review now labels "Project context" and "Person context". **Frank's choices:** projects only for named initiatives with their own goal or several pieces of work; people only if they ask Frank for something, he's waiting on them, or they own work he cares about; new people always start at 3 stars (the AI never guesses weight; **later** 1 star, Nov 3); and a task linked to a new project or person creates it when accepted, while rejecting the project or person just removes the link. Anything already in Projects or People, and Frank himself, is never proposed. Links are stored as suggestion ids (`projectSuggestionId`, `requesterSuggestionId`, `waitingOnSuggestionId`) and swapped for real ids when decided. **Benchmark (gpt-oss:20b):** finds new projects and people, but rarely links tasks to them on its own; Frank can link them in Edit. Moving the prompt-injection rule to the top was needed to keep it ignoring injected instructions with the longer prompt.
 
 ### 2026-11-02 · Local models through Ollama, default gpt-oss:20b
-A third provider runs a model on the computer through Ollama's HTTP API, so nothing leaves the machine. It uses plain `fetch` (no new dependency), Ollama's JSON-schema constrained output, a context window sized to each prompt (Ollama's default silently drops the start of long prompts), and the shared validation. **Why gpt-oss:20b:** on Frank's MacBook Pro (M5, 32 GB) it found 85% of expected suggestions with no rule breaks, at about 17 s per item and 12.7 GB of memory. qwen3:8b was as fast but followed a prompt injection and proposed duplicates; qwen3:30b returns empty answers with thinking off. gpt-oss can't turn thinking off and thinks at length if sent `false`, so it gets `think: "low"`. Claude hasn't been benchmarked yet (no key on the Mac). Demo AI stays the default provider.
+A third provider runs a model on the computer through Ollama's HTTP API, so nothing leaves the machine. It uses plain `fetch` (no new dependency), Ollama's JSON-schema constrained output, a context window sized to each prompt (Ollama's default silently drops the start of long prompts), and the shared validation. **Why gpt-oss:20b:** on Frank's MacBook Pro (M5, 32 GB) it found 85% of expected suggestions with no rule breaks, at about 17 s per item and 12.7 GB of memory. qwen3:8b was as fast but followed a prompt injection and proposed duplicates; qwen3:30b returns empty answers with thinking off. gpt-oss can't turn thinking off and thinks at length if sent `false`, so it gets `think: "low"`.
 
 ### 2026-11-02 · Refusal fallback on for Claude extraction
 On Opus 5.5 and Sonnet 5.5, extraction requests send `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`). If Claude's safety classifier declines, the API reruns the request on a fallback model instead of failing. This follows Anthropic's guidance. Frank was told; it's easy to remove.
 
 ### 2026-11-02 · Demo AI is the default provider
-A local, rule-based provider ships so the import and review flow works and can be tested without an API key or any data leaving the PC. Claude is used only when the user selects it and stores a key. **Why:** the key and the employer's data policy were still pending.
+A local, rule-based provider ships so the import and review flow works and can be tested without an API key or any data leaving the PC. Claude is used only when the user selects it and stores a key. **Why:** the key and the employer's data policy were still pending. (Renamed Basic on Nov 4.)
 
 ### 2026-11-02 · Claude model default: Opus 5.5
 `claude-opus-5-5` is the default, at medium effort, with Zod structured outputs through `client.beta.messages.parse`. Sonnet 5.5 and Haiku 5.5 can be chosen in Settings. Cost tradeoffs are Frank's decision.
@@ -301,7 +309,7 @@ Electron `safeStorage` (Windows DPAPI, macOS Keychain) in `secrets.json`. The ke
 List on the left, task on the right, with a draggable divider and a 360px minimum per pane, so the list can scroll while a task is open. The same pattern is used for Projects and People. Edits save automatically when switching tasks.
 
 ### 2026-11-02 · Design direction B (Frank)
-Sharp and keyboard-first (inspired by Linear and Superhuman): top tabs, a Ctrl+K palette, dense rows with scores, and light, dark or follow-system themes. Chosen from three mocked-up directions because the WinUI version "looked too much like a Microsoft app". The prototype is in `design/`.
+Sharp and keyboard-first (inspired by Linear and Superhuman): top tabs, a Ctrl+K palette, dense rows with scores, and light, dark or follow-system themes. Chosen from three mocked-up directions because the WinUI version "looked too much like a Microsoft app". The prototype is `design/prototype-direction-b.html`.
 
 ### 2026-11-02 · Electron + React + TypeScript instead of WinUI 3 / .NET 10 (Frank)
 **Why:**
@@ -319,10 +327,10 @@ Electron 45's Node 24 includes `node:sqlite` with the online `backup()` API. Tha
 The live database stays in app data, not a synced folder, to avoid corruption from sync. A daily snapshot goes to OneDrive and the last 30 are kept.
 
 ### 2026-11-02 · Priority score is deterministic and explainable
-A 0–100 score combines due date, the requester's weight (1–5 stars), and staleness and follow-ups, with weights adjustable in Settings. Every score shows its top reasons, and a manual override always wins. An AI adjustment may be added in milestone 3, but it must stay explainable.
+A 0–100 score combines due date, the requester's weight (1–5 stars), and staleness and follow-ups, with weights adjustable in Settings. Every score shows its top reasons, and a manual override always wins. (The AI adjustment came on Nov 5, limited to ±15 with a reason.)
 
 ### 2026-11-02 · Context briefs for projects, tasks and people (Frank)
-**Why:** Frank doesn't want to re-explain context to the AI. Each brief has a summary and standing instructions, and every AI request includes the relevant briefs. AI-proposed brief updates go through Review.
+**Why:** Frank doesn't want to re-explain context to the AI. Each brief has a summary (now called Updates) and standing instructions (projects and people only since Nov 4), and AI requests include the relevant ones. AI-proposed updates go through Review.
 
 ### 2026-11-02 · Optional projects; no label for one-off tasks (Frank)
 Tasks don't need a project. Tasks with no project show no label and a neutral stripe.
