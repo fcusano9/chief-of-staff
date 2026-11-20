@@ -43,7 +43,7 @@ An AI-assisted work manager for Windows and Mac. It replaces Microsoft To Do: ta
 | `bench` | Scores AI providers on made-up sample imports ([bench/README.md](bench/README.md)) |
 | `scripts` | `demo-data.mjs`, which fills the dev copy with made-up data |
 | `design` | Clickable mockups, one per feature, approved before it was built (open in a browser) |
-| `docs` | Roadmap, design decisions, AI and business rules, Copilot prompts, and the interactive architecture guide (`architecture.html`) |
+| `docs` | Roadmap, design decisions, AI and business rules, Copilot prompts, and the interactive architecture guide (`ARCHITECTURE.html`) |
 
 ## Install
 
@@ -120,7 +120,7 @@ npm install
 npm run dev           # run with hot reload
 npm run demo:data     # fill the dev copy with made-up test data (your dev data is moved aside, not deleted)
 npm test              # unit and data tests
-npm run docs          # rebuild the data part of docs/architecture.html after changing a rule, table, or IPC call
+npm run docs          # rebuild the data part of docs/ARCHITECTURE.html after changing a rule, table, or IPC call
 npm run typecheck
 npm run build         # build into out/
 npm start             # run the built app from out/
@@ -164,7 +164,7 @@ The tag must match the version in `package.json`, or the workflow stops. To try 
 
 Start with [AGENTS.md](AGENTS.md), which covers the rules, architecture, conventions and how to make common changes. Then read [docs/ROADMAP.md](docs/ROADMAP.md) for what's built and what's next, and [docs/DECISIONS.md](docs/DECISIONS.md) for why.
 
-For a visual tour, open [docs/architecture.html](docs/architecture.html) in a browser: a clickable system map, step-by-step flows, the data model, the screens, every business and AI rule, and a priority score calculator.
+For a visual tour, open [docs/ARCHITECTURE.html](docs/ARCHITECTURE.html) in a browser: a clickable system map, step-by-step flows, the data model, the screens, every business and AI rule, and a priority score calculator.
 
 ## License
 
