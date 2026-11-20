@@ -122,6 +122,9 @@ try {
   check('saved to Drafts as Reply all, with the edit', saved.length === 1 && saved[0].replyAll === true && saved[0].entryId === 'E1' && saved[0].body.includes('Monday works better'), JSON.stringify(saved))
   const after = await text(app, '[data-testid="reply-card"]')
   check('says saved, with Open in Outlook', after.includes('Saved to Outlook Drafts') && after.includes('Open in Outlook'), after)
+  // Activity starts folded; open it to read the line.
+  if (!(await text(app, '.pane.right')).includes('Draft reply saved to Outlook Drafts')) await app.clickText('Activity', '.pane.right .fold')
+  await app.sleep(300)
   check('Activity notes the draft', (await text(app, '.pane.right')).includes('Draft reply saved to Outlook Drafts'))
   check('the task stays open', (await app.eval(`return (await window.cos['tasks.listActive']({})).some(t => t.title.startsWith('Reply to Dana'))`)))
   await app.screenshot(join(shots, 'draft-reply-02-saved.png'))

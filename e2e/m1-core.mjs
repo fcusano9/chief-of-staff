@@ -18,7 +18,9 @@ try {
   await app.screenshot(join(shots, '01-today-empty.png'))
 
   // Every tab renders
-  for (const tab of ['Today', 'Tasks', 'Review', 'Waiting', 'Projects', 'People', 'Prep', 'Weekly', 'Archive', 'Import']) {
+  // Review shows only while it has items; Prep and Archive stay hidden until they're built.
+  check('Review tab hidden with nothing to review', !(await app.eval(`return [...document.querySelectorAll('.tab')].some(t => t.textContent === 'Review')`)))
+  for (const tab of ['Today', 'Tasks', 'Waiting', 'Weekly', 'Projects', 'People', 'Import']) {
     await app.clickText(tab, '.tab')
     await app.sleep(200)
     const h1 = await app.eval(`return document.querySelector('main h1')?.textContent`)
@@ -40,7 +42,7 @@ try {
     await app.clickText('Save', '.pane.right button')
     await app.sleep(300)
   }
-  check('two people saved', (await app.eval(`return document.querySelectorAll('.pane.left .r').length`)) === 2)
+  check('two people saved', (await app.eval(`return document.querySelectorAll('.pane.left .r:not(.chip-fade)').length`)) === 2)
 
   // Up and Down move through People and open each one; Enter puts the cursor in the name
   const personSel = () => app.eval(`return [document.querySelector('.pane.left .r.sel .ttl')?.firstChild.textContent, document.querySelector('.pane.right .title-inp')?.value]`)
@@ -83,7 +85,7 @@ try {
   await app.type('Pricing assumptions'); await app.key('Enter')
   await app.key('Enter', { ctrl: true })
   await app.sleep(400)
-  const t1 = await app.eval(`return { score: document.querySelector('.pane.right .score').textContent, why: document.querySelector('.pane.right .card div:nth-child(2)').textContent, subs: document.querySelectorAll('.pane.right .check input[type=text]').length }`)
+  const t1 = await app.eval(`return { score: document.querySelector('.pane.right .score').textContent, why: [...document.querySelectorAll('.pane.right .card')].find(c => c.textContent.startsWith('Priority'))?.children[1]?.textContent ?? '', subs: document.querySelectorAll('.pane.right .check input[type=text]').length }`)
   check('task saved with score and rationale', Number(t1.score) === 73 && /due today/i.test(t1.why) && /Dana Lee/.test(t1.why), JSON.stringify(t1))
 
   // A few more tasks via N key
@@ -96,7 +98,7 @@ try {
     await app.key('Enter', { ctrl: true })
     await app.sleep(250)
   }
-  const count = await app.eval(`return document.querySelectorAll('.pane.left .r').length`)
+  const count = await app.eval(`return document.querySelectorAll('.pane.left .r:not(.chip-fade)').length`)
   check('six tasks in list', count === 6, String(count))
   check('highest priority first', (await app.eval(`return document.querySelector('.pane.left .r .ttl').firstChild.textContent`)) === 'Roadmap slides for VP review')
 
@@ -119,15 +121,18 @@ try {
   check('switching tasks autosaves edits', note === 'Edited while browsing', String(note))
 
   // E marks done and removes from list
-  const before = await app.eval(`return document.querySelectorAll('.pane.left .r').length`)
+  const before = await app.eval(`return document.querySelectorAll('.pane.left .r:not(.chip-fade)').length`)
   const doneTitle = await app.eval(`return document.querySelector('.pane.left .r.sel .ttl')?.firstChild.textContent`)
   const doneId = await app.eval(`return Number(document.querySelector('.pane.left .r.sel').dataset.id)`)
   await app.click('.pane.right textarea')
   await app.type('Final note before done')
   await app.eval(`document.activeElement.blur()`)
   await app.key('e')
+  // E asks for an optional resolution first; Mark done in that window finishes it.
+  await app.waitFor('[data-dialog]')
+  await app.clickText('Mark done', '[data-dialog] button')
   await app.sleep(700)
-  const after = await app.eval(`return document.querySelectorAll('.pane.left .r').length`)
+  const after = await app.eval(`return document.querySelectorAll('.pane.left .r:not(.chip-fade)').length`)
   check('E marks done', after === before - 1, `${before} -> ${after} (${doneTitle})`)
   const doneTask = await app.eval(`return await window.cos['tasks.get'](${doneId})`)
   check('E with unsaved edits keeps edits and stays done', doneTask.status === 'done' && doneTask.notes === 'Final note before done', `${doneTask.status} / ${doneTask.notes}`)
@@ -157,7 +162,7 @@ try {
 
   // Waiting tab + Today
   await app.clickText('Waiting', '.tab')
-  check('waiting list shows Finance', (await app.eval(`return document.querySelector('main .r')?.textContent ?? ''`)).includes('Finance'))
+  check('waiting list shows Finance', (await app.eval(`return document.querySelector('main .r:not(.chip-fade)')?.textContent ?? ''`)).includes('Finance'))
   await app.clickText('Today', '.tab')
   const metrics = await app.eval(`return [...document.querySelectorAll('.stat')].map(s => s.textContent)`)
   check('today metrics populated', metrics.length === 4 && metrics[3] !== '–', JSON.stringify(metrics))

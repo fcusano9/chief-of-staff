@@ -11,6 +11,11 @@ mkdirSync(shots, { recursive: true })
 const results = []
 const check = (name, ok, detail = '') => results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`)
 const h1 = (app) => app.eval(`return document.querySelector('main h1')?.textContent`)
+// The summary says "by Friday", which Basic counts from the import date (today): the next Friday, a week on if today is Friday.
+const nextFriday = (now = new Date()) => {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + ((5 - now.getDay() + 7) % 7 || 7))
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 const setValue = (sel, value, kind = 'HTMLInputElement') =>
   `const e=document.querySelector(${JSON.stringify(sel)}); const set=Object.getOwnPropertyDescriptor(${kind}.prototype,'value').set; set.call(e, ${JSON.stringify(value)}); e.dispatchEvent(new Event(${kind === 'HTMLSelectElement' ? "'change'" : "'input'"},{bubbles:true}))`
 
@@ -84,7 +89,7 @@ try {
   await app.key('a')
   await app.sleep(500)
   const created = await app.eval(`return (await window.cos['tasks.listActive']()).find(t => t.title === 'Send pricing deck to EMEA distributors')`)
-  check('edited suggestion accepted as task', !!created && created.projectId === projId && created.dueDate === '2026-11-06', JSON.stringify(created && { p: created.projectId, d: created.dueDate }))
+  check('edited suggestion accepted as task', !!created && created.projectId === projId && created.dueDate === nextFriday(), JSON.stringify(created && { p: created.projectId, d: created.dueDate }))
   check('task linked to its source', created?.linkedSources?.[0]?.title === 'Copilot summary for the week of Oct 26')
 
   // Accept "Looks done" via button, reject "Waiting on" with R
@@ -113,6 +118,9 @@ try {
   await app.eval(`window.__id = (await window.cos['tasks.listActive']()).find(t => t.title.startsWith('Send pricing')).id`)
   await app.key('k', { ctrl: true }); await app.type('Send pricing'); await app.key('Enter')
   await app.sleep(500)
+  // Linked imports are listed in the editor's Activity, which starts folded.
+  await app.clickText('Activity', '.pane.right .fold')
+  await app.sleep(300)
   const knows = await app.eval(`return document.querySelector('.pane.right').textContent`)
   check('task editor shows linked source', knows.includes('“Copilot summary for the week of Oct 26”'))
 
@@ -183,7 +191,7 @@ try {
 
   // Local model through Ollama. Points at a closed port so the suite never depends on Ollama running.
   const setAddress = (url) =>
-    app.eval(`const e=[...document.querySelectorAll('main .field')].find(f => f.textContent.startsWith('Ollama address')).querySelector('input'); e.focus()
+    app.eval(`const e=[...document.querySelectorAll('main .field')].find(f => f.textContent.startsWith('Ollama address')).querySelector('input'); e.closest('details').open = true; e.focus()
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e, ${JSON.stringify(url)}); e.dispatchEvent(new Event('input',{bubbles:true})); e.blur()`)
   await app.click('.iconbtn[title="Settings"]')
   await setAddress('http://127.0.0.1:9')
@@ -191,8 +199,8 @@ try {
   const ollamaText = await app.eval(`return document.querySelector('[data-provider="ollama"]').textContent`)
   check('nothing at the address: Ollama shown as not installed or not running', /Not installed|Installed, not running/.test(ollamaText), ollamaText.slice(0, 80))
   // A local model can't be picked with nothing answering, so choose it as a saved setting from before.
-  await app.eval(`await window.cos['settings.save']({ ...(await window.cos['settings.get']()), aiProvider: 'local', localModel: 'gpt-oss:20b' }); location.reload(); return true`)
-  await app.sleep(2500)
+  await app.eval(`await window.cos['settings.save']({ ...(await window.cos['settings.get']()), aiProvider: 'local', localModel: 'gpt-oss:20b' }); return true`)
+  await app.reload()
   check('status bar shows local model, unavailable', (await bar()).includes('Ollama gpt-oss:20b (unavailable)'), await bar())
   await app.click('.iconbtn[title="Settings"]')
   await app.sleep(800)

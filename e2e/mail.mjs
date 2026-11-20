@@ -79,8 +79,9 @@ try {
 
   await app.clickText('Waiting', '.tab')
   await app.sleep(300)
-  const waiting = await text(app, 'main .list')
-  check('waiting item from sent mail, flagged for follow-up', waiting.includes('Tom Alvarez') && waiting.includes('Follow up'), waiting)
+  // Open lists are grouped; an item needing a follow-up sits under the Follow up section.
+  const waiting = await text(app, 'main [data-section="Follow up"]')
+  check('waiting item from sent mail, flagged for follow-up', waiting.includes('Tom Alvarez'), waiting)
   await app.screenshot(join(shots, 'mail-04-waiting.png'))
 
   await app.clickText('Import', '.tab')
