@@ -124,6 +124,10 @@ The app should keep itself up to date (requested 2026-11-05; not to be built yet
 - **Signing:** unsigned updates may trigger Windows SmartScreen. On Mac, automatic updates generally require a signed, notarized app. Signing certificates cost money, which needs the owner's approval.
 - **Data safety:** an update that changes the database already gets the automatic safety copy before upgrading.
 
+## Model tests and Effort (built 2026-11-19)
+
+- ✅ **Model test** (Settings → Developer Tools): re-run past imports on up to 6 models and effort levels, with every model given the same rebuilt input; mark each suggestion accepted or rejected; compare accepted, cost, and time per model; past tests are kept (issue #67). **Effort** under Model (Developer Tools only) sets Claude's effort or Ollama's reasoning and passes for every AI use. Unit tests only; not yet tried with a real Claude key or Ollama, and no e2e suite yet.
+
 ## Merge tasks (built 2026-11-17)
 
 - ✅ **Merge two tasks or two waiting items** from the task editor or Ctrl+K, picking between fields that differ (issue #60). Unit tests, plus the `merge` e2e suite.

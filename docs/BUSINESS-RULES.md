@@ -219,9 +219,22 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 
 | Rule | Detail | Where |
 |---|---|---|
-| What's counted | Successful Claude requests: imports, daily briefings, weekly reflections, person briefs, status cards, and draft replies. Basic and Ollama are free and never recorded. The record is never pruned, unlike the AI logs. | `src/main/services/usage.ts` |
+| What's counted | Successful Claude requests: imports, daily briefings, weekly reflections, person briefs, status cards, draft replies, and model tests. Basic and Ollama are free and never recorded. The record is never pruned, unlike the AI logs. | `src/main/services/usage.ts` |
 | Estimates only | Costs use the list prices built into the app (the interactive guide's Overview lists them), with a higher Haiku price for prompts over 100,000 tokens. The part of a prompt written to or read from Claude's cache is priced at the cache prices; token counts always include it. The Anthropic Console has the real figure. | `src/shared/pricing.ts` · `estimateCost` |
 | Where it's shown | The AI spending screen (this month, the last 30 days, by purpose, and by model), each AI log, Recent imports, and the mail card's total. | `src/renderer/src/screens/AiSpendingScreen.tsx` |
+
+## Developer Tools and model tests
+
+| Rule | Detail | Where |
+|---|---|---|
+| Developer Tools | A switch in Settings, off by default, in the installed app too, so tests use real imports. On, it shows Effort under Model and the model test. Off, Effort is hidden and ignored but kept for next time. | `src/main/ai/provider.ts` · `effortOf` |
+| Opening it | Settings → Developer Tools → Open model test, or "Model test" in Ctrl+K while Developer Tools is on. It opens on Past tests. | `src/renderer/src/screens/ModelTestScreen.tsx` |
+| Setting one up | Pick past imports (newest first, with search; mail conversations too) and models (Claude models once a key is saved, and downloaded Ollama models; not Basic). Up to 6 models and 20 imports; the same model can appear at different effort levels, but not twice at the same one. An estimate shows before Run test. | `src/main/services/model-tests.ts` · `start` |
+| The estimate | Each Claude run's prompt, plus the output that model has averaged on past imports and tests. With no past answers it says "at least". Effort isn't counted beyond that history. | `src/main/services/model-tests.ts` · `estimate` |
+| One at a time | One test runs at a time. Its progress shows in the status bar, and the user can leave the screen. Stop keeps finished runs; the rest show as Not run. A test cut off by closing the app is marked Stopped. | `src/main/services/model-tests.ts` |
+| Results | One column per model, with its time, estimated cost, and how many suggestions the user accepted and rejected. Clicking a suggestion marks it accepted, then rejected, then neither. Marks are saved at once. The column with the most accepted has a green edge. The same suggestion in two columns is marked separately. A failed run shows its error. | `src/renderer/src/screens/ModelTestScreen.tsx` |
+| Summary | Per model across all the test's imports: accepted, rejected, accepted compared with the best model, average time and cost per import, unmarked, and failed. | `src/renderer/src/screens/ModelTestScreen.tsx` · `Summary` |
+| Keeping and deleting | Tests are kept until deleted (two-click Delete). Deleting an import removes it from its tests. | `src/main/db.ts` |
 
 ## Data safety
 
@@ -250,6 +263,7 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Writing style | Up to 1,000 characters. | `src/main/services/settings.ts` · `save` |
 | Apple Mail accounts | Up to 20. | `src/main/services/settings.ts` · `save` |
 | Look | Theme: system, light, or dark. Density: Compact, Comfortable (the default), or Spacious. | `src/shared/types.ts` · `DENSITIES` |
+| Effort | Claude: one of Default, Low, Medium, High, Extra, or Max; anything else becomes Default. Ollama: Low, Medium, or High, and Split or Single passes. Used only while Developer Tools is on. | `src/main/services/settings.ts` · `save` |
 
 ## Open questions (found while documenting)
 

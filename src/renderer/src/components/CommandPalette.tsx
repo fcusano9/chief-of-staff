@@ -36,7 +36,7 @@ export const TABS: [View, string][] = [...MAIN_TABS.flat(), ...DAILY_TABS]
 
 /** Ctrl+K: jump to any screen, task, project, or person, or run an action. */
 export function CommandPalette({ onClose }: { onClose: () => void }) {
-  const { go, openTask, projects, people, toggleTheme, toast, saveSettings, view, selection } = useApp()
+  const { go, openTask, projects, people, toggleTheme, toast, saveSettings, view, selection, settings } = useApp()
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -53,6 +53,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     const all: Command[] = [
       ...TABS.map(([v, l]) => ({ group: 'Go to', label: l, run: () => go(v) })),
       { group: 'Go to', label: 'Settings', run: () => go('settings') },
+      ...(settings.devTools ? [{ group: 'Go to', label: 'Model test', run: () => go('modeltest') }] : []),
       { group: 'Actions', label: 'New task', keys: 'N', run: () => openTask({ id: 'new' }) },
       ...(editing ? [{ group: 'Actions', label: 'Merge with…', run: requestMerge }] : []),
       {
@@ -82,7 +83,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     ]
     const q = query.trim().toLowerCase()
     return (q ? all.filter((c) => c.label.toLowerCase().includes(q)) : all).slice(0, 40)
-  }, [query, tasks, projects, people, view, selection])
+  }, [query, tasks, projects, people, view, selection, settings.devTools])
 
   useEffect(() => setCursor(0), [query])
   useEffect(() => {

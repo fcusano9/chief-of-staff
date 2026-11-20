@@ -46,6 +46,20 @@ export const CLAUDE_MAX_TOKENS = {
   weekly: 8000,
 }
 
+/**
+ * Higher effort thinks longer, and thinking counts toward max_tokens, so Extra and Max (and High
+ * for the small requests) get more room than the base caps above. Default, Low and Medium use the base.
+ */
+export const CLAUDE_EFFORT_MIN_TOKENS = { low: 0, medium: 0, high: 16000, xhigh: 32000, max: 64000 }
+export const claudeMaxTokens = (base: number, effort?: keyof typeof CLAUDE_EFFORT_MIN_TOKENS) => Math.max(base, effort ? CLAUDE_EFFORT_MIN_TOKENS[effort] : 0)
+
+/**
+ * How long one Claude request may take: 10 minutes, or longer for a large max_tokens (the SDK's
+ * own estimate, an hour per 128K tokens). Passed explicitly because the SDK refuses non-streaming
+ * requests it expects to pass 10 minutes.
+ */
+export const claudeTimeoutMs = (maxTokens: number) => Math.max(10 * 60_000, Math.ceil((60 * 60_000 * maxTokens) / 128_000))
+
 /* ═══ How much the AI is sent ═══════════════════════════════════════════════════════════════ */
 
 /**
