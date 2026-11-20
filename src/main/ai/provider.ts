@@ -6,6 +6,27 @@ import type { RawReflection, WeeklyInput } from './weekly'
 import type { ExtractionContext, SourceForExtraction } from './context'
 import type { RawExtraction } from './schema'
 import type { CacheTokens } from '@shared/pricing'
+import type { AiProviderId, AppSettings, ClaudeEffort, LocalPasses, LocalReasoning } from '@shared/types'
+
+/** One model and how hard it works: what the settings ask for, or one model in a model test. */
+export interface ProviderSpec {
+  provider: AiProviderId
+  /** Claude model id or Ollama model name; ignored for Basic. */
+  model: string
+  /** Unset keeps each request's own level (imports medium, the rest low). */
+  claudeEffort?: ClaudeEffort
+  localReasoning?: LocalReasoning
+  localPasses?: LocalPasses
+}
+
+/**
+ * The effort the settings ask for. Effort only counts while Developer Tools is on; off, every
+ * provider uses its defaults (Claude per request, Ollama low reasoning with split passes).
+ */
+export function effortOf(s: Pick<AppSettings, 'devTools' | 'claudeEffort' | 'localReasoning' | 'localPasses'>): { claude?: ClaudeEffort; reasoning: LocalReasoning; passes: LocalPasses } {
+  if (!s.devTools) return { claude: undefined, reasoning: 'low', passes: 'split' }
+  return { claude: s.claudeEffort === 'default' ? undefined : s.claudeEffort, reasoning: s.localReasoning, passes: s.localPasses }
+}
 
 /**
  * Anything that can read an imported item and propose suggestions. Claude is the first real

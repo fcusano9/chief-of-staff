@@ -209,3 +209,12 @@ export function CostNote({ cost, what = 'this import' }: { cost: number | null; 
     </span>
   )
 }
+
+/** An ⓘ that shows a short explanation on hover or keyboard focus. */
+export function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="info-tip" tabIndex={0} role="note" aria-label={text}>
+      ⓘ<span className="tip-box">{text}</span>
+    </span>
+  )
+}

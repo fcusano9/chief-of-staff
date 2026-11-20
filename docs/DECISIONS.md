@@ -2,6 +2,14 @@
 
 Newest first. Each entry records what was decided, why, and who decided. Add an entry whenever a choice would surprise someone reading the code later.
 
+### 2026-11-19 · Model tests and the Effort setting (Frank)
+Frank's choices for issue #67 (mockup `design/model-test.html`, approved after three rounds). The goal is to find the cheapest model and effort that doesn't make imports worse.
+- **Behind a Developer Tools switch in Settings,** in the installed app too, not only in dev mode, because the point is testing on real imports. Effort shows only while the switch is on.
+- **Model tests rebuild an import's input** rather than saving a snapshot of it with every import. Frank didn't want snapshots kept for every import. The rebuild leaves out tasks, projects, and people that came from that import or later, reopens tasks finished since, and drops later updates and AI priority changes. It doesn't replay Activity to undo later edits (renamed tasks, moved dates), which would add a lot of code for little gain: every model in a test gets the same rebuilt input, so the comparison stays fair.
+- **Scored by the user's marks, not an answer key:** with real data there's no right answer, so each suggestion is marked accepted or rejected. Suggestions aren't matched across models, which keeps it simple.
+- **One Effort for every AI use,** not just imports. Claude's Default keeps today's levels (Medium for imports, Low for the rest); any other level applies everywhere. Names are friendlier than Anthropic's (Extra for xhigh, Max for max). Ollama has Effort plus a separate Passes line.
+- **Up to 6 models per test:** more columns get too narrow to compare, and runs add up fast.
+
 ### 2026-11-19 · Claude caches the repeated part of imports (Frank)
 **Why:** mail imports cost far more than other imports because each conversation is its own request, and every request repeated the instructions and the whole task, project, and people list. Frank chose prompt caching because the AI reads exactly the same text, so accuracy doesn't change.
 - **The calendar moved after the cached part** for Claude, because it starts on each item's date and would otherwise change the instructions from one email to the next. Ollama's prompt is unchanged.

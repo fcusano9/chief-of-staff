@@ -9,7 +9,7 @@ import { buildProjectStatusInput, buildTaskStatusInput, cleanStatusCard } from '
 import { ClaudeProvider } from './ai/claude'
 import { DemoProvider } from './ai/demo'
 import { isLoopbackUrl, OllamaProvider } from './ai/ollama'
-import { AiError, type AiProvider } from './ai/provider'
+import { AiError, effortOf, type AiProvider, type ProviderSpec } from './ai/provider'
 import { openDatabase, SCHEMA_VERSION } from './db'
 import { chooseDataLocation, findRedirectingPackage } from './paths'
 import { applyPendingRestore, createBackup, listBackups, requestRestore, snapshotNow } from './services/backup'
@@ -23,6 +23,7 @@ import { BriefingService } from './services/briefings'
 import { WeeklyService } from './services/weekly'
 import { BriefService, PersonService, ProjectService } from './services/directory'
 import { MailService } from './services/mail'
+import { ModelTestService } from './services/model-tests'
 import { CopilotService } from './services/copilot'
 import { NextActionService, ProjectCardService } from './services/next-actions'
 import { ReplyService } from './services/replies'
@@ -129,11 +130,16 @@ function currentProvider(): AiProvider {
   return providerFor(settings.current.aiProvider)
 }
 function providerFor(id: AiProviderId, localModel = settings.current.localModel): AiProvider {
-  if (id === 'local') return new OllamaProvider(settings.current.localUrl, localModel)
-  if (id === 'claude') {
+  const e = effortOf(settings.current)
+  return buildProvider({ provider: id, model: id === 'local' ? localModel : settings.current.aiModel, claudeEffort: e.claude, localReasoning: e.reasoning, localPasses: e.passes })
+}
+/** A provider for one model and effort, as the settings or a model test asks. */
+function buildProvider(spec: ProviderSpec): AiProvider {
+  if (spec.provider === 'local') return new OllamaProvider(settings.current.localUrl, spec.model, { reasoning: spec.localReasoning, passes: spec.localPasses })
+  if (spec.provider === 'claude') {
     const key = keys.get()
     if (!key) throw new AiError('Claude is selected but no API key is set. Add one in Settings → AI providers, or pick another model.')
-    return new ClaudeProvider(key, settings.current.aiModel)
+    return new ClaudeProvider(key, spec.model, spec.claudeEffort)
   }
   return new DemoProvider()
 }
@@ -141,6 +147,7 @@ const sources = new SourceService(db, currentProvider, () => settings.current.us
 const briefings = new BriefingService(db, tasks, currentProvider, () => settings.current.userName)
 const weekly = new WeeklyService(db, tasks, currentProvider, () => settings.current.userName)
 const usage = new UsageService(db)
+const modelTests = new ModelTestService(db, buildProvider, () => settings.current.userName)
 const copilot = new CopilotService(db)
 // Test data folders can read mail from a fixture file instead of Outlook (see e2e/README.md).
 const outlookFixture = isSeparateData ? process.env.COS_OUTLOOK_FIXTURE : undefined
@@ -393,6 +400,17 @@ const handlers: { [K in keyof Api]: (...args: Parameters<Api[K]>) => ReturnType<
   'weekly.isWriting': () => weekly.isWriting(),
   'weekly.aiCalls': (weekStart) => weekly.aiCalls(weekStart),
   'usage.spending': () => usage.spending(),
+  'modelTests.sources': () => modelTests.sources(),
+  'modelTests.sourceText': (sourceId) => modelTests.sourceText(sourceId),
+  'modelTests.estimate': (sourceIds, models) => modelTests.estimate(sourceIds, models),
+  'modelTests.start': (sourceIds, models) => modelTests.start(sourceIds, models),
+  'modelTests.status': () => modelTests.status(),
+  'modelTests.stop': () => modelTests.stop(),
+  'modelTests.list': () => modelTests.list(),
+  'modelTests.get': (testId) => modelTests.get(testId),
+  'modelTests.mark': (suggestionId, mark) => modelTests.mark(suggestionId, mark),
+  'modelTests.delete': (testId) => modelTests.delete(testId),
+  'modelTests.aiLog': (runId) => modelTests.aiLog(runId),
 }
 
 function registerIpc(): void {
