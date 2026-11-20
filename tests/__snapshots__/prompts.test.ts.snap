@@ -1055,7 +1055,7 @@ Propose suggestions for Frank Cusano based on the imported item.",
                   "description": "For new_person, or brief_update on a person: the company or organization they work for, as stated in the source, else null",
                 },
                 "details": {
-                  "description": "Status update text, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
+                  "description": "Status update text, how a finished task was resolved, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
                   "type": "string",
                 },
                 "due_date": {
@@ -1214,7 +1214,7 @@ Propose only:
 - new_task: something Frank Cusano personally needs to do (assigned to them, volunteered by them, or clearly theirs). Skip tasks owned by other people unless Frank Cusano must follow up, and skip anything already on the open-task list. If it belongs to a project you propose with new_project, set project_name to that project's name.
 - needs_reply: someone asked Frank Cusano a direct question, or for a decision, approval or information, and is waiting for Frank Cusano's answer, which Frank Cusano hasn't given later in the item. Title is "Reply to <their name>: <topic>" (under 80 characters); requester_name is who is waiting; due_date only if they gave a deadline. Don't propose a separate new_task just for replying; propose a new_task only for work beyond the reply. Skip it for FYIs, thank-yous and questions sent to a group that someone else answered.
 - status_update: meaningful progress, a decision, or a changed date on an existing open task. Use its task_id.
-- mark_done: an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id.
+- mark_done: an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id. details is how it was resolved: one or two factual sentences (what was delivered or decided, by whom, and when) that still make sense months later.
 - waiting_on: Frank Cusano is now waiting on someone else for an existing task (task_id) or a new item (task_id null, title set). This includes Frank Cusano asking someone, in a message Frank Cusano sent, for an answer, file or decision they haven't delivered yet in the item; title says what is owed, and waiting_on is that person's name. Skip it if the open-task list already waits on them for the same thing.
 - new_project: a named, ongoing initiative with its own goal or several pieces of work (for example "the dealer training program") that is not in the project list. Title is the project's name; details is a one- or two-sentence summary of its goal, timing and who is involved. One-off requests are tasks, not projects.
 - new_person: someone Frank Cusano works with who is not in the people list: they ask Frank Cusano for something, Frank Cusano is waiting on them, or they own a decision or piece of work Frank Cusano cares about. Title is their full name as written; set role, company and email only if the source states them; details is what's worth remembering about them. Skip people only mentioned in passing, and never propose Frank Cusano.
@@ -1485,7 +1485,7 @@ Propose suggestions for Frank Cusano based on the imported item.",
                   "description": "For new_person, or brief_update on a person: the company or organization they work for, as stated in the source, else null",
                 },
                 "details": {
-                  "description": "Status update text, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
+                  "description": "Status update text, how a finished task was resolved, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
                   "type": "string",
                 },
                 "due_date": {
@@ -1644,7 +1644,7 @@ Propose only:
 - new_task: something Frank Cusano personally needs to do (assigned to them, volunteered by them, or clearly theirs). Skip tasks owned by other people unless Frank Cusano must follow up, and skip anything already on the open-task list. If it belongs to a project you propose with new_project, set project_name to that project's name.
 - needs_reply: someone asked Frank Cusano a direct question, or for a decision, approval or information, and is waiting for Frank Cusano's answer, which Frank Cusano hasn't given later in the item. Title is "Reply to <their name>: <topic>" (under 80 characters); requester_name is who is waiting; due_date only if they gave a deadline. Don't propose a separate new_task just for replying; propose a new_task only for work beyond the reply. Skip it for FYIs, thank-yous and questions sent to a group that someone else answered.
 - status_update: meaningful progress, a decision, or a changed date on an existing open task. Use its task_id.
-- mark_done: an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id.
+- mark_done: an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id. details is how it was resolved: one or two factual sentences (what was delivered or decided, by whom, and when) that still make sense months later.
 - waiting_on: Frank Cusano is now waiting on someone else for an existing task (task_id) or a new item (task_id null, title set). This includes Frank Cusano asking someone, in a message Frank Cusano sent, for an answer, file or decision they haven't delivered yet in the item; title says what is owed, and waiting_on is that person's name. Skip it if the open-task list already waits on them for the same thing.
 - new_project: a named, ongoing initiative with its own goal or several pieces of work (for example "the dealer training program") that is not in the project list. Title is the project's name; details is a one- or two-sentence summary of its goal, timing and who is involved. One-off requests are tasks, not projects.
 - new_person: someone Frank Cusano works with who is not in the people list: they ask Frank Cusano for something, Frank Cusano is waiting on them, or they own a decision or piece of work Frank Cusano cares about. Title is their full name as written; set role, company and email only if the source states them; details is what's worth remembering about them. Skip people only mentioned in passing, and never propose Frank Cusano.
@@ -1792,7 +1792,7 @@ exports[`every AI request matches the saved snapshot > import, Ollama pass 1 (ta
               ],
             },
             "details": {
-              "description": "Status update text, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
+              "description": "Status update text, how a finished task was resolved, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
               "type": "string",
             },
             "due_date": {
@@ -1919,7 +1919,7 @@ Propose only:
 - new_task: something Frank Cusano personally needs to do (assigned to them, volunteered by them, or clearly theirs). Skip tasks owned by other people unless Frank Cusano must follow up, and skip anything already on the open-task list. If it belongs to a project you propose with new_project, set project_name to that project's name.
 - needs_reply: someone asked Frank Cusano a direct question, or for a decision, approval or information, and is waiting for Frank Cusano's answer, which Frank Cusano hasn't given later in the item. Title is "Reply to <their name>: <topic>" (under 80 characters); requester_name is who is waiting; due_date only if they gave a deadline. Don't propose a separate new_task just for replying; propose a new_task only for work beyond the reply. Skip it for FYIs, thank-yous and questions sent to a group that someone else answered.
 - status_update: meaningful progress, a decision, or a changed date on an existing open task. Use its task_id.
-- mark_done: an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id.
+- mark_done: an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id. details is how it was resolved: one or two factual sentences (what was delivered or decided, by whom, and when) that still make sense months later.
 - waiting_on: Frank Cusano is now waiting on someone else for an existing task (task_id) or a new item (task_id null, title set). This includes Frank Cusano asking someone, in a message Frank Cusano sent, for an answer, file or decision they haven't delivered yet in the item; title says what is owed, and waiting_on is that person's name. Skip it if the open-task list already waits on them for the same thing.
 
 Rules:
@@ -2037,7 +2037,7 @@ exports[`every AI request matches the saved snapshot > import, Ollama pass 2 (di
               ],
             },
             "details": {
-              "description": "Status update text, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
+              "description": "Status update text, how a finished task was resolved, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
               "type": "string",
             },
             "due_date": {
@@ -2422,7 +2422,7 @@ exports[`every AI request matches the saved snapshot > import, Ollama single pas
               ],
             },
             "details": {
-              "description": "Status update text, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
+              "description": "Status update text, how a finished task was resolved, brief text to add, a new project summary, what to remember about a new person, or useful detail for a new task",
               "type": "string",
             },
             "due_date": {
@@ -2552,7 +2552,7 @@ Propose only:
 - new_task: something Frank Cusano personally needs to do (assigned to them, volunteered by them, or clearly theirs). Skip tasks owned by other people unless Frank Cusano must follow up, and skip anything already on the open-task list. If it belongs to a project you propose with new_project, set project_name to that project's name.
 - needs_reply: someone asked Frank Cusano a direct question, or for a decision, approval or information, and is waiting for Frank Cusano's answer, which Frank Cusano hasn't given later in the item. Title is "Reply to <their name>: <topic>" (under 80 characters); requester_name is who is waiting; due_date only if they gave a deadline. Don't propose a separate new_task just for replying; propose a new_task only for work beyond the reply. Skip it for FYIs, thank-yous and questions sent to a group that someone else answered.
 - status_update: meaningful progress, a decision, or a changed date on an existing open task. Use its task_id.
-- mark_done: an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id.
+- mark_done: an existing open task that the source shows is finished, including a waiting-on task whose answer or deliverable has now arrived. Use its task_id. details is how it was resolved: one or two factual sentences (what was delivered or decided, by whom, and when) that still make sense months later.
 - waiting_on: Frank Cusano is now waiting on someone else for an existing task (task_id) or a new item (task_id null, title set). This includes Frank Cusano asking someone, in a message Frank Cusano sent, for an answer, file or decision they haven't delivered yet in the item; title says what is owed, and waiting_on is that person's name. Skip it if the open-task list already waits on them for the same thing.
 - new_project: a named, ongoing initiative with its own goal or several pieces of work (for example "the dealer training program") that is not in the project list. Title is the project's name; details is a one- or two-sentence summary of its goal, timing and who is involved. One-off requests are tasks, not projects.
 - new_person: someone Frank Cusano works with who is not in the people list: they ask Frank Cusano for something, Frank Cusano is waiting on them, or they own a decision or piece of work Frank Cusano cares about. Title is their full name as written; set role, company and email only if the source states them; details is what's worth remembering about them. Skip people only mentioned in passing, and never propose Frank Cusano.

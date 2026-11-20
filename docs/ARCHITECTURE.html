@@ -490,7 +490,7 @@ window.COS_MODEL = {
       "screen": "today", "rules": ["b-lists", "b-daily-briefing", "b-meetings"], "flows": ["briefing"] },
     { "id": "ui-tasks", "zone": "ui", "x": 24, "y": 132, "w": 156, "h": 44, "label": "Tasks & Waiting", "hint": "Lists and the task editor", "sub": "TasksScreen.tsx",
       "plain": "The two working lists, grouped and ranked, with the task editor beside them: notes, subtasks, the status card, the reply card, Updates, and Activity.",
-      "files": [{ "path": "src/renderer/src/screens/TasksScreen.tsx", "names": ["TasksScreen", "sections"] }, { "path": "src/renderer/src/components/TaskEditor.tsx", "names": ["TaskEditor"] }],
+      "files": [{ "path": "src/renderer/src/screens/TasksScreen.tsx", "names": ["TasksScreen", "sections"] }, { "path": "src/renderer/src/components/TaskEditor.tsx", "names": ["TaskEditor"] }, { "path": "src/renderer/src/components/MarkDoneDialog.tsx", "names": ["MarkDoneDialog"] }],
       "screen": "tasks", "rules": ["b-tasks", "b-lists", "b-waiting-on-and-follow-ups"], "flows": ["accept", "status", "reply", "recompute"] },
     { "id": "ui-weekly", "zone": "ui", "x": 24, "y": 188, "w": 156, "h": 44, "label": "Weekly", "hint": "One week at a time", "sub": "WeeklyScreen.tsx",
       "plain": "Each Sunday-to-Saturday week: what was completed, added, slipped, and waited on, plus the AI reflection for the current week.",
@@ -881,7 +881,7 @@ window.COS_MODEL = {
     "status_updates": { "group": "legacy", "x": 28, "y": 450, "label": "Old status updates", "purpose": "Emptied by the upgrade to version 11, which moved status updates into each task's Updates. Kept so older databases still open.", "writers": [] },
     "projects": { "group": "core", "x": 232, "y": 72, "label": "Projects", "purpose": "Each project: name, color, status (active, on hold, completed, archived), and the overview the user writes. The old AI brief columns stay, unused.", "writers": ["svc-directory", "svc-review"] },
     "people": { "group": "core", "x": 420, "y": 72, "label": "People", "purpose": "Each person: name, role, company, email, stars (1–5), and the one-line brief with who wrote it and when.", "writers": ["svc-directory", "svc-review"] },
-    "work_items": { "group": "core", "x": 326, "y": 160, "label": "Tasks", "purpose": "Every task and waiting item: title, notes, status, due date, project, who asked, the computed score and its reason, a score set by hand, follow-ups, who it's waiting on and since when, and its dates.", "writers": ["svc-tasks", "svc-review"] },
+    "work_items": { "group": "core", "x": 326, "y": 160, "label": "Tasks", "purpose": "Every task and waiting item: title, notes, status, due date, project, who asked, the computed score and its reason, a score set by hand, follow-ups, who it's waiting on and since when, its dates, and its resolution (how it was closed).", "writers": ["svc-tasks", "svc-review"] },
     "subtasks": { "group": "core", "x": 232, "y": 250, "label": "Subtasks", "purpose": "Each task's checklist, in order.", "writers": ["svc-tasks"] },
     "context_briefs": { "group": "core", "x": 420, "y": 250, "label": "Updates", "purpose": "The dated Updates for every task, project, and person, one row each by scope and owner, plus standing instructions for projects and people. Not a foreign key: it names its owner by scope and id.", "writers": ["svc-directory", "svc-review"] },
     "source_items": { "group": "import", "x": 620, "y": 72, "label": "Imports", "purpose": "Every import, kept: its text, kind, name, date, a hash that catches duplicates, any extraction error, and for mail the conversation details.", "writers": ["svc-import", "svc-mail"] },
@@ -1053,7 +1053,7 @@ window.COS_MODEL = {
 window.COS_GENERATED = {
  "facts": {
   "version": "1.0.0",
-  "schemaVersion": 22,
+  "schemaVersion": 23,
   "channelCount": 103,
   "tableCount": 30,
   "priority": {
@@ -2909,6 +2909,12 @@ window.COS_GENERATED = {
      "type": "TEXT",
      "required": false,
      "key": false
+    },
+    {
+     "name": "resolution",
+     "type": "TEXT",
+     "required": false,
+     "key": false
     }
    ],
    "links": [
@@ -3020,6 +3026,11 @@ window.COS_GENERATED = {
          "Entering Done",
          "Records when it was finished and, if it was waiting, who it was waiting on, so Done lists and Reopen know where it came from.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/tasks.ts\">\u003ccode>src/main/services/tasks.ts\u003c/code>\u003c/a> · \u003ccode>save\u003c/code>"
+        ],
+        [
+         "Resolution",
+         "Mark done (the editor's button, or E on Tasks and Waiting) first asks for a resolution: how the task was closed. It's optional; Cancel, Esc, or a click outside leaves the task open. Choosing Done in the Status menu shows the Resolution box in the editor instead. A done task's resolution stays editable above its Notes, and is kept when it's reopened (the next Mark done starts from it). Not recorded in Activity or Updates.",
+         "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/renderer/src/components/MarkDoneDialog.tsx\">\u003ccode>src/renderer/src/components/MarkDoneDialog.tsx\u003c/code>\u003c/a>; \u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/tasks.ts\">\u003ccode>src/main/services/tasks.ts\u003c/code>\u003c/a> · \u003ccode>save\u003c/code>"
         ],
         [
          "Reopen",
@@ -3481,7 +3492,7 @@ window.COS_GENERATED = {
         ],
         [
          "Looks done",
-         "Adds the update, if there is one, then marks the task done.",
+         "Marks the task done, with the suggestion's text (editable before accepting) as its resolution. An empty text keeps any resolution the task already has.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/suggestions.ts\">\u003ccode>src/main/services/suggestions.ts\u003c/code>\u003c/a> · \u003ccode>accept\u003c/code>"
         ],
         [
@@ -4357,6 +4368,10 @@ window.COS_GENERATED = {
         [
          "✅ Output",
          "Suggestions go to Review: new task, needs reply, status update, mark done, waiting on, new project, new person, context."
+        ],
+        [
+         "✅ Resolution",
+         "A mark done suggestion's text is how the task was resolved (what was delivered or decided, by whom, and when), and becomes the task's resolution when accepted."
         ],
         [
          "✅ Status cards",

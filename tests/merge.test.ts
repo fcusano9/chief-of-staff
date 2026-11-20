@@ -26,7 +26,7 @@ const at = (y: number, m: number, d: number, h = 10) => new Date(y, m - 1, d, h)
 const taskOf = (o: Partial<Task>): Task => ({
   id: 1, title: 'Task', notes: null, status: 'open', dueDate: null, projectId: null, requesterId: null, priorityScore: 50, priorityRationale: null,
   priorityOverride: null, aiAdjustment: null, followUpCount: 0, waitingOn: null, waitingSince: null, waitedOn: null, createdAt: '2026-11-01T10:00:00.000Z',
-  lastActivityAt: '2026-11-01T10:00:00.000Z', completedAt: null, subtasks: [], linkedSources: [], project: null, requester: null, ...o,
+  lastActivityAt: '2026-11-01T10:00:00.000Z', completedAt: null, resolution: null, subtasks: [], linkedSources: [], project: null, requester: null, ...o,
 })
 
 describe('merge rules', () => {

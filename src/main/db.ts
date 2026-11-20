@@ -442,6 +442,11 @@ export const MIGRATIONS: Migration[] = [
   );
   CREATE INDEX ix_model_test_calls_run ON model_test_calls(run_id);
   `,
+  // A task's resolution: how it was closed, written when it's marked done (optional) and editable
+  // after. Kept when the task is reopened.
+  `
+  ALTER TABLE work_items ADD COLUMN resolution TEXT;
+  `,
 ]
 
 /** Adds each project's status brief to the end of its Updates, dated when it was written, then clears it. */

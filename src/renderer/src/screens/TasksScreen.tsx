@@ -7,6 +7,7 @@ import { DoneRow, SearchBox, TaskRow } from '../components/bits'
 import { type ProjectFilter, ProjectChips } from '../components/ProjectChips'
 import { SplitView } from '../components/SplitView'
 import { TaskEditor } from '../components/TaskEditor'
+import { MarkDoneDialog } from '../components/MarkDoneDialog'
 import { type Hint, useShortcutHints } from '../components/hints'
 import { useApp } from '../context'
 
@@ -57,6 +58,8 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
   const [cursor, setCursor] = useState(0)
   // Bumped after a merge, so the editor reloads the merged task.
   const [editorKey, setEditorKey] = useState(0)
+  // E on a row whose editor isn't open: the task waiting for its resolution.
+  const [markingDone, setMarkingDone] = useState<Task | null>(null)
   const rightRef = useRef<HTMLElement>(null)
   const done: Hint[] = mode === 'open' ? [['E', 'done']] : []
   useShortcutHints([['↑ ↓', 'move'], ['↵', 'open'], ...done, ['N', 'new'], ['/', 'search']])
@@ -116,15 +119,12 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
         if (selectedId !== current.id) openTask({ id: current.id })
         else rightRef.current?.querySelector<HTMLInputElement>('.title-inp')?.focus()
       } else if (e.key === 'e' && current && mode === 'open') {
+        // Stops the "e" from being typed into the resolution window, which takes focus.
+        e.preventDefault()
         // The open task goes through its editor so pending edits are saved together with "done".
         const doneButton = selectedId === current.id ? rightRef.current?.querySelector<HTMLButtonElement>('[data-action="done"]') : null
         if (doneButton) return doneButton.click()
-        cos['tasks.setStatus'](current.id, 'done')
-          .then(() => {
-            toast(`Done: ${current.title}`)
-            selectNeighbor(current.id)
-          })
-          .catch((err) => toast(errorMessage(err), true))
+        setMarkingDone(current)
       } else if (e.key === '/') {
         e.preventDefault()
         document.querySelector<HTMLInputElement>('#list-search')?.focus()
@@ -228,5 +228,26 @@ export function TasksScreen({ list = 'tasks' }: { list?: 'tasks' | 'waiting' }) 
     </div>
   )
 
-  return <SplitView left={left} right={right} rightRef={rightRef} />
+  return (
+    <>
+      <SplitView left={left} right={right} rightRef={rightRef} />
+      {markingDone && (
+        <MarkDoneDialog
+          title={markingDone.title}
+          initial={markingDone.resolution ?? ''}
+          onCancel={() => setMarkingDone(null)}
+          onDone={(resolution) => {
+            const task = markingDone
+            setMarkingDone(null)
+            cos['tasks.setStatus'](task.id, 'done', resolution)
+              .then(() => {
+                toast(`Done: ${task.title}`)
+                selectNeighbor(task.id)
+              })
+              .catch((err) => toast(errorMessage(err), true))
+          }}
+        />
+      )}
+    </>
+  )
 }

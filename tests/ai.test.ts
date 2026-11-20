@@ -179,7 +179,9 @@ describe('AI import and review queue', () => {
     expect(updated.lastActivityAt >= slides.lastActivityAt).toBe(true)
 
     suggestions.accept(byKind('mark_done').id)
-    expect(tasks.get(faq.id)!.status).toBe('done')
+    // A "Looks done" suggestion's text becomes the task's resolution, not an update.
+    expect(tasks.get(faq.id)!).toMatchObject({ status: 'done', resolution: 'FAQ sent to dealers' })
+    expect(briefs.get('task', faq.id).summary).toBe('')
 
     suggestions.accept(byKind('waiting_on').id)
     expect(tasks.get(margin.id)!.status).toBe('waiting_on')

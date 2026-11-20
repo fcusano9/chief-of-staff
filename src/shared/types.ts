@@ -97,6 +97,8 @@ export interface Task {
   createdAt: string
   lastActivityAt: string
   completedAt: string | null
+  /** How the task was closed, written when it's marked done or later. Kept when it's reopened. */
+  resolution: string | null
   subtasks: Subtask[]
   /** Imported emails, chats, transcripts, or summaries this task came from or was updated by. */
   linkedSources: SourceRef[]
@@ -352,6 +354,8 @@ export interface TaskInput {
   waitingOn: string | null
   /** When entering Waiting on, the time the wait started (defaults to now). */
   waitingSince?: string | null
+  /** How the task was closed. Left out: kept as it is. */
+  resolution?: string | null
   subtasks: Subtask[]
 }
 
