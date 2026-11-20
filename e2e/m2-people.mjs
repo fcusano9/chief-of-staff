@@ -14,7 +14,7 @@ const results = []
 const check = (name, ok, detail = '') => results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`)
 const setSelect = (sel, value) =>
   `const e=document.querySelector(${JSON.stringify(sel)}); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e, ${JSON.stringify(value)}); e.dispatchEvent(new Event('change',{bubbles:true}))`
-const rows = (app) => app.eval(`return [...document.querySelectorAll('.pane.left .r')].map(r => r.querySelector('.ttl').firstChild.textContent)`)
+const rows = (app) => app.eval(`return [...document.querySelectorAll('.pane.left .r:not(.chip-fade)')].map(r => r.querySelector('.ttl').firstChild.textContent)`)
 const briefText = (app) => app.eval(`return document.querySelector('[data-brief]')?.textContent ?? null`)
 const rightText = (app) => app.eval(`return document.querySelector('.pane.right').textContent`)
 let app = await launch({ appDir, dataDir })
@@ -36,7 +36,7 @@ try {
   await app.click('.pane.right .title-inp')
   await app.type('Taylor Brooks')
   await app.clickText('Save', '.pane.right button')
-  await app.waitFor('.pane.left .r')
+  await app.waitFor('.pane.left .r:not(.chip-fade)')
   await app.sleep(300)
   check('three people listed', (await rows(app)).length === 3, JSON.stringify(await rows(app)))
 
@@ -62,7 +62,7 @@ try {
   check('clear shows everyone', (await rows(app)).length === 3)
 
   // Brief: write with Basic, keep it
-  await app.clickText('Dana Lee', '.pane.left .r')
+  await app.clickText('Dana Lee', '.pane.left .r:not(.chip-fade)')
   await app.waitFor('[data-brief]')
   const labels = await app.eval(`return [...document.querySelectorAll('.pane.right .field > span:first-child')].map(s => s.textContent)`)
   check('company sits above role', JSON.stringify(labels.slice(0, 2)) === '["Company","Role"]', JSON.stringify(labels))
@@ -118,7 +118,7 @@ try {
   await app.screenshot(join(shots, 'm2-people-03-brief.png'))
 
   // Company through the editor
-  await app.clickText('Taylor Brooks', '.pane.left .r')
+  await app.clickText('Taylor Brooks', '.pane.left .r:not(.chip-fade)')
   await app.waitFor('.pane.right input[list="company-options"]')
   check('no context, no Write brief', !(await rightText(app)).includes('Write brief'))
   await app.click('.pane.right input[list="company-options"]')

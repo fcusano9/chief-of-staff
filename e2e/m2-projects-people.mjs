@@ -58,7 +58,7 @@ try {
     `Object.getOwnPropertyDescriptor(${kind}.prototype,'value').set.call(${sel}, ${JSON.stringify(value)}); ${sel}.dispatchEvent(new Event('${event}',{bubbles:true}))`
   const field = (label, tag) => `[...document.querySelectorAll('main .field')].find(f => f.textContent.startsWith('${label}')).querySelector('${tag}')`
   await app.click('.iconbtn[title="Settings"]')
-  await app.eval(`const e = ${field('Ollama address', 'input')}; e.focus(); ${setInput('e', ollamaUrl)}; e.blur()`)
+  await app.eval(`const e = ${field('Ollama address', 'input')}; e.closest('details').open = true; e.focus(); ${setInput('e', ollamaUrl)}; e.blur()`)
   await app.sleep(800)
   await app.click('[data-ai-button]')
   await app.waitFor('.model-menu .mm-item')

@@ -73,7 +73,7 @@ app = await launch({ appDir, dataDir, fresh: false })
 try {
   await app.waitFor('.tab')
   const tabs = await app.eval(`return [...document.querySelectorAll('.tab')].map(t => t.textContent)`)
-  check('Weekly tab sits next to Today', tabs[0] === 'Today' && tabs[1] === 'Weekly', JSON.stringify(tabs))
+  check('Weekly tab follows Waiting', tabs.indexOf('Weekly') === tabs.indexOf('Waiting') + 1, JSON.stringify(tabs))
 
   // G then V opens it.
   await app.key('g')

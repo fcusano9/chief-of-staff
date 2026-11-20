@@ -34,8 +34,7 @@ try {
     await t({ title: 'Signed SOW from Northside AV', status: 'waiting_on', waitingOn: 'Priya Shah' });
     await t({ title: 'Northside SOW countersignature', status: 'waiting_on', waitingOn: 'Marco Diaz', followUpCount: 2 });
     return true`)
-  await app.eval(`location.reload(); return true`)
-  await app.sleep(1500)
+  await app.reload()
 
   // From the task editor
   await app.clickText('Tasks', '.tab')

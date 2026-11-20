@@ -24,8 +24,7 @@ try {
     await t({ title: 'Book customer visits' });
     await t({ title: 'Dealer FAQ' });
     return true`)
-  await app.eval(`location.reload(); return true`)
-  await app.sleep(1500)
+  await app.reload()
   await app.clickText('Tasks', '.tab')
   await app.sleep(400)
 

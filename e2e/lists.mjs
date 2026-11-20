@@ -35,8 +35,7 @@ try {
     const old = await t({ title: 'Roadmap slides' });
     await window.cos['tasks.setStatus'](old.id, 'done');
     return true`)
-  await app.eval(`location.reload(); return true`)
-  await app.sleep(1500)
+  await app.reload()
 
   // Tasks
   await app.clickText('Tasks', '.tab')
@@ -50,7 +49,7 @@ try {
   await app.sleep(300)
   check('Done shows finished tasks only', JSON.stringify(await titles(app)) === JSON.stringify(['Roadmap slides']) && (await head(app)).includes('1 done'), (await head(app)))
   await app.screenshot(join(shots, 'lists-01-tasks-done.png'))
-  await app.clickText('Roadmap slides', '.pane.left .r')
+  await app.clickText('Roadmap slides', '.pane.left .r:not(.chip-fade)')
   await app.waitFor('.pane.right .title-inp')
   await app.clickText('Reopen', '.pane.right button')
   await app.sleep(500)
@@ -69,8 +68,9 @@ try {
   await search(app, '')
   await app.clickText('Done', '.seg button')
   await app.sleep(300)
-  check('Waiting Done shows answered items with who', (await app.eval(`return document.querySelector('.pane.left .r')?.textContent ?? ''`)).includes('from Priya Shah'))
-  await app.clickText('Margin model', '.pane.left .r')
+  const answered = await app.eval(`return document.querySelector('.pane.left .r:not(.chip-fade)')?.textContent ?? ''`)
+  check('Waiting Done shows answered items with who', answered.includes('from Priya Shah'), answered)
+  await app.clickText('Margin model', '.pane.left .r:not(.chip-fade)')
   await app.waitFor('.pane.right .title-inp')
   await app.clickText('Reopen', '.pane.right button')
   await app.sleep(500)

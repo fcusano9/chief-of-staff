@@ -92,7 +92,9 @@ try {
   await app.waitFor('[data-import-cost]')
   const rowCost = (title) => app.eval(`return [...document.querySelectorAll('main .r')].find(r => r.querySelector('.ttl')?.textContent.startsWith(${JSON.stringify(title)}))?.querySelector('[data-import-cost]')?.textContent ?? null`)
   check('Recent imports: a pasted import shows its estimate', (await rowCost('Pricing call notes')) === ' · est. $0.060', await rowCost('Pricing call notes'))
-  check('Recent imports: an Outlook mail import shows the total of its conversations’ latest runs', (await rowCost('Outlook mail')) === ' · est. $0.099', await rowCost('Outlook mail'))
+  // The mail row is named for this computer's mail app: Outlook on Windows, Apple Mail on the Mac.
+  const mailRow = process.platform === 'darwin' ? 'Apple Mail' : 'Outlook mail'
+  check('Recent imports: a mail import shows the total of its conversations’ latest runs', (await rowCost(mailRow)) === ' · est. $0.099', await rowCost(mailRow))
   const costTip = await app.eval(`return document.querySelector('[data-import-cost]')?.title`)
   check('Recent imports: hover says it’s an estimate that may have changed', costTip?.includes('Estimated cost') && costTip?.includes('may have changed'), costTip)
   await app.clickText('Conversations', 'main button')

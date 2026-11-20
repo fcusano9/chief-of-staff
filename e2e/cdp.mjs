@@ -61,6 +61,11 @@ export async function launch({ appDir, dataDir, port = 9333, fresh = true, packa
       if (res.result?.exceptionDetails) throw new Error(res.result.exceptionDetails.exception?.description ?? 'eval failed')
       return res.result?.result?.value
     },
+    // Reloads the page from DevTools. The app blocks page navigation, which in Electron includes location.reload().
+    async reload(ms = 2500) {
+      await send('Page.reload')
+      await sleep(ms)
+    },
     async waitFor(selector, ms = 8000) {
       for (let t = 0; t < ms; t += 100) {
         if (await api.eval(`return !!document.querySelector(${JSON.stringify(selector)})`)) return

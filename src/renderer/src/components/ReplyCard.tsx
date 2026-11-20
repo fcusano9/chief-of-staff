@@ -176,7 +176,7 @@ export function ReplyCard({ taskId, onSaved }: { taskId: number | null; onSaved?
         </div>
       </div>
       <textarea className="inp rp-body" aria-label="Draft reply" value={p.body} onChange={(e) => setPhase({ ...p, body: e.target.value })} />
-      <div className="row" style={{ marginTop: 8 }}>
+      <div className="row rp-actions" style={{ marginTop: 8 }}>
         {p.retry ? (
           <>
             <input

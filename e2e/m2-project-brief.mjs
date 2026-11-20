@@ -32,9 +32,9 @@ try {
   await app.type('Q1 roadmap')
   check('a new project has no overview, card or updates yet', !(await app.eval(`return !!document.querySelector('[data-overview], [data-testid="status-card"]')`)))
   await app.clickText('Save', '.pane.right button')
-  await app.waitFor('.pane.left .r')
+  await app.waitFor('.pane.left .r:not(.chip-fade)')
   await app.sleep(300)
-  await app.clickText('Spring pricing launch', '.pane.left .r')
+  await app.clickText('Spring pricing launch', '.pane.left .r:not(.chip-fade)')
   await app.waitFor('[data-overview]')
 
   // Name and overview look different
@@ -61,7 +61,7 @@ try {
   await app.sleep(400)
   check('Ctrl+Enter saves the overview', (await text(app, '[data-overview]')) === 'Moving dealers to a four-tier pricing model for the spring launch.')
   check('overview saved', (await project(app)).overview === 'Moving dealers to a four-tier pricing model for the spring launch.')
-  const listSub = await app.eval(`return [...document.querySelectorAll('.pane.left .r')].find(r => r.textContent.startsWith('Spring')).querySelector('.ttl .faint')?.textContent`)
+  const listSub = await app.eval(`return [...document.querySelectorAll('.pane.left .r:not(.chip-fade)')].find(r => r.textContent.startsWith('Spring')).querySelector('.ttl .faint')?.textContent`)
   check('overview shown under the name in the list', listSub === 'Moving dealers to a four-tier pricing model for the spring launch.', listSub)
 
   // The card replaces the brief. With Basic, Write is off and the note links to Settings.
@@ -70,7 +70,7 @@ try {
   check('card says to pick an AI model, with a Settings link', card.includes('Where this stands and next step') && card.includes('Select an AI model in Settings to use this feature.'), card)
   check('Write is off with Basic', await app.eval(`return [...document.querySelectorAll('.pane.right [data-testid="status-card"] button')].find(b => b.textContent.includes('Write')).disabled`))
   check('Updates button shows the count', (await app.eval(`return [...document.querySelectorAll('.pane.right button')].find(b => b.textContent.startsWith('Updates')).textContent.replace(/\\s+/g, ' ')`)) === 'Updates 2')
-  check('Latest card shows the newest update', !!(await app.eval(`return document.querySelector('.pane.right [data-latest]')`)))
+  check('Latest card shows the newest update', (await text(app, '.pane.right [data-latest]')).includes('Northwind AV pilots the tiers'), await text(app, '.pane.right [data-latest]'))
   await app.screenshot(join(shots, 'm2-project-brief-01-card.png'))
   check('unsaved name edit survives', (await app.eval(`return document.querySelector('.pane.right .title-inp').value`)) === 'Spring pricing launch 2027')
 
@@ -84,7 +84,8 @@ try {
   await app.key('Enter')
   await app.sleep(400)
   const after = await app.eval(`return [...document.querySelectorAll('.dialog [data-note]')].map(n => n.textContent)`)
-  check('added note first and marked new', after.length === 3 && after[0].includes('new') && after[0].includes('EMEA will use the same four tiers'), JSON.stringify(after))
+  // Projects have no brief, so no note counts as new since one (people still mark them).
+  check('added note first', after.length === 3 && after[0].includes('EMEA will use the same four tiers'), JSON.stringify(after))
   check('added note saved with a date', /\n[A-Z][a-z]{2} \d{1,2}, \d{4}: EMEA will use the same four tiers, priced in euros\.$/.test(await history(app)), await history(app))
   await app.screenshot(join(shots, 'm2-project-brief-02-history.png'))
 
@@ -115,7 +116,7 @@ try {
   // The card's Settings link (shown with Basic) opens Settings.
   await app.clickText('Settings', '.pane.right [data-testid="status-card"] button')
   await app.sleep(400)
-  check('the Settings link opens Settings', !!(await app.eval(`return document.getElementById('ai-providers')`)))
+  check('the Settings link opens Settings', await app.eval(`return !!document.getElementById('ai-providers')`))
   check('no renderer errors', app.errors.length === 0, app.errors.join(' | '))
 } catch (e) {
   results.push(`ERROR  ${e.stack}`)
