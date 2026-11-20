@@ -111,6 +111,7 @@ textarea.inp { min-height: 64px; resize: vertical; display: block; }
 <div class="toast" id="toast"></div>
 <script>
 const $ = (id) => document.getElementById(id)
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 1700) }
 const TITLE = 'Pricing deck for the Q1 launch'
 let view = 'before', status = 'Open', resolution = ''
@@ -124,7 +125,7 @@ function editor() {
   const done = status === 'Done'
   const resBox = done ? `<div class="${view === 'before' ? '' : 'new'}">
       <div class="label">Resolution</div>
-      <textarea class="inp" id="res" placeholder="How it was resolved">${resolution}</textarea></div>` : ''
+      <textarea class="inp" id="res" placeholder="How it was resolved">${esc(resolution)}</textarea></div>` : ''
   const showRes = done && view !== 'before'
   return `<div class="editor"><div class="stripe"></div><div class="inner">
   <div class="row"><span class="score ${done ? 'done' : ''}">58</span><input class="title-inp" value="${TITLE}"><button class="iconbtn">✕</button></div>
@@ -150,7 +151,7 @@ function editor() {
 function dialog(title) {
   $('modal').innerHTML = `<div class="scrim" id="scrim"><div class="win new">
     <h4>Mark done</h4>
-    <div class="sub">${title}</div>
+    <div class="sub">${esc(title)}</div>
     <textarea class="inp" id="dres" placeholder="Resolution (optional)"></textarea>
     <div class="foot"><span class="spacer"></span><button class="btn" id="cancel">Cancel</button><button class="btn primary" id="ok">Mark done</button></div>
   </div></div>`
@@ -172,7 +173,7 @@ function dialog(title) {
 
 let listDone = null
 const ROWS = [['91', 'Reply to Dana about the Q4 budget', 'Overdue by 2 days'], ['58', TITLE, 'Due in 4 days'], ['44', 'Dealer FAQ for DM-NVX 3.2 firmware', 'Due in 6 days']]
-const list = () => `<div class="list">${ROWS.filter((r) => r[1] !== listDone).map((r, i) => `<div class="lr ${i === 1 ? 'sel' : ''}" data-t="${r[1]}"><span class="s" style="color:var(--warn)">${r[0]}</span><span class="t">${r[1]}</span><span class="w">${r[2]}</span></div>`).join('')}</div>
+const list = () => `<div class="list">${ROWS.filter((r) => r[1] !== listDone).map((r, i) => `<div class="lr ${i === 1 ? 'sel' : ''}" data-t="${esc(r[1])}"><span class="s" style="color:var(--warn)">${r[0]}</span><span class="t">${esc(r[1])}</span><span class="w">${r[2]}</span></div>`).join('')}</div>
   <div class="bar"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">Enter</span> open</span><span><span class="kbd">E</span> done</span></div>`
 
 const review = () => `<div class="rv">
