@@ -249,6 +249,29 @@ export const CLAUDE_MODELS: AiModelOption[] = [
   { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', note: 'Fastest, cheapest', price: priceLabel('claude-haiku-5-5') },
 ]
 
+/** Claude's effort levels (output_config.effort), lowest to highest. Higher thinks longer: slower, costs more, usually more careful. */
+export type ClaudeEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+/** 'default' keeps each feature's own level (imports medium, everything else low). */
+export type ClaudeEffortSetting = ClaudeEffort | 'default'
+export const CLAUDE_EFFORTS: { id: ClaudeEffortSetting; label: string }[] = [
+  { id: 'default', label: 'Default' },
+  { id: 'low', label: 'Low' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'high', label: 'High' },
+  { id: 'xhigh', label: 'Extra' },
+  { id: 'max', label: 'Max' },
+]
+/** How hard a local (Ollama) model thinks before answering. */
+export type LocalReasoning = 'low' | 'medium' | 'high'
+export const LOCAL_REASONINGS: { id: LocalReasoning; label: string }[] = [
+  { id: 'low', label: 'Low' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'high', label: 'High' },
+]
+/** Split asks a local model for a few kinds of suggestion per request (imports only); single asks once. */
+export type LocalPasses = 'split' | 'single'
+export const effortLabel = (id: ClaudeEffortSetting | LocalReasoning) => CLAUDE_EFFORTS.find((e) => e.id === id)?.label ?? id
+
 /** The rule-based reader built into the app (provider id 'demo'). It isn't actually AI. */
 export const BASIC_LABEL = 'Basic'
 
@@ -398,6 +421,14 @@ export interface AppSettings {
   dailyBriefingTime: string
   /** How the user writes, sent with every draft reply (Settings → AI). Empty means plain, professional replies. */
   replyStyle: string
+  /** Settings → Developer Tools: shows Effort and the model test. Off means Effort is ignored (the defaults are used). */
+  devTools: boolean
+  /** Effort for every Claude request, used only while devTools is on. */
+  claudeEffort: ClaudeEffortSetting
+  /** Ollama's reasoning for every request, used only while devTools is on. */
+  localReasoning: LocalReasoning
+  /** Ollama's passes for imports, used only while devTools is on. */
+  localPasses: LocalPasses
   /** Apple Mail accounts to read (Mail's account ids), chosen in Settings. Empty reads nothing. */
   mailAccounts: string[]
   /** Apple Calendar calendars to read (their ids), chosen in Settings on the Mac. Empty reads nothing. */
@@ -421,6 +452,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   peopleFilter: { company: '', openOnly: false },
   dailyBriefingTime: '07:30',
   replyStyle: '',
+  devTools: false,
+  claudeEffort: 'default',
+  localReasoning: 'low',
+  localPasses: 'split',
   mailAccounts: [],
   calendarIds: [],
   backupFolder: null,
@@ -760,9 +795,119 @@ export interface WeekListItem {
   hasReflection: boolean
 }
 
+/** Most models one model test can compare, and most imports it can run them on. */
+export const MODEL_TEST_MAX_MODELS = 6
+export const MODEL_TEST_MAX_IMPORTS = 20
+
+/** One model in a model test, and how hard it works. Basic isn't offered. */
+export interface ModelTestModel {
+  provider: 'claude' | 'local'
+  /** Claude model id or Ollama model name. */
+  model: string
+  /** Claude: an effort level. Ollama: a reasoning level. */
+  effort: ClaudeEffort
+  /** Ollama only: split or single pass. */
+  passes?: LocalPasses
+}
+
+/** An import the user can pick for a model test. */
+export interface ModelTestSource {
+  id: number
+  title: string
+  kind: SourceKind
+  importedAt: string
+  /** Suggestions from this import the user accepted in Review. */
+  accepted: number
+}
+
+/** One suggestion a model made in a test, as Review would show it, and how the user marked it. */
+export interface ModelTestSuggestion {
+  id: number
+  kind: SuggestionKind
+  title: string
+  details: string
+  dueDate: string | null
+  /** The project or person it's linked to, by name (new ones too). */
+  project: string | null
+  person: string | null
+  evidence: string
+  mark: 'accepted' | 'rejected' | null
+}
+
+export type ModelTestRunStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped'
+
+/** One model on one import. */
+export interface ModelTestRun {
+  id: number
+  sourceId: number
+  /** Index into the test's models. */
+  modelIndex: number
+  status: ModelTestRunStatus
+  durationMs: number | null
+  /** Estimated cost of its Claude requests; null for free models or before it ran. */
+  cost: number | null
+  error: string | null
+  /** How many suggestions the app's checks dropped (shown in the AI log). */
+  dropped: number
+  suggestions: ModelTestSuggestion[]
+}
+
+export interface ModelTestImport {
+  sourceId: number
+  title: string
+  kind: SourceKind
+  importedAt: string
+  accepted: number
+}
+
+export interface ModelTest {
+  id: number
+  createdAt: string
+  /** running, done, or stopped (by Stop, or by the app closing mid-test). */
+  status: 'running' | 'done' | 'stopped'
+  models: ModelTestModel[]
+  imports: ModelTestImport[]
+  runs: ModelTestRun[]
+}
+
+/** A past test, for the list. */
+export interface ModelTestSummary {
+  id: number
+  createdAt: string
+  status: ModelTest['status']
+  models: ModelTestModel[]
+  imports: number
+  cost: number | null
+  /** Suggestions not marked yet. */
+  unmarked: number
+  /** The model with the most accepted suggestions, or null when none are accepted yet. */
+  best: number | null
+}
+
+export interface ModelTestEstimate {
+  runs: number
+  /** Estimated cost of the Claude runs. */
+  cost: number
+  /** True when some Claude model had no past answers to estimate its output from, so the cost is a lower bound. */
+  partial: boolean
+}
+
+/** The test that's running now, if any. */
+export interface ModelTestJob {
+  testId: number
+  done: number
+  total: number
+}
+
+/** "Claude Sonnet 5.5 · Medium" or "Ollama gpt-oss:20b · Low · Single". */
+export function modelTestLabel(m: ModelTestModel): string {
+  const name = m.provider === 'claude' ? (CLAUDE_MODELS.find((c) => c.id === m.model)?.label ?? m.model) : localModelLabel(m.model)
+  return `${name} · ${effortLabel(m.effort)}${m.provider === 'local' && m.passes === 'single' ? ' · Single' : ''}`
+}
+
 /** What a paid AI request was for. */
 /** project_brief is kept for spending recorded before project briefs were replaced by the status card. */
-export type UsagePurpose = 'import' | 'briefing' | 'weekly' | 'person_brief' | 'project_brief' | 'status' | 'reply'
+export type UsagePurpose = 'import' | 'briefing' | 'weekly' | 'person_brief' | 'project_brief' | 'status' | 'reply' | 'model_test'
 
 export const USAGE_PURPOSE_LABELS: Record<UsagePurpose, string> = {
   import: 'Imports',
@@ -772,6 +917,7 @@ export const USAGE_PURPOSE_LABELS: Record<UsagePurpose, string> = {
   project_brief: 'Project briefs',
   status: 'Where this stands',
   reply: 'Draft replies',
+  model_test: 'Model tests',
 }
 
 /** Claude requests added up by purpose or by model. */

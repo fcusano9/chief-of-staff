@@ -47,9 +47,30 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ Relative dates | Count from the item's date (the date on the Import card, an email's date, or a Copilot answer's end), not today. |
 | ✅ Naming | The AI also returns a name (under **60 characters**, kept to **80**) and type for the item. Used only for text imports the user didn't name: not mail, not a file (its file name), not a Copilot answer (named from its marker line), and never after the user renames it. Basic names nothing: the first line is kept. Ollama names it in pass 1. |
 | ✅ Mail rules | No "needs reply" if the user sent the latest message. A waiting-on item starts when the user sent the ask. Follow-up flag after **3 business days**. First Outlook check looks back **7 days**. |
-| ✅ Local model passes | Ollama runs split passes at low reasoning: (1) tasks, updates, done, waiting on, status cards, priority changes, and the item's name and type; (2) projects, people, and context; (3) linking new tasks to new projects and people. Each request times out after **6 minutes**. |
-| ✅ Claude settings | Medium effort, refusal fallback on (Opus and Sonnet). |
+| ✅ Local model passes | Ollama runs split passes at low reasoning (both can be changed with Effort and Passes, below): (1) tasks, updates, done, waiting on, status cards, priority changes, and the item's name and type; (2) projects, people, and context; (3) linking new tasks to new projects and people. Each request times out after **6 minutes**. |
+| ✅ Claude settings | Medium effort (unless Effort says otherwise, below), refusal fallback on (Opus and Sonnet). |
 | ✅ AI log | The last **5 runs** per import, deleted with the import. |
+
+## Effort (Settings → AI, with Developer Tools on)
+
+| Rule | Detail |
+|---|---|
+| ✅ Only with Developer Tools | Effort shows under Model only while Settings → Developer Tools is on. Off, every request uses the defaults below, whatever was chosen. |
+| ✅ Claude | Default, Low, Medium, High, Extra, or Max (Anthropic's low, medium, high, xhigh, and max). **Default** keeps each feature's own level: Medium for imports, Low for briefings, status cards, draft replies, person briefs, and the weekly reflection. Any other level is used for every Claude request. |
+| ✅ Room to think | Thinking counts toward each request's output cap, so High raises small caps to **16,000** tokens, Extra to **32,000**, and Max to **64,000** (`CLAUDE_EFFORT_MIN_TOKENS`). Requests that may run past 10 minutes get a longer time-out (`claudeTimeoutMs`). |
+| ✅ Ollama | Effort (Low, Medium, or High reasoning) for every request, and Passes (Split or Single) for imports. Defaults: Low and Split. |
+| ✅ Basic | No Effort setting. |
+
+## Model tests (Settings → Developer Tools)
+
+| Rule | Detail |
+|---|---|
+| ✅ When | Only when the user runs one: past imports re-run on up to **6** models and effort levels, up to **20** imports per test. |
+| ✅ Same input for every model | Each import's open tasks, projects, and people are rebuilt as they were when it was imported, once per test (`buildExtractionContext` with `asOf`). Left out: tasks, projects, and people created then or later (people only when an import created them), updates dated after that day or from that import, and every AI priority change. Tasks finished since count as open. Not undone: later edits to titles, dates, and projects, and deleted or merged tasks. |
+| ✅ Output | Each model's suggestions, after the same checks as an import. Nothing goes to Review, and no task, card, or priority changes. The user marks each suggestion accepted or rejected. |
+| ✅ Where data goes | As for imports: Claude models send each import to Anthropic. |
+| ✅ AI log | Every request and response, kept with the test until it's deleted. Claude requests count in AI spending as Model tests. |
+| ✅ Order | Claude runs **3** at a time, then Ollama runs one at a time, grouped by model. Stop finishes the requests already sent. |
 
 ## Daily briefing (Today)
 

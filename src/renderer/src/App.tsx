@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { AiStatus, AppInfo, AppSettings, PersonSummary, ProjectSummary } from '@shared/types'
+import type { AiStatus, AppInfo, AppSettings, ModelTestJob, PersonSummary, ProjectSummary } from '@shared/types'
 import { cos, errorMessage } from './api'
 import { CommandPalette, DAILY_TABS, MAIN_TABS, TABS } from './components/CommandPalette'
 import { ALWAYS_HINTS, DEFAULT_HINTS, type Hint } from './components/hints'
@@ -8,6 +8,7 @@ import { AppContext, type AppContextValue, type PersonRequest, type TaskSelectio
 import { ComingSoonScreen } from './screens/ComingSoonScreen'
 import { AiLogScreen } from './screens/AiLogScreen'
 import { AiSpendingScreen } from './screens/AiSpendingScreen'
+import { ModelTestScreen } from './screens/ModelTestScreen'
 import { ImportScreen } from './screens/ImportScreen'
 import { ReviewScreen } from './screens/ReviewScreen'
 import { PeopleScreen } from './screens/PeopleScreen'
@@ -58,6 +59,16 @@ export function App() {
   }, [])
   const pageHints = Object.values(hintSets).sort((a, b) => b.level - a.level)[0]?.hints ?? DEFAULT_HINTS
   const [toastMsg, setToastMsg] = useState<{ text: string; error: boolean } | null>(null)
+  // A running model test shows its progress in the status bar (Developer Tools only).
+  const [testJob, setTestJob] = useState<ModelTestJob | null>(null)
+  const devTools = settings?.devTools ?? false
+  useEffect(() => {
+    if (!devTools) return setTestJob(null)
+    const poll = () => void cos['modelTests.status']().then(setTestJob).catch(() => setTestJob(null))
+    poll()
+    const timer = setInterval(poll, 2000)
+    return () => clearInterval(timer)
+  }, [devTools])
   const [osDark, setOsDark] = useState(systemDark)
   const toastTimer = useRef<number>(undefined)
   const settingsRef = useRef<AppSettings | null>(null)
@@ -200,6 +211,7 @@ export function App() {
     : view === 'import' ? <ImportScreen />
     : view === 'ailog' ? <AiLogScreen />
     : view === 'aispending' ? <AiSpendingScreen />
+    : view === 'modeltest' ? <ModelTestScreen />
     : <ComingSoonScreen view={view} />
   const fill = view === 'tasks' || view === 'projects' || view === 'people' || view === 'weekly'
 
@@ -244,7 +256,7 @@ export function App() {
           <button className="iconbtn" title="Toggle light / dark (Shift+D)" onClick={toggleTheme}>
             ◐
           </button>
-          <button className={`iconbtn ${view === 'settings' || view === 'aispending' ? 'on' : ''}`} title="Settings" onClick={() => setView('settings')}>
+          <button className={`iconbtn ${view === 'settings' || view === 'aispending' || view === 'modeltest' ? 'on' : ''}`} title="Settings" onClick={() => setView('settings')}>
             ⚙
           </button>
         </header>
@@ -268,6 +280,11 @@ export function App() {
             </span>
           ))}
           <div className="spacer" />
+          {testJob && (
+            <button className="btn ghost" style={{ padding: '0 6px', fontSize: 'var(--fs-sm)' }} data-model-test-job onClick={() => setView('modeltest')}>
+              Model test · {testJob.done} of {testJob.total}
+            </button>
+          )}
           <span>{settings!.lastBackupAt ? `Backed up ${new Date(settings!.lastBackupAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'Not backed up yet'}</span>
           <button
             className="btn ghost ai-btn"

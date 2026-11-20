@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { ACTIVE_STATUSES, SOURCE_KIND_LABELS, type SourceKind, type SuggestionKind } from '@shared/types'
-import { recentNotes } from '@shared/notes'
+import { noteLines, parseNote, recentNotes } from '@shared/notes'
 import { IMPORT_TEXT_CHARS, PROJECT_UPDATES_FOR_AI, UPDATES_FOR_AI } from './limits'
 import { importAsk, importCalendar, importKindDefinitions, importNextActionRule, importSystem } from './prompts'
 
@@ -38,8 +38,41 @@ export interface SourceForExtraction {
 const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 /** Everything the AI should know before reading a source: open tasks, projects with briefs, people. */
-export function buildExtractionContext(db: DatabaseSync, userName: string, now = new Date()): ExtractionContext {
+/**
+ * An import's input rebuilt as it was when it was imported, for a model test: every model in the
+ * test gets this same input. Approximate on purpose (see docs/DECISIONS.md, "Model tests rebuild an
+ * import's input"): later edits to titles, dates and projects show as they are now, deleted or
+ * merged tasks are gone, people added by hand later still appear, and earlier AI priority changes
+ * are left out.
+ */
+export interface AsOf {
+  /** The import being tested. */
+  sourceId: number
+}
+
+/**
+ * What the AI is told about the user's open work for an import. With `asOf`, it's rebuilt as it
+ * was when that import came in: tasks, projects and people created then or later are left out,
+ * tasks finished since count as open again, and updates after that day (or from that import) are dropped.
+ */
+export function buildExtractionContext(db: DatabaseSync, userName: string, now = new Date(), asOf?: AsOf): ExtractionContext {
   const active = ACTIVE_STATUSES.map((s) => `'${s}'`).join(', ')
+  const source = asOf ? (db.prepare('SELECT title, imported_at FROM source_items WHERE id = ?').get(asOf.sourceId) as { title: string; imported_at: string } | undefined) : undefined
+  if (asOf && !source) throw new Error(`Import ${asOf.sourceId} not found`)
+  const cutoff = source?.imported_at ?? null
+  if (cutoff) now = new Date(cutoff)
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime()
+  /** Updates as they stood then: nothing dated after the import's day, nothing from the import itself. */
+  const asThen = (summary: string) =>
+    !source
+      ? summary
+      : noteLines(summary)
+          .filter((line) => {
+            const n = parseNote(line)
+            const t = n.date ? Date.parse(n.date) : NaN
+            return n.source !== source.title && (Number.isNaN(t) || t < endOfDay)
+          })
+          .join('\n')
   const tasks = db
     .prepare(
       `SELECT w.id, w.title, w.status, w.due_date, w.waiting_on, w.priority_score, p.name AS project, r.name AS requester, IFNULL(b.summary, '') AS updates,
@@ -47,22 +80,31 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
        FROM work_items w LEFT JOIN projects p ON p.id = w.project_id LEFT JOIN people r ON r.id = w.requester_id
        LEFT JOIN context_briefs b ON b.scope = 'task' AND b.owner_id = w.id
        LEFT JOIN priority_adjustments a ON a.work_item_id = w.id
-       WHERE w.status IN (${active}) ORDER BY w.id`,
+       WHERE ${cutoff ? `w.created_at < :cutoff AND (w.status IN (${active}) OR (w.status = 'done' AND w.completed_at >= :cutoff))` : `w.status IN (${active})`}
+       ORDER BY w.id`,
     )
-    .all() as Record<string, unknown>[]
+    .all(cutoff ? { cutoff } : {}) as Record<string, unknown>[]
   const projects = db
     .prepare(
       `SELECT p.id, p.name, p.overview, IFNULL(b.summary, '') AS history, IFNULL(b.standing_instructions, '') AS instructions
        FROM projects p LEFT JOIN context_briefs b ON b.scope = 'project' AND b.owner_id = p.id
-       WHERE p.status <> 'archived' ORDER BY p.name`,
+       WHERE p.status <> 'archived' ${cutoff ? 'AND p.created_at < :cutoff' : ''} ORDER BY p.name`,
     )
-    .all() as Record<string, unknown>[]
+    .all(cutoff ? { cutoff } : {}) as Record<string, unknown>[]
+  // People have no created date; leave out those that this import or a later one created.
   const people = db
     .prepare(
       `SELECT p.id, p.name, p.role, p.company, p.brief, IFNULL(b.summary, '') AS history
-       FROM people p LEFT JOIN context_briefs b ON b.scope = 'person' AND b.owner_id = p.id ORDER BY p.name`,
+       FROM people p LEFT JOIN context_briefs b ON b.scope = 'person' AND b.owner_id = p.id
+       ${
+         cutoff
+           ? `WHERE p.id NOT IN (SELECT g.result_ref_id FROM suggestions g JOIN source_items s ON s.id = g.source_id
+                                 WHERE g.kind = 'new_person' AND g.status = 'accepted' AND g.result_ref_id IS NOT NULL AND (s.id = :source OR s.imported_at >= :cutoff))`
+           : ''
+       }
+       ORDER BY p.name`,
     )
-    .all() as Record<string, unknown>[]
+    .all(cutoff ? { cutoff, source: asOf!.sourceId } : {}) as Record<string, unknown>[]
 
   return {
     today: localDate(now),
@@ -70,22 +112,24 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
     tasks: tasks.map((t) => ({
       id: Number(t.id),
       title: String(t.title),
-      status: String(t.status),
+      // Finished since the import: open again, as it was then (waiting, if it waits on someone).
+      status: t.status === 'done' ? (t.waiting_on ? 'waiting_on' : 'open') : String(t.status),
       dueDate: (t.due_date as string) ?? null,
       project: (t.project as string) ?? null,
       requester: (t.requester as string) ?? null,
       waitingOn: (t.waiting_on as string) ?? null,
       // The task's latest updates, whole ones only, so the AI can match new items to it.
-      updates: recentNotes(String(t.updates), UPDATES_FOR_AI),
+      updates: recentNotes(asThen(String(t.updates)), UPDATES_FOR_AI),
       priority: Number(t.priority_score),
-      aiChange: t.ai_delta == null ? null : { delta: Number(t.ai_delta), reason: String(t.ai_reason) },
+      // Rebuilt inputs leave out AI changes: today's may have come from this import or a later one.
+      aiChange: t.ai_delta == null || source ? null : { delta: Number(t.ai_delta), reason: String(t.ai_reason) },
     })),
     // A project's overview and its latest updates (whole ones only).
     projects: projects.map((p) => ({
       id: Number(p.id),
       name: String(p.name),
       overview: (p.overview as string) ?? '',
-      brief: recentNotes(String(p.history), PROJECT_UPDATES_FOR_AI).join(' | '),
+      brief: recentNotes(asThen(String(p.history)), PROJECT_UPDATES_FOR_AI).join(' | '),
       instructions: String(p.instructions),
     })),
     // A person's one-line brief; without one, their latest updates (whole ones only).
@@ -94,7 +138,7 @@ export function buildExtractionContext(db: DatabaseSync, userName: string, now =
       name: String(p.name),
       role: (p.role as string) ?? null,
       company: (p.company as string) ?? null,
-      brief: (p.brief as string) || recentNotes(String(p.history), UPDATES_FOR_AI).join(' | '),
+      brief: (p.brief as string) || recentNotes(asThen(String(p.history)), UPDATES_FOR_AI).join(' | '),
     })),
   }
 }

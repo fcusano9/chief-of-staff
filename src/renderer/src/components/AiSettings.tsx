@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AiProviderId, OllamaSetupStatus } from '@shared/types'
 import { formatCost } from '@shared/pricing'
-import { CLAUDE_MODELS, TESTED_LOCAL_MODELS } from '@shared/types'
+import { CLAUDE_EFFORTS, CLAUDE_MODELS, LOCAL_REASONINGS, TESTED_LOCAL_MODELS, type ClaudeEffortSetting, type LocalPasses, type LocalReasoning } from '@shared/types'
 import { cos, errorMessage } from '../api'
 import { useApp } from '../context'
-import { ConfirmButton } from './bits'
+import { ConfirmButton, InfoTip } from './bits'
 import { ModelMenu, ProviderIcon } from './ModelMenu'
 
 type TestResult = { ok: boolean; text: string } | 'testing' | null
@@ -18,6 +18,61 @@ export function AiSettings() {
         <div style={{ fontWeight: 500, marginBottom: 8 }}>AI providers</div>
         <ClaudeProvider />
         <OllamaProvider />
+      </div>
+    </>
+  )
+}
+
+export const CLAUDE_EFFORT_INFO =
+  'How long Claude thinks before answering. Higher is slower, costs more, and is usually more careful. Default uses Medium for imports and Low for everything else (briefings, status cards, draft replies, person briefs, and the weekly reflection). Any other level is used for everything.'
+export const LOCAL_EFFORT_INFO = 'How long the model thinks before answering. Higher is slower and usually more careful. Low is the default.'
+export const PASSES_INFO =
+  'Split: the model reads each import a few times, looking for a few kinds of suggestion each time. Slower, finds more. Single: one read for everything. Faster, finds less. Only imports use passes.'
+
+/** Effort for the chosen model (Settings → Developer Tools on). Basic has none. */
+function EffortFields() {
+  const { settings, saveSettings, ai } = useApp()
+  if (ai.provider === 'claude')
+    return (
+      <div className="field" data-effort>
+        <span>Effort</span>
+        <span className="row">
+          <select className="inp" style={{ width: 160 }} aria-label="Effort" value={settings.claudeEffort} onChange={(e) => void saveSettings({ claudeEffort: e.target.value as ClaudeEffortSetting })}>
+            {CLAUDE_EFFORTS.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <InfoTip text={CLAUDE_EFFORT_INFO} />
+        </span>
+      </div>
+    )
+  if (ai.provider !== 'local') return null
+  return (
+    <>
+      <div className="field" data-effort>
+        <span>Effort</span>
+        <span className="row">
+          <select className="inp" style={{ width: 160 }} aria-label="Effort" value={settings.localReasoning} onChange={(e) => void saveSettings({ localReasoning: e.target.value as LocalReasoning })}>
+            {LOCAL_REASONINGS.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <InfoTip text={LOCAL_EFFORT_INFO} />
+        </span>
+      </div>
+      <div className="field" data-passes>
+        <span>Passes</span>
+        <span className="row">
+          <select className="inp" style={{ width: 160 }} aria-label="Passes" value={settings.localPasses} onChange={(e) => void saveSettings({ localPasses: e.target.value as LocalPasses })}>
+            <option value="split">Split</option>
+            <option value="single">Single</option>
+          </select>
+          <InfoTip text={PASSES_INFO} />
+        </span>
       </div>
     </>
   )
@@ -61,6 +116,7 @@ function ModelCard() {
               <span className="chev" aria-hidden />
             </button>
           </div>
+          {settings.devTools && <EffortFields />}
         </div>
         <div style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.6 }}>
           <p style={{ margin: '4px 0 6px' }} data-model-note>

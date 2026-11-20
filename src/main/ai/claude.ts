@@ -1,13 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
-import { CLAUDE_MODELS } from '@shared/types'
+import { CLAUDE_MODELS, type ClaudeEffort } from '@shared/types'
 import { buildBriefPrompt, PersonBriefSchema, type PersonBriefInput } from './brief'
 import { buildReplyPrompt, ReplySchema, type RawReply, type ReplyInput } from './reply'
 import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } from './status'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
 import { buildSystemPrompt, buildUserPrompt, itemDateOf, type ExtractionContext, type SourceForExtraction } from './context'
-import { CLAUDE_MAX_TOKENS } from './limits'
+import { CLAUDE_MAX_TOKENS, claudeMaxTokens, claudeTimeoutMs } from './limits'
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawExtraction } from './schema'
 
@@ -21,12 +21,12 @@ const FALLBACK_BETA = 'server-side-fallback-2026-07-01'
 const fallbackFor = (model: string) => (FALLBACK_MODELS.has(model) ? { betas: [FALLBACK_BETA], fallbacks: 'default' as const } : {})
 
 /** The request sent for one extraction. Exported so tests can check it without calling the API. */
-export function buildExtractionRequest(model: string, ctx: ExtractionContext, source: SourceForExtraction) {
+export function buildExtractionRequest(model: string, ctx: ExtractionContext, source: SourceForExtraction, effort?: ClaudeEffort) {
   return {
     model,
-    max_tokens: CLAUDE_MAX_TOKENS.import,
+    max_tokens: claudeMaxTokens(CLAUDE_MAX_TOKENS.import, effort),
     // Medium effort: extraction is careful reading, not deep reasoning.
-    output_config: { effort: 'medium' as const, format: betaZodOutputFormat(ExtractionSchema) },
+    output_config: { effort: effort ?? ('medium' as const), format: betaZodOutputFormat(ExtractionSchema) },
     system: buildSystemPrompt(ctx, undefined, itemDateOf(source)),
     messages: [{ role: 'user' as const, content: buildUserPrompt(ctx, source) }],
     ...fallbackFor(model),
@@ -34,14 +34,14 @@ export function buildExtractionRequest(model: string, ctx: ExtractionContext, so
 }
 
 /** The request for a person's one-line brief. */
-export function buildBriefRequest(model: string, input: PersonBriefInput) {
+export function buildBriefRequest(model: string, input: PersonBriefInput, effort?: ClaudeEffort) {
   const { system, user } = buildBriefPrompt(input)
   return {
     model,
     // Room for a short answer plus the model's thinking, which counts toward the limit.
-    max_tokens: CLAUDE_MAX_TOKENS.personBrief,
+    max_tokens: claudeMaxTokens(CLAUDE_MAX_TOKENS.personBrief, effort),
     // Low effort: summarizing a few notes needs little reasoning.
-    output_config: { effort: 'low' as const, format: betaZodOutputFormat(PersonBriefSchema) },
+    output_config: { effort: effort ?? ('low' as const), format: betaZodOutputFormat(PersonBriefSchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -49,13 +49,13 @@ export function buildBriefRequest(model: string, input: PersonBriefInput) {
 }
 
 /** The request for a task's or project's card ("Where this stands" and the next step). */
-export function buildStatusRequest(model: string, input: StatusInput) {
+export function buildStatusRequest(model: string, input: StatusInput, effort?: ClaudeEffort) {
   const { system, user } = buildStatusPrompt(input)
   return {
     model,
-    max_tokens: CLAUDE_MAX_TOKENS.statusCard,
+    max_tokens: claudeMaxTokens(CLAUDE_MAX_TOKENS.statusCard, effort),
     // Low effort: condensing notes into a few lines needs little reasoning.
-    output_config: { effort: 'low' as const, format: betaZodOutputFormat(StatusSchema) },
+    output_config: { effort: effort ?? ('low' as const), format: betaZodOutputFormat(StatusSchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -63,13 +63,13 @@ export function buildStatusRequest(model: string, input: StatusInput) {
 }
 
 /** The request for a draft reply to an email. */
-export function buildReplyRequest(model: string, input: ReplyInput) {
+export function buildReplyRequest(model: string, input: ReplyInput, effort?: ClaudeEffort) {
   const { system, user } = buildReplyPrompt(input)
   return {
     model,
-    max_tokens: CLAUDE_MAX_TOKENS.reply,
+    max_tokens: claudeMaxTokens(CLAUDE_MAX_TOKENS.reply, effort),
     // Low effort: a short reply from a thread and a few notes needs little reasoning.
-    output_config: { effort: 'low' as const, format: betaZodOutputFormat(ReplySchema) },
+    output_config: { effort: effort ?? ('low' as const), format: betaZodOutputFormat(ReplySchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -77,13 +77,13 @@ export function buildReplyRequest(model: string, input: ReplyInput) {
 }
 
 /** The request for the daily briefing. */
-export function buildBriefingRequest(model: string, input: BriefingInput) {
+export function buildBriefingRequest(model: string, input: BriefingInput, effort?: ClaudeEffort) {
   const { system, user } = buildBriefingPrompt(input)
   return {
     model,
-    max_tokens: CLAUDE_MAX_TOKENS.briefing,
+    max_tokens: claudeMaxTokens(CLAUDE_MAX_TOKENS.briefing, effort),
     // Low effort: picking and explaining a handful of tasks needs little reasoning.
-    output_config: { effort: 'low' as const, format: betaZodOutputFormat(BriefingSchema) },
+    output_config: { effort: effort ?? ('low' as const), format: betaZodOutputFormat(BriefingSchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -91,13 +91,13 @@ export function buildBriefingRequest(model: string, input: BriefingInput) {
 }
 
 /** The request for the weekly reflection. */
-export function buildWeeklyRequest(model: string, input: WeeklyInput) {
+export function buildWeeklyRequest(model: string, input: WeeklyInput, effort?: ClaudeEffort) {
   const { system, user } = buildWeeklyPrompt(input)
   return {
     model,
-    max_tokens: CLAUDE_MAX_TOKENS.weekly,
+    max_tokens: claudeMaxTokens(CLAUDE_MAX_TOKENS.weekly, effort),
     // Low effort: a short look back at lists that are already worked out.
-    output_config: { effort: 'low' as const, format: betaZodOutputFormat(WeeklySchema) },
+    output_config: { effort: effort ?? ('low' as const), format: betaZodOutputFormat(WeeklySchema) },
     system,
     messages: [{ role: 'user' as const, content: user }],
     ...fallbackFor(model),
@@ -109,9 +109,11 @@ export class ClaudeProvider implements AiProvider {
   readonly label: string
   private readonly client: Anthropic
 
+  /** `effort` set: every request uses it (Settings → Effort). Unset: each request keeps its own level. */
   constructor(
     apiKey: string,
     private readonly model: string,
+    private readonly effort?: ClaudeEffort,
   ) {
     this.client = new Anthropic({ apiKey, maxRetries: 2 })
     this.label = CLAUDE_MODELS.find((m) => m.id === model)?.label ?? model
@@ -119,11 +121,11 @@ export class ClaudeProvider implements AiProvider {
 
   async extract(ctx: ExtractionContext, source: SourceForExtraction, log?: AiCallLog): Promise<RawExtraction> {
     try {
-      const request = buildExtractionRequest(this.model, ctx, source)
+      const request = buildExtractionRequest(this.model, ctx, source, this.effort)
       const response = await logged(
         log,
         { purpose: 'Find suggestions', endpoint: 'Anthropic Messages API (POST /v1/messages; the beta flag is sent as a header)', request: asSent(request) },
-        () => this.client.beta.messages.parse(request),
+        () => this.client.beta.messages.parse(request, { timeout: claudeTimeoutMs(request.max_tokens) }),
         (r) => {
           // parsed_output is added by the SDK; drop it so this is the API's response as received.
           const { parsed_output: _parsed, ...raw } = r
@@ -146,7 +148,7 @@ export class ClaudeProvider implements AiProvider {
 
   async writePersonBrief(input: PersonBriefInput, log?: AiCallLog): Promise<string> {
     try {
-      const response = await this.send(log, 'Write a person brief', buildBriefRequest(this.model, input))
+      const response = await this.send(log, 'Write a person brief', buildBriefRequest(this.model, input, this.effort))
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this brief. Nothing was changed.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The brief was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
@@ -158,7 +160,7 @@ export class ClaudeProvider implements AiProvider {
 
   async writeStatus(input: StatusInput, log?: AiCallLog): Promise<RawStatus> {
     try {
-      const response = await this.send(log, `Write where this ${input.scope} stands`, buildStatusRequest(this.model, input))
+      const response = await this.send(log, `Write where this ${input.scope} stands`, buildStatusRequest(this.model, input, this.effort))
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write this. Nothing was changed.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The answer was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
@@ -170,7 +172,7 @@ export class ClaudeProvider implements AiProvider {
 
   async writeReply(input: ReplyInput, log?: AiCallLog): Promise<RawReply> {
     try {
-      const response = await this.send(log, 'Draft a reply', buildReplyRequest(this.model, input))
+      const response = await this.send(log, 'Draft a reply', buildReplyRequest(this.model, input, this.effort))
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to draft this reply. Nothing was changed.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The draft was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
@@ -182,11 +184,11 @@ export class ClaudeProvider implements AiProvider {
 
   async writeBriefing(input: BriefingInput, log?: AiCallLog): Promise<RawBriefing> {
     try {
-      const request = buildBriefingRequest(this.model, input)
+      const request = buildBriefingRequest(this.model, input, this.effort)
       const response = await logged(
         log,
         { purpose: 'Write the briefing', endpoint: 'Anthropic Messages API (POST /v1/messages; the beta flag is sent as a header)', request: asSent(request) },
-        () => this.client.beta.messages.parse(request),
+        () => this.client.beta.messages.parse(request, { timeout: claudeTimeoutMs(request.max_tokens) }),
         (r) => {
           const { parsed_output: _parsed, ...raw } = r
           return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens, paidModel: r.model }
@@ -204,7 +206,7 @@ export class ClaudeProvider implements AiProvider {
 
   async writeWeeklyReflection(input: WeeklyInput, log?: AiCallLog): Promise<RawReflection> {
     try {
-      const response = await this.send(log, 'Write the weekly reflection', buildWeeklyRequest(this.model, input))
+      const response = await this.send(log, 'Write the weekly reflection', buildWeeklyRequest(this.model, input, this.effort))
       if (response.stop_reason === 'refusal') throw new AiError('Claude declined to write the reflection.')
       if (response.stop_reason === 'max_tokens') throw new AiError('The reflection was cut off. Try again.')
       if (!response.parsed_output) throw new AiError("Claude's response couldn't be read. Try again.")
@@ -219,7 +221,7 @@ export class ClaudeProvider implements AiProvider {
     return logged(
       log,
       { purpose, endpoint: ENDPOINT, request: asSent(request) },
-      () => this.client.beta.messages.parse(request),
+      () => this.client.beta.messages.parse(request, { timeout: claudeTimeoutMs(request.max_tokens) }),
       (r) => {
         const { parsed_output: _parsed, ...raw } = r
         return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens, paidModel: r.model }

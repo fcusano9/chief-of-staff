@@ -1,6 +1,12 @@
 import type { MergeChoices } from './merge'
 import type {
   AiRun,
+  ModelTest,
+  ModelTestEstimate,
+  ModelTestJob,
+  ModelTestModel,
+  ModelTestSource,
+  ModelTestSummary,
   AiSpending,
   AiCall,
   AiStatus,
@@ -203,6 +209,18 @@ export interface Api {
   'weekly.aiCalls': (weekStart: string) => AiCall[]
   /** Estimated Claude costs this month and over the last 30 days, by purpose and by model. */
   'usage.spending': () => AiSpending
+  /** Model tests (Settings → Developer Tools). Nothing they do goes to Review or changes the user's data. */
+  'modelTests.sources': () => ModelTestSource[]
+  'modelTests.sourceText': (sourceId: number) => string
+  'modelTests.estimate': (sourceIds: number[], models: ModelTestModel[]) => ModelTestEstimate
+  'modelTests.start': (sourceIds: number[], models: ModelTestModel[]) => number
+  'modelTests.status': () => ModelTestJob | null
+  'modelTests.stop': () => void
+  'modelTests.list': () => ModelTestSummary[]
+  'modelTests.get': (testId: number) => ModelTest | null
+  'modelTests.mark': (suggestionId: number, mark: 'accepted' | 'rejected' | null) => void
+  'modelTests.delete': (testId: number) => void
+  'modelTests.aiLog': (runId: number) => { calls: AiCall[]; dropped: { kind: string; title: string; reason: string }[]; rawOutput: string | null }
 }
 
 export type ApiChannel = keyof Api
@@ -300,6 +318,17 @@ export const API_CHANNELS: ApiChannel[] = [
   'weekly.isWriting',
   'weekly.aiCalls',
   'usage.spending',
+  'modelTests.sources',
+  'modelTests.sourceText',
+  'modelTests.estimate',
+  'modelTests.start',
+  'modelTests.status',
+  'modelTests.stop',
+  'modelTests.list',
+  'modelTests.get',
+  'modelTests.mark',
+  'modelTests.delete',
+  'modelTests.aiLog',
 ]
 
 /** The renderer sees every call as async. */

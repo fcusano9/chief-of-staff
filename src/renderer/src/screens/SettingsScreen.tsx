@@ -45,7 +45,7 @@ export const SHORTCUTS: { title: string; keys: [string, string][] }[] = [
 ]
 
 export function SettingsScreen() {
-  const { settings, saveSettings, info, toast } = useApp()
+  const { settings, saveSettings, info, toast, go } = useApp()
   const [weights, setWeights] = useState<PriorityWeights>(settings.priorityWeights)
   const [backupFolder, setBackupFolder] = useState(settings.backupFolder ?? '')
   const [keep, setKeep] = useState(settings.backupsToKeep)
@@ -171,6 +171,31 @@ export function SettingsScreen() {
         </div>
 
         <RestoreBackups />
+
+        <div className="card" data-dev-tools>
+          <div className="row" style={{ marginBottom: settings.devTools ? 8 : 0 }}>
+            <span style={{ fontWeight: 500 }}>Developer Tools</span>
+            <div className="spacer" />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.devTools}
+              aria-label="Developer Tools"
+              className={`switch ${settings.devTools ? 'on' : ''}`}
+              onClick={() => void saveSettings({ devTools: !settings.devTools })}
+            />
+          </div>
+          {settings.devTools && (
+            <div className="field" style={{ gridTemplateColumns: '110px 1fr' }}>
+              <span>Model test</span>
+              <span>
+                <button className="btn" data-open-model-test onClick={() => go('modeltest')}>
+                  Open model test
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
 
         <div className="card" style={{ gridColumn: '1 / -1' }}>
           <div style={{ fontWeight: 500, marginBottom: 8 }}>Keyboard shortcuts</div>
