@@ -16,22 +16,36 @@ export interface ModelPrice {
   input: number
   /** US dollars per million output tokens (thinking is billed as output). */
   output: number
-  /** A higher price for requests whose prompt is over `aboveTokens` input tokens. */
-  long?: { aboveTokens: number; input: number; output: number }
+  /** US dollars per million input tokens written to the prompt cache (the 5-minute cache). */
+  cacheWrite: number
+  /** US dollars per million input tokens read from the prompt cache. */
+  cacheRead: number
+  /** Higher prices for requests whose prompt (cached parts included) is over `aboveTokens` input tokens. */
+  long?: { aboveTokens: number; input: number; output: number; cacheWrite: number; cacheRead: number }
 }
 
 export const CLAUDE_PRICES: Record<string, ModelPrice> = {
-  'claude-opus-5-5': { input: 4, output: 20 },
-  'claude-sonnet-5-5': { input: 2, output: 10 },
-  'claude-haiku-5-5': { input: 0.1, output: 0.5, long: { aboveTokens: 100_000, input: 0.5, output: 2.5 } },
+  'claude-opus-5-5': { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.2 },
+  'claude-sonnet-5-5': { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.1 },
+  'claude-haiku-5-5': { input: 0.1, output: 0.5, cacheWrite: 0.125, cacheRead: 0.01, long: { aboveTokens: 100_000, input: 0.5, output: 2.5, cacheWrite: 0.625, cacheRead: 0.05 } },
 }
 
-/** Estimated cost in US dollars of one request, or null when the model's price isn't known. */
-export function estimateCost(model: string | null | undefined, inputTokens: number, outputTokens: number): number | null {
+/** How many of a request's input tokens were written to or read from the prompt cache. */
+export interface CacheTokens {
+  write: number
+  read: number
+}
+
+/**
+ * Estimated cost in US dollars of one request, or null when the model's price isn't known.
+ * `inputTokens` is the whole prompt, cached parts included; `cache` says how much of it was cached.
+ */
+export function estimateCost(model: string | null | undefined, inputTokens: number, outputTokens: number, cache: CacheTokens = { write: 0, read: 0 }): number | null {
   const price = model ? CLAUDE_PRICES[model] : undefined
   if (!price) return null
   const p = price.long && inputTokens > price.long.aboveTokens ? price.long : price
-  return (inputTokens * p.input + outputTokens * p.output) / 1_000_000
+  const uncached = Math.max(0, inputTokens - cache.write - cache.read)
+  return (uncached * p.input + cache.write * p.cacheWrite + cache.read * p.cacheRead + outputTokens * p.output) / 1_000_000
 }
 
 /** "$2.54", or three decimals under a dollar ("$0.067") so small runs can be told apart. */

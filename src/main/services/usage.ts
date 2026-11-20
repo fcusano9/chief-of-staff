@@ -20,8 +20,8 @@ export class UsageService {
   record(call: AiCallRecord, purpose: UsagePurpose, briefingId: number | null = null): void {
     if (!call.paidModel || call.inputTokens == null) return
     this.db
-      .prepare('INSERT INTO ai_usage (at, purpose, model, input_tokens, output_tokens, briefing_id) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(call.startedAt, purpose, call.paidModel, call.inputTokens, call.outputTokens ?? 0, briefingId)
+      .prepare('INSERT INTO ai_usage (at, purpose, model, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens, briefing_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(call.startedAt, purpose, call.paidModel, call.inputTokens, call.outputTokens ?? 0, call.cache?.write ?? 0, call.cache?.read ?? 0, briefingId)
   }
 
   /** A log that only records usage, for requests that have no AI log of their own (person and project briefs). */
@@ -31,8 +31,8 @@ export class UsageService {
 
   /** Estimated cost of the Claude requests behind a briefing, or null if none (or none priced). */
   briefingCost(briefingId: number): number | null {
-    const rows = this.db.prepare('SELECT model, input_tokens, output_tokens FROM ai_usage WHERE briefing_id = ?').all(briefingId) as unknown as Row[]
-    const costs = rows.map((r) => estimateCost(r.model, Number(r.input_tokens), Number(r.output_tokens))).filter((c): c is number => c != null)
+    const rows = this.db.prepare(`SELECT ${COLUMNS} FROM ai_usage WHERE briefing_id = ?`).all(briefingId) as unknown as Row[]
+    const costs = rows.map(costOf).filter((c): c is number => c != null)
     return costs.length ? costs.reduce((a, b) => a + b, 0) : null
   }
 
@@ -44,7 +44,7 @@ export class UsageService {
   }
 
   private period(from: Date): UsagePeriod {
-    const rows = this.db.prepare('SELECT purpose, model, input_tokens, output_tokens FROM ai_usage WHERE at >= ?').all(from.toISOString()) as unknown as Row[]
+    const rows = this.db.prepare(`SELECT purpose, ${COLUMNS} FROM ai_usage WHERE at >= ?`).all(from.toISOString()) as unknown as Row[]
     return { from: from.toISOString(), total: sum('total', rows), byPurpose: groupBy(rows, (r) => r.purpose), byModel: groupBy(rows, (r) => r.model) }
   }
 }
@@ -54,12 +54,19 @@ interface Row {
   model: string
   input_tokens: number
   output_tokens: number
+  cache_write_tokens: number
+  cache_read_tokens: number
 }
+
+const COLUMNS = 'model, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens'
+
+const costOf = (r: Row) =>
+  estimateCost(r.model, Number(r.input_tokens), Number(r.output_tokens), { write: Number(r.cache_write_tokens), read: Number(r.cache_read_tokens) })
 
 function sum(key: string, rows: Row[]): UsageGroup {
   const g: UsageGroup = { key, requests: 0, inputTokens: 0, outputTokens: 0, cost: 0, unpriced: 0 }
   for (const r of rows) {
-    const cost = estimateCost(r.model, Number(r.input_tokens), Number(r.output_tokens))
+    const cost = costOf(r)
     g.requests++
     g.inputTokens += Number(r.input_tokens)
     g.outputTokens += Number(r.output_tokens)

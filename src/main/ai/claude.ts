@@ -6,7 +6,7 @@ import { buildReplyPrompt, ReplySchema, type RawReply, type ReplyInput } from '.
 import { buildStatusPrompt, StatusSchema, type RawStatus, type StatusInput } from './status'
 import { BriefingSchema, buildBriefingPrompt, type BriefingInput, type RawBriefing } from './briefing'
 import { buildWeeklyPrompt, WeeklySchema, type RawReflection, type WeeklyInput } from './weekly'
-import { buildSystemPrompt, buildUserPrompt, itemDateOf, type ExtractionContext, type SourceForExtraction } from './context'
+import { buildDirectory, buildInstructions, buildItem, calendar, itemDateOf, type ExtractionContext, type SourceForExtraction } from './context'
 import { CLAUDE_MAX_TOKENS, claudeMaxTokens, claudeTimeoutMs } from './limits'
 import { AiError, asSent, logged, type AiCallLog, type AiProvider } from './provider'
 import { ExtractionSchema, type RawExtraction } from './schema'
@@ -20,17 +20,41 @@ const FALLBACK_BETA = 'server-side-fallback-2026-07-01'
 /** If a safety classifier declines, the API retries on a fallback model instead of failing. */
 const fallbackFor = (model: string) => (FALLBACK_MODELS.has(model) ? { betas: [FALLBACK_BETA], fallbacks: 'default' as const } : {})
 
-/** The request sent for one extraction. Exported so tests can check it without calling the API. */
+/** Marks the end of a part of the prompt that Claude may cache for 5 minutes. */
+const CACHE = { cache_control: { type: 'ephemeral' as const } }
+
+/**
+ * The request sent for one extraction. Exported so tests can check it without calling the API.
+ * Laid out so the parts that repeat come first and are cached: the instructions (the same for
+ * every import), then the open tasks, projects, and people (the same for every conversation in a
+ * mail run). The calendar and the item come last, since they change. A cached part costs a little
+ * more the first time and far less on each reuse within 5 minutes.
+ */
 export function buildExtractionRequest(model: string, ctx: ExtractionContext, source: SourceForExtraction, effort?: ClaudeEffort) {
   return {
     model,
     max_tokens: claudeMaxTokens(CLAUDE_MAX_TOKENS.import, effort),
     // Medium effort: extraction is careful reading, not deep reasoning.
     output_config: { effort: effort ?? ('medium' as const), format: betaZodOutputFormat(ExtractionSchema) },
-    system: buildSystemPrompt(ctx, undefined, itemDateOf(source)),
-    messages: [{ role: 'user' as const, content: buildUserPrompt(ctx, source) }],
+    system: [{ type: 'text' as const, text: buildInstructions(ctx), ...CACHE }],
+    messages: [
+      {
+        role: 'user' as const,
+        content: [
+          { type: 'text' as const, text: buildDirectory(ctx), ...CACHE },
+          { type: 'text' as const, text: `${calendar(ctx.today, itemDateOf(source))}\n\n${buildItem(ctx, source)}` },
+        ],
+      },
+    ],
     ...fallbackFor(model),
   }
+}
+
+/** Tokens and the model that answered, for the AI log and AI spending. input_tokens leaves out cached tokens, so they're added back. */
+function usageOf(r: Anthropic.Beta.BetaMessage) {
+  const write = r.usage.cache_creation_input_tokens ?? 0
+  const read = r.usage.cache_read_input_tokens ?? 0
+  return { inputTokens: r.usage.input_tokens + write + read, outputTokens: r.usage.output_tokens, cache: { write, read }, paidModel: r.model }
 }
 
 /** The request for a person's one-line brief. */
@@ -129,7 +153,7 @@ export class ClaudeProvider implements AiProvider {
         (r) => {
           // parsed_output is added by the SDK; drop it so this is the API's response as received.
           const { parsed_output: _parsed, ...raw } = r
-          return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens, paidModel: r.model }
+          return { response: raw, ...usageOf(r) }
         },
         (err) => (err instanceof Anthropic.APIError ? (err.error ?? null) : null),
       )
@@ -191,7 +215,7 @@ export class ClaudeProvider implements AiProvider {
         () => this.client.beta.messages.parse(request, { timeout: claudeTimeoutMs(request.max_tokens) }),
         (r) => {
           const { parsed_output: _parsed, ...raw } = r
-          return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens, paidModel: r.model }
+          return { response: raw, ...usageOf(r) }
         },
         (err) => (err instanceof Anthropic.APIError ? (err.error ?? null) : null),
       )
@@ -224,7 +248,7 @@ export class ClaudeProvider implements AiProvider {
       () => this.client.beta.messages.parse(request, { timeout: claudeTimeoutMs(request.max_tokens) }),
       (r) => {
         const { parsed_output: _parsed, ...raw } = r
-        return { response: raw, inputTokens: r.usage.input_tokens, outputTokens: r.usage.output_tokens, paidModel: r.model }
+        return { response: raw, ...usageOf(r) }
       },
       (err) => (err instanceof Anthropic.APIError ? (err.error ?? null) : null),
     )

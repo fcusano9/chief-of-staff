@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { estimateCost } from '@shared/pricing'
+import { estimateCost, type CacheTokens } from '@shared/pricing'
 import type { AiCall, AiRun } from '@shared/types'
 import type { AiCallLog, AiCallRecord } from '../ai/provider'
 import type { DroppedSuggestion } from '../ai/schema'
@@ -41,12 +41,12 @@ export class AiLogService {
   /** A log the provider writes each request and response into. */
   logFor(runId: number): AiCallLog {
     const insert = this.db.prepare(
-      `INSERT INTO ai_calls (run_id, purpose, endpoint, request, response, error, started_at, duration_ms, input_tokens, output_tokens)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO ai_calls (run_id, purpose, endpoint, request, response, error, started_at, duration_ms, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     return {
       record: (c: AiCallRecord) => {
-        insert.run(runId, c.purpose, c.endpoint, pretty(c.request), c.response == null ? null : pretty(c.response), c.error, c.startedAt, c.durationMs, c.inputTokens, c.outputTokens)
+        insert.run(runId, c.purpose, c.endpoint, pretty(c.request), c.response == null ? null : pretty(c.response), c.error, c.startedAt, c.durationMs, c.inputTokens, c.outputTokens, c.cache?.write ?? 0, c.cache?.read ?? 0)
         this.usage.record(c, 'import')
       },
     }
@@ -68,11 +68,11 @@ export class AiLogService {
    */
   latestRunCost(sourceId: number): number | null {
     const calls = this.db
-      .prepare('SELECT endpoint, request, response, input_tokens, output_tokens FROM ai_calls WHERE run_id = (SELECT MAX(id) FROM extraction_runs WHERE source_id = ?)')
+      .prepare('SELECT endpoint, request, response, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens FROM ai_calls WHERE run_id = (SELECT MAX(id) FROM extraction_runs WHERE source_id = ?)')
       .all(sourceId) as Record<string, unknown>[]
     const costs = calls
       .filter((c) => c.input_tokens != null)
-      .map((c) => estimateCost(paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null), Number(c.input_tokens), Number(c.output_tokens ?? 0)))
+      .map((c) => estimateCost(paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null), Number(c.input_tokens), Number(c.output_tokens ?? 0), cacheOf(c)))
       .filter((c): c is number => c != null)
     return costs.length ? costs.reduce((a, b) => a + b, 0) : null
   }
@@ -112,6 +112,7 @@ export class AiLogService {
               durationMs: Number(c.duration_ms),
               inputTokens: c.input_tokens == null ? null : Number(c.input_tokens),
               outputTokens: c.output_tokens == null ? null : Number(c.output_tokens),
+              cache: cacheOf(c),
               paidModel: paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null),
             }),
           ),
@@ -119,3 +120,6 @@ export class AiLogService {
     })
   }
 }
+
+/** A logged request's prompt-cache tokens (0 for requests from before they were recorded). */
+const cacheOf = (c: Record<string, unknown>): CacheTokens => ({ write: Number(c.cache_write_tokens ?? 0), read: Number(c.cache_read_tokens ?? 0) })

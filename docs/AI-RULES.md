@@ -33,7 +33,8 @@ Status: ✅ built · 🟡 approved, not built yet
 | Status card, project (Write) | Status, overview, latest updates, open tasks (title, waiting on, due date) | Updates **1,500 characters** (whole ones), **40** open tasks |
 | Draft reply (task card) | The email thread (every import of the conversation, plus the newest email if the app hasn't read it), the task's title, Notes, latest updates, and the style note; on Try again, the user's note and the draft being replaced | Thread **40,000**, Notes **1,000**, updates **1,500 characters** (whole ones) |
 | Email conversations | Each message, plus the older messages quoted in the email (for context) | **8,000** per message, **4,000** of quoted older messages, **40,000** per conversation |
-| Every prompt | A three-week calendar, so "Friday" resolves correctly. For an import dated before today, it starts on the item's date | 21 days |
+| Every prompt | A three-week calendar, so "Friday" resolves correctly. For an import dated before today, it starts on the item's date. Claude gets it in the user message, after the cached part; Ollama at the end of the instructions | 21 days |
+| Claude's prompt cache (imports) | The instructions and the open tasks, projects, and people come first and are marked for Claude to cache for 5 minutes; the calendar and the item come after. An Outlook or Apple Mail run builds the tasks, projects, and people once and sends the same ones with every conversation, so changes made during the run (such as an earlier conversation's AI priority change) are sent from the next run on. Answers are still checked against the current tasks. | Writing to the cache costs 1.25× the input price, reading it 0.05× (Opus and Sonnet 5.5) or 0.1× (Haiku 5.5) |
 
 ## Imports (Import screen, Outlook mail)
 

@@ -1053,7 +1053,7 @@ window.COS_MODEL = {
 window.COS_GENERATED = {
  "facts": {
   "version": "1.0.0",
-  "schemaVersion": 21,
+  "schemaVersion": 22,
   "channelCount": 103,
   "tableCount": 30,
   "priority": {
@@ -1243,6 +1243,18 @@ window.COS_GENERATED = {
      "type": "INTEGER",
      "required": false,
      "key": false
+    },
+    {
+     "name": "cache_write_tokens",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "cache_read_tokens",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
     }
    ],
    "links": [
@@ -1296,6 +1308,18 @@ window.COS_GENERATED = {
      "name": "briefing_id",
      "type": "INTEGER",
      "required": false,
+     "key": false
+    },
+    {
+     "name": "cache_write_tokens",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "cache_read_tokens",
+     "type": "INTEGER",
+     "required": true,
      "key": false
     }
    ],
@@ -1752,6 +1776,18 @@ window.COS_GENERATED = {
      "name": "output_tokens",
      "type": "INTEGER",
      "required": false,
+     "key": false
+    },
+    {
+     "name": "cache_write_tokens",
+     "type": "INTEGER",
+     "required": true,
+     "key": false
+    },
+    {
+     "name": "cache_read_tokens",
+     "type": "INTEGER",
+     "required": true,
      "key": false
     }
    ],
@@ -3512,7 +3548,7 @@ window.COS_GENERATED = {
         ],
         [
          "Read",
-         "Sends each chosen conversation to the AI, one at a time, in the background. Stop finishes the current one and the rest are offered next time; a stopped run doesn't move the start date.",
+         "Sends each chosen conversation to the AI, one at a time, in the background. Stop finishes the current one and the rest are offered next time; a stopped run doesn't move the start date. Every conversation in a run is sent the same open tasks, projects, and people, taken when the run starts, so Claude can cache them.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/mail.ts\">\u003ccode>src/main/services/mail.ts\u003c/code>\u003c/a> · \u003ccode>read\u003c/code>"
         ],
         [
@@ -3854,7 +3890,7 @@ window.COS_GENERATED = {
         ],
         [
          "Estimates only",
-         "Costs use the list prices built into the app (the interactive guide's Overview lists them), with a higher Haiku price for prompts over 100,000 tokens. The Anthropic Console has the real figure.",
+         "Costs use the list prices built into the app (the interactive guide's Overview lists them), with a higher Haiku price for prompts over 100,000 tokens. The part of a prompt written to or read from Claude's cache is priced at the cache prices; token counts always include it. The Anthropic Console has the real figure.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/shared/pricing.ts\">\u003ccode>src/shared/pricing.ts\u003c/code>\u003c/a> · \u003ccode>estimateCost\u003c/code>"
         ],
         [
@@ -4286,8 +4322,13 @@ window.COS_GENERATED = {
         ],
         [
          "Every prompt",
-         "A three-week calendar, so &quot;Friday&quot; resolves correctly. For an import dated before today, it starts on the item's date",
+         "A three-week calendar, so &quot;Friday&quot; resolves correctly. For an import dated before today, it starts on the item's date. Claude gets it in the user message, after the cached part; Ollama at the end of the instructions",
          "21 days"
+        ],
+        [
+         "Claude's prompt cache (imports)",
+         "The instructions and the open tasks, projects, and people come first and are marked for Claude to cache for 5 minutes; the calendar and the item come after. An Outlook or Apple Mail run builds the tasks, projects, and people once and sends the same ones with every conversation, so changes made during the run (such as an earlier conversation's AI priority change) are sent from the next run on. Answers are still checked against the current tasks.",
+         "Writing to the cache costs 1.25× the input price, reading it 0.05× (Opus and Sonnet 5.5) or 0.1× (Haiku 5.5)"
         ]
        ]
       }

@@ -142,7 +142,7 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Check | Lists new mail in the Inbox, its subfolders, and Sent since the last finished import (7 days back the first time, or a date the user picks). Nothing is sent to the AI. | `src/main/services/mail.ts` · `check` |
 | Skipped | Meeting invites, automatic replies, newsletters and mailing lists, and automated senders (no-reply and similar). Sent mail is skipped only for invites and automatic replies. "Read anyway" overrides a skip. | `src/main/mail/plan.ts` · `skipReason` |
 | Conversations | Messages are grouped into conversations: Outlook's own, or for Apple Mail Exchange's Thread-Index, else the subject without "RE:" and "FW:". Each conversation becomes one import, oldest message first, with quoted history kept only under the first message. | `src/main/mail/plan.ts` · `planMailbox` |
-| Read | Sends each chosen conversation to the AI, one at a time, in the background. Stop finishes the current one and the rest are offered next time; a stopped run doesn't move the start date. | `src/main/services/mail.ts` · `read` |
+| Read | Sends each chosen conversation to the AI, one at a time, in the background. Stop finishes the current one and the rest are offered next time; a stopped run doesn't move the start date. Every conversation in a run is sent the same open tasks, projects, and people, taken when the run starts, so Claude can cache them. | `src/main/services/mail.ts` · `read` |
 | Never read twice | Every message read is recorded by its Internet message id, so going back further only adds older mail. | `src/main/services/mail.ts` · `save` |
 | The user wrote last | No "Needs reply" is proposed. The AI log says why it was dropped. | `src/main/services/sources.ts` · `applyMailRules` |
 
@@ -220,7 +220,7 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Rule | Detail | Where |
 |---|---|---|
 | What's counted | Successful Claude requests: imports, daily briefings, weekly reflections, person briefs, status cards, draft replies, and model tests. Basic and Ollama are free and never recorded. The record is never pruned, unlike the AI logs. | `src/main/services/usage.ts` |
-| Estimates only | Costs use the list prices built into the app (the interactive guide's Overview lists them), with a higher Haiku price for prompts over 100,000 tokens. The Anthropic Console has the real figure. | `src/shared/pricing.ts` · `estimateCost` |
+| Estimates only | Costs use the list prices built into the app (the interactive guide's Overview lists them), with a higher Haiku price for prompts over 100,000 tokens. The part of a prompt written to or read from Claude's cache is priced at the cache prices; token counts always include it. The Anthropic Console has the real figure. | `src/shared/pricing.ts` · `estimateCost` |
 | Where it's shown | The AI spending screen (this month, the last 30 days, by purpose, and by model), each AI log, Recent imports, and the mail card's total. | `src/renderer/src/screens/AiSpendingScreen.tsx` |
 
 ## Developer Tools and model tests

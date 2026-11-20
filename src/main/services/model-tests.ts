@@ -166,12 +166,12 @@ export class ModelTestService {
     const t0 = Date.now()
     this.db.prepare(`UPDATE model_test_runs SET status = 'running', started_at = ? WHERE id = ?`).run(nowIso(), runId)
     const insertCall = this.db.prepare(
-      `INSERT INTO model_test_calls (run_id, purpose, endpoint, request, response, error, started_at, duration_ms, input_tokens, output_tokens)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO model_test_calls (run_id, purpose, endpoint, request, response, error, started_at, duration_ms, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     const log: AiCallLog = {
       record: (c: AiCallRecord) => {
-        insertCall.run(runId, c.purpose, c.endpoint, pretty(c.request), c.response == null ? null : pretty(c.response), c.error, c.startedAt, c.durationMs, c.inputTokens, c.outputTokens)
+        insertCall.run(runId, c.purpose, c.endpoint, pretty(c.request), c.response == null ? null : pretty(c.response), c.error, c.startedAt, c.durationMs, c.inputTokens, c.outputTokens, c.cache?.write ?? 0, c.cache?.read ?? 0)
         this.usage.record(c, 'model_test')
       },
     }
@@ -242,7 +242,9 @@ export class ModelTestService {
       .prepare('SELECT g.* FROM model_test_suggestions g JOIN model_test_runs r ON r.id = g.run_id WHERE r.test_id = ? ORDER BY g.run_id, g.position')
       .all(testId) as Record<string, unknown>[]
     const calls = this.db
-      .prepare('SELECT c.run_id, c.endpoint, c.request, c.response, c.input_tokens, c.output_tokens FROM model_test_calls c JOIN model_test_runs r ON r.id = c.run_id WHERE r.test_id = ?')
+      .prepare(
+        'SELECT c.run_id, c.endpoint, c.request, c.response, c.input_tokens, c.output_tokens, c.cache_write_tokens, c.cache_read_tokens FROM model_test_calls c JOIN model_test_runs r ON r.id = c.run_id WHERE r.test_id = ?',
+      )
       .all(testId) as Record<string, unknown>[]
     const imports = this.db
       .prepare(
@@ -260,7 +262,7 @@ export class ModelTestService {
         const id = Number(r.id)
         const costs = calls
           .filter((c) => Number(c.run_id) === id && c.input_tokens != null)
-          .map((c) => estimateCost(paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null), Number(c.input_tokens), Number(c.output_tokens ?? 0)))
+          .map((c) => estimateCost(paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null), Number(c.input_tokens), Number(c.output_tokens ?? 0), cacheOf(c)))
           .filter((c): c is number => c != null)
         return {
           id,
@@ -309,6 +311,7 @@ export class ModelTestService {
         inputTokens: c.input_tokens == null ? null : Number(c.input_tokens),
         outputTokens: c.output_tokens == null ? null : Number(c.output_tokens),
         paidModel: paidModelOf(String(c.endpoint), String(c.request), (c.response as string) ?? null),
+        cache: cacheOf(c),
       })),
     }
   }
@@ -324,6 +327,9 @@ export class ModelTestService {
     return row?.mail_meta ? (JSON.parse(row.mail_meta) as MailMeta) : null
   }
 }
+
+/** A logged request's prompt-cache tokens. */
+const cacheOf = (c: Record<string, unknown>) => ({ write: Number(c.cache_write_tokens ?? 0), read: Number(c.cache_read_tokens ?? 0) })
 
 /** A suggestion as Review would show it: the task, project and person by name, new ones included. */
 function describe(d: SuggestionDraft, ctx: ExtractionContext): Omit<ModelTestSuggestion, 'id' | 'kind' | 'evidence' | 'mark'> {

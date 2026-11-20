@@ -77,6 +77,7 @@ npm run typecheck    # both TS projects
 npm run build        # electron-vite build into out/
 npm run e2e          # build, then click through the real app (see e2e/README.md)
 npm run bench:ai     # score demo, local and Claude models on sample imports (see bench/README.md)
+npm run bench:key    # Windows: store the Anthropic key the benchmark uses in Credential Manager (hidden typing; -- -Delete removes it)
 npm run install:win  # package to %LOCALAPPDATA%\Programs\Chief of Staff (build) (Start-menu shortcut points here)
 npm run package:win  # Windows installer in release/; package:mac makes the Mac .dmg (see README, "Making a release": tagging vX.Y.Z builds both on GitHub as a draft release)
 ```
@@ -161,6 +162,7 @@ Before telling Frank something is done, run `npm test` and `npm run typecheck`. 
   - Costs are estimates from the list prices in `src/shared/pricing.ts` (`CLAUDE_PRICES`, with Haiku 5.5's higher price above 100K-token prompts). The screen lists the prices used, says they may have changed, and links to Anthropic's pricing page. The Anthropic Console is the real figure.
   - **When Anthropic changes prices or a model is added**, update `CLAUDE_PRICES`, `PRICES_CHECKED` and `PRICES_CHECKED_LABEL` after checking the pricing page. The model picker's price text comes from the same table. A model with no price is counted but shown as "price not known".
   - The Import and briefing AI logs show each request's model and estimated cost, and the run or briefing total.
+  - **Prompt cache (imports):** `buildExtractionRequest` marks the instructions (`buildInstructions`, without the calendar) and the open tasks, projects, and people (`buildDirectory`) for Claude to cache; the calendar and item (`buildItem`) follow. A mail run builds that context once (`SourceService.extractionContext`) and passes it to each `extract`. `input_tokens` stays the whole prompt; `cache_write_tokens` and `cache_read_tokens` (in `ai_usage` and `ai_calls`) price the cached part with `CLAUDE_PRICES`' `cacheWrite` and `cacheRead`. Keep anything that changes per item out of the cached part, or the cache stops working.
   - Recent imports on the Import screen show each import's estimated cost (its latest run, the one its AI log opens on; `SourceItem.estimatedCost`), and each Outlook mail import's total across its conversations. The Outlook card shows the total when a Read finishes or is stopped (`MailJobStatus.estimatedCost`). Nothing shows for free models.
 
 ## Environment notes (Frank's Windows PC)

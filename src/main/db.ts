@@ -379,6 +379,14 @@ export const MIGRATIONS: Migration[] = [
   `
   ALTER TABLE task_events ADD COLUMN merged_from TEXT;
   `,
+  // Claude's prompt cache: how many of a request's input tokens were written to and read from it,
+  // so cost estimates use the cache prices. input_tokens stays the whole prompt. 0 for older rows.
+  `
+  ALTER TABLE ai_usage ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE ai_usage ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE ai_calls ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE ai_calls ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0;
+  `,
   // Model tests (Settings → Developer Tools): past imports re-run on several models and effort
   // levels, kept with the user's marks until the test is deleted. Nothing here goes to Review.
   // A run belongs to one import; deleting the import deletes its runs.
@@ -428,7 +436,9 @@ export const MIGRATIONS: Migration[] = [
     started_at TEXT NOT NULL,
     duration_ms INTEGER NOT NULL,
     input_tokens INTEGER,
-    output_tokens INTEGER
+    output_tokens INTEGER,
+    cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_read_tokens INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX ix_model_test_calls_run ON model_test_calls(run_id);
   `,

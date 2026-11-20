@@ -10,6 +10,13 @@ Frank's choices for issue #67 (mockup `design/model-test.html`, approved after t
 - **One Effort for every AI use,** not just imports. Claude's Default keeps today's levels (Medium for imports, Low for the rest); any other level applies everywhere. Names are friendlier than Anthropic's (Extra for xhigh, Max for max). Ollama has Effort plus a separate Passes line.
 - **Up to 6 models per test:** more columns get too narrow to compare, and runs add up fast.
 
+### 2026-11-19 · Claude caches the repeated part of imports (Frank)
+**Why:** mail imports cost far more than other imports because each conversation is its own request, and every request repeated the instructions and the whole task, project, and people list. Frank chose prompt caching because the AI reads exactly the same text, so accuracy doesn't change.
+- **The calendar moved after the cached part** for Claude, because it starts on each item's date and would otherwise change the instructions from one email to the next. Ollama's prompt is unchanged.
+- **A mail run sends one snapshot** of the tasks, projects, and people to every conversation. The trade-off: a change made during the run, such as an earlier conversation's AI priority change, is sent from the next run on. Answers are still checked against the current data.
+- **Every Claude import is cached,** including a single pasted one, which then costs about 25% more for its repeated part. Reuse within 5 minutes pays it back.
+- **Not done:** sending several conversations in one request (Frank declined: the AI could mix threads up). The Batch API (half price, but results arrive later and the refusal fallback can't be used) is undecided.
+
 ### 2026-11-17 · Merging two tasks or waiting items (Frank)
 Frank's choices for issue #60 (mockup `design/merge-tasks.html`, approved):
 - **Starts from the task editor** (a Merge button next to Delete) or Ctrl+K "Merge with…", not from selecting two rows in a list.
