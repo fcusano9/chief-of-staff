@@ -678,7 +678,7 @@ window.COS_MODEL = {
       "rules": ["a-rules-for-every-ai-feature", "a-what-the-ai-is-sent-about-each-item"] },
 
     { "id": "mail-outlook", "zone": "mail", "x": 1004, "y": 400, "w": 174, "h": 44, "label": "Outlook reader", "hint": "Windows · PowerShell", "sub": "outlook.ps1",
-      "plain": "A bundled PowerShell script talks to classic Outlook over COM, because Electron can't. It reads mail and the calendar, finds the newest email in a conversation, and saves or opens reply drafts. It never sends, moves, deletes, or flags.",
+      "plain": "A bundled PowerShell script talks to classic Outlook over COM, because Electron can't. It reads mail and the calendar, finds the email to reply to, and saves or opens reply drafts. It never sends, moves, deletes, or flags.",
       "points": ["Uses the running Outlook and says so if it's closed, rather than starting it."],
       "files": [{ "path": "src/main/mail/outlook.ts", "names": ["PowerShellOutlook", "OutlookReader", "FixtureOutlook"] }, { "path": "src/main/mail/outlook.ps1" }], "rules": ["b-mail"] },
     { "id": "mail-apple", "zone": "mail", "x": 1004, "y": 452, "w": 174, "h": 44, "label": "Apple Mail reader", "hint": "Mac · osascript", "sub": "applemail.jxa",
@@ -837,7 +837,7 @@ window.COS_MODEL = {
       "steps": [
         { "title": "The Reply card appears", "text": "Only on tasks linked to an email, and greyed out with Basic.", "nodes": ["ui-tasks", "svc-replies"], "edges": [["ui-tasks", "bridge"], ["bridge", "main-ipc"], ["main-ipc", "svc-replies"]], "code": "src/main/services/replies.ts · target" },
         { "title": "Find the email to answer", "text": "The mail app is asked for the last email, sent or received, that included the person the task is with, leaving out automatic replies, and who Reply all goes to. Emails after it come back too, as context.", "nodes": ["svc-replies", "mail-outlook", "mail-apple", "ext-outlook", "ext-mail"], "edges": [["svc-replies", "mail-outlook"], ["mail-outlook", "ext-outlook"], ["svc-replies", "mail-apple"]], "code": "src/main/services/replies.ts · draft" },
-        { "title": "Write the draft", "text": "The AI gets the thread, the task, its Notes and latest updates, and the writing-style note. If the newest email is the user's own, it writes a short follow-up nudge.", "nodes": ["svc-replies", "ai-provider", "ai-claude"], "edges": [["svc-replies", "ai-provider"], ["ai-provider", "ai-claude"]], "code": "src/main/ai/reply.ts · cleanReply" },
+        { "title": "Write the draft", "text": "The AI gets the thread, the task, its Notes and latest updates, and the writing-style note. If that email is the user's own, it writes a short follow-up nudge.", "nodes": ["svc-replies", "ai-provider", "ai-claude"], "edges": [["svc-replies", "ai-provider"], ["ai-provider", "ai-claude"]], "code": "src/main/ai/reply.ts · cleanReply" },
         { "title": "Preview and edit", "text": "To, Cc, and Subject come from the mail app; every draft is Reply all, adding no one. The user can edit the text, or Try again with a note.", "nodes": ["ui-tasks"], "code": "src/renderer/src/components/ReplyCard.tsx · ReplyCard" },
         { "title": "Save to Drafts or open", "text": "Save to Outlook / Mail Drafts saves it as a draft; Open in Outlook / Mail opens a reply window. Neither sends.", "nodes": ["svc-replies", "mail-outlook", "mail-apple", "ext-outlook", "ext-mail"], "edges": [["svc-replies", "mail-outlook"], ["mail-outlook", "ext-outlook"]], "code": "src/main/services/replies.ts · save" },
         { "title": "Note it in Activity", "text": "“Draft reply saved to Outlook Drafts” or “Reply opened in Mail”. The task stays open.", "nodes": ["svc-activity"], "edges": [["svc-replies", "svc-activity"]], "code": "src/shared/events.ts · eventWhat" }
@@ -877,7 +877,7 @@ window.COS_MODEL = {
     "priority_adjustments": { "group": "cards", "x": 28, "y": 126, "label": "AI priority changes", "purpose": "The AI's current change to a task's score (at most ±15), its reason, and where it came from. One per task.", "writers": ["svc-adjust"] },
     "project_cards": { "group": "cards", "x": 28, "y": 180, "label": "Project status cards", "purpose": "Each project's “Where this stands” card, written only on Write.", "writers": ["svc-cards"] },
     "task_events": { "group": "history", "x": 28, "y": 288, "label": "Activity lines", "purpose": "The Activity log: one row per recorded change to a task, with old and new values as they read then, and who made it.", "writers": ["svc-activity", "svc-adjust", "svc-replies"] },
-    "task_events_meta": { "group": "history", "x": 28, "y": 342, "label": "When Activity began", "purpose": "When the Activity log started, so older tasks can say their earlier changes weren't recorded.", "writers": ["svc-activity"] },
+    "task_events_meta": { "group": "history", "x": 28, "y": 342, "label": "When Activity began", "purpose": "When the Activity log started. No longer read.", "writers": ["svc-activity"] },
     "status_updates": { "group": "legacy", "x": 28, "y": 450, "label": "Old status updates", "purpose": "Emptied by the upgrade to version 11, which moved status updates into each task's Updates. Kept so older databases still open.", "writers": [] },
     "projects": { "group": "core", "x": 232, "y": 72, "label": "Projects", "purpose": "Each project: name, color, status (active, on hold, completed, archived), and the overview the user writes. The old AI brief columns stay, unused.", "writers": ["svc-directory", "svc-review"] },
     "people": { "group": "core", "x": 420, "y": 72, "label": "People", "purpose": "Each person: name, role, company, email, stars (1–5), and the one-line brief with who wrote it and when.", "writers": ["svc-directory", "svc-review"] },
@@ -891,7 +891,7 @@ window.COS_MODEL = {
     "copilot_coverage": { "group": "import", "x": 620, "y": 180, "label": "Copilot spans", "purpose": "The time span each imported Copilot answer covered, so the next prompt starts where it ended.", "writers": ["svc-copilot"] },
     "ai_calls": { "group": "import", "x": 816, "y": 180, "label": "AI requests", "purpose": "Each request in a run, exactly as sent and received, with timing and tokens.", "writers": ["svc-ailog"] },
     "mail_imports": { "group": "mail", "x": 620, "y": 288, "label": "Mail reads", "purpose": "One row per mail Read: where it started, when it was checked and finished, and whether it completed.", "writers": ["svc-mail"] },
-    "mail_messages": { "group": "mail", "x": 816, "y": 288, "label": "Messages read", "purpose": "Every email read, by its Internet message id, so none is read twice. Also used to find the newest email for a draft reply.", "writers": ["svc-mail"] },
+    "mail_messages": { "group": "mail", "x": 816, "y": 288, "label": "Messages read", "purpose": "Every email read, by its Internet message id, so none is read twice. Also used to find the email a draft reply answers.", "writers": ["svc-mail"] },
     "ai_usage": { "group": "spending", "x": 620, "y": 396, "label": "Claude usage", "purpose": "One row per paid Claude request: when, what for, which model, and how many tokens. Never pruned, so monthly totals stay right.", "writers": ["svc-usage", "svc-ailog", "svc-briefing", "svc-weekly", "svc-modeltest"] },
     "model_tests": { "group": "modeltests", "x": 620, "y": 504, "label": "Model tests", "purpose": "Each model test: when it ran, the models and effort levels it compared, and whether it finished or was stopped.", "writers": ["svc-modeltest"] },
     "model_test_runs": { "group": "modeltests", "x": 816, "y": 504, "label": "Test runs", "purpose": "One model on one import in a test: its status, time, error, the raw answer, and what the checks dropped. Deleted with the import.", "writers": ["svc-modeltest"] },
@@ -3202,7 +3202,7 @@ window.COS_GENERATED = {
         ],
         [
          "Today",
-         "Four counts (Urgent, Waiting on, Overdue, Open), the daily briefing, Focus (the 7 highest open tasks), and Waiting (the 5 longest waits).",
+         "Four counts (Urgent, Waiting on, Overdue, Open), the daily briefing, Focus (the 7 highest open tasks), Meetings, and Waiting (the 5 longest waits).",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/renderer/src/screens/TodayScreen.tsx\">\u003ccode>src/renderer/src/screens/TodayScreen.tsx\u003c/code>\u003c/a>"
         ]
        ]
@@ -3400,7 +3400,7 @@ window.COS_GENERATED = {
         ],
         [
          "As it read then",
-         "Activity stores names, not ids, so renaming a project doesn't rewrite history. Tasks older than the log say &quot;Changes before … weren't recorded.&quot;",
+         "Activity stores names, not ids, so renaming a project doesn't rewrite history. Tasks older than the log show only when they were created.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/task-events.ts\">\u003ccode>src/main/services/task-events.ts\u003c/code>\u003c/a>"
         ]
        ]
@@ -4106,7 +4106,7 @@ window.COS_GENERATED = {
      "blocks": [
       {
        "type": "p",
-       "html": "Places where the code and the docs disagree, or where the code does something that may not be intended. Nothing was changed. Each needs a decision: change the code, or change the docs. Remove a row once it's settled."
+       "html": "Places where the code does something that may not be intended. The rules above describe what the code does today. Each needs a decision: change the code, or keep it. Remove a row once it's settled."
       },
       {
        "type": "table",
@@ -4118,7 +4118,7 @@ window.COS_GENERATED = {
        "rows": [
         [
          "Should every AI request be in the AI log?",
-         "AI-RULES.md says every request is logged. Person briefs, status cards written with Write, and draft replies are only counted in AI spending; their request and response aren't kept, and with Ollama or Basic nothing is recorded.",
+         "Person briefs, status cards written with Write, and draft replies are only counted in AI spending; their request and response aren't kept, and with Ollama or Basic nothing is recorded.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/index.ts\">\u003ccode>src/main/index.ts\u003c/code>\u003c/a>"
         ],
         [
@@ -4128,7 +4128,7 @@ window.COS_GENERATED = {
         ],
         [
          "Should the AI's details become Notes?",
-         "AGENTS.md says the AI never writes Notes, but accepting a new task copies the AI's details into the task's Notes.",
+         "Notes are meant to be the user's own, but accepting a new task copies the AI's details into the task's Notes.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/services/suggestions.ts\">\u003ccode>src/main/services/suggestions.ts\u003c/code>\u003c/a> · \u003ccode>createTask\u003c/code>"
         ],
         [
@@ -4143,17 +4143,17 @@ window.COS_GENERATED = {
         ],
         [
          "Should every prompt get the calendar?",
-         "AI-RULES.md says every prompt has the three-week calendar. Only import requests do; the briefing, weekly, status card, and reply prompts get only today's date.",
+         "Only import requests get the three-week calendar; the briefing, weekly, status card, and reply prompts get only today's date.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/ai/context.ts\">\u003ccode>src/main/ai/context.ts\u003c/code>\u003c/a>"
         ],
         [
-         "Which projects should imports send?",
-         "AI-RULES.md says active projects. Imports send every project that isn't archived, including on hold and completed ones, with their standing instructions.",
+         "Should imports send finished projects?",
+         "Imports send every project that isn't archived, including on hold and completed ones.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/ai/context.ts\">\u003ccode>src/main/ai/context.ts\u003c/code>\u003c/a> · \u003ccode>buildExtractionContext\u003c/code>"
         ],
         [
          "Should the briefing adjust waiting items?",
-         "AI-RULES.md says any task it was sent. Only open tasks can get an AI priority change from a briefing; waiting items can't.",
+         "Only open tasks can get an AI priority change from a briefing; waiting items it was sent can't.",
          "\u003ca class=\"src\" href=\"https://github.com/fcusano9/chief-of-staff/blob/main/src/main/ai/briefing.ts\">\u003ccode>src/main/ai/briefing.ts\u003c/code>\u003c/a> · \u003ccode>assembleBriefing\u003c/code>"
         ],
         [
@@ -4267,8 +4267,8 @@ window.COS_GENERATED = {
          "\u003cstrong>Basic\u003c/strong>: nowhere (simple rules, not AI). \u003cstrong>Ollama\u003c/strong>: stays on this computer, unless its address points at another machine. \u003cstrong>Claude\u003c/strong>: sent to Anthropic. Check the employer's policy before sending work content to Anthropic."
         ],
         [
-         "Every request is logged",
-         "The exact request and response are saved (AI log), with tokens and the estimated Claude cost."
+         "What's logged",
+         "Imports, daily briefings, and weekly reflections keep the exact request and response (AI log), with tokens and the estimated Claude cost. Person briefs, status cards from Write, and draft replies are only counted in AI spending."
         ],
         [
          "Default model",
@@ -4332,8 +4332,8 @@ window.COS_GENERATED = {
          "\u003cstrong>8,000\u003c/strong> per message, \u003cstrong>4,000\u003c/strong> of quoted older messages, \u003cstrong>40,000\u003c/strong> per conversation"
         ],
         [
-         "Every prompt",
-         "A three-week calendar, so &quot;Friday&quot; resolves correctly. For an import dated before today, it starts on the item's date. Claude gets it in the user message, after the cached part; Ollama at the end of the instructions",
+         "Dates",
+         "Imports get a three-week calendar, so &quot;Friday&quot; resolves correctly; for an item dated before today, it starts on the item's date. Claude gets it after the cached part, Ollama at the end of the instructions. Every other request gets only today's date",
          "21 days"
         ],
         [
@@ -4363,7 +4363,7 @@ window.COS_GENERATED = {
         ],
         [
          "✅ Sent",
-         "The item, plus all open tasks (title, status, due date, project, who asked, waiting on, score and any AI change, and updates), active projects, and all people."
+         "The item, plus all open tasks (title, status, due date, project, who asked, waiting on, score and any AI change, and updates), every project that isn't archived (overview, latest updates, and standing instructions), and all people."
         ],
         [
          "✅ Output",
@@ -4515,7 +4515,7 @@ window.COS_GENERATED = {
         ],
         [
          "✅ Priority adjustment",
-         "For any of the tasks it was sent, listed or not. See Priority adjustment below."
+         "For any open task it was sent, listed or not (not waiting items). See Priority adjustment below."
         ],
         [
          "✅ Kept",
