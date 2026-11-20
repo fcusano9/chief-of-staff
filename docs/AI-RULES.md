@@ -18,7 +18,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | Runs only when the user acts | Nothing runs on a schedule today. Every AI request comes from a click or an import. |
 | Basic writes no AI text | Basic (simple rules) never writes status cards or priority changes; Write is greyed out while it's selected. |
 | Where data goes | **Basic**: nowhere (simple rules, not AI). **Ollama**: stays on this computer, unless its address points at another machine. **Claude**: sent to Anthropic. Check the employer's policy before sending work content to Anthropic. |
-| Every request is logged | The exact request and response are saved (AI log), with tokens and the estimated Claude cost. |
+| What's logged | Imports, daily briefings, and weekly reflections keep the exact request and response (AI log), with tokens and the estimated Claude cost. Person briefs, status cards from Write, and draft replies are only counted in AI spending. |
 | Default model | Claude: Opus 5.5 (Sonnet or Haiku 5.5 in Settings). Ollama: gpt-oss:20b. App default: Basic. |
 
 ## What the AI is sent about each item
@@ -33,7 +33,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | Status card, project (Write) | Status, overview, latest updates, open tasks (title, waiting on, due date) | Updates **1,500 characters** (whole ones), **40** open tasks |
 | Draft reply (task card) | The email thread (every import of the conversation, plus the newest email if the app hasn't read it), the task's title, Notes, latest updates, and the style note; on Try again, the user's note and the draft being replaced | Thread **40,000**, Notes **1,000**, updates **1,500 characters** (whole ones) |
 | Email conversations | Each message, plus the older messages quoted in the email (for context) | **8,000** per message, **4,000** of quoted older messages, **40,000** per conversation |
-| Every prompt | A three-week calendar, so "Friday" resolves correctly. For an import dated before today, it starts on the item's date. Claude gets it in the user message, after the cached part; Ollama at the end of the instructions | 21 days |
+| Dates | Imports get a three-week calendar, so "Friday" resolves correctly; for an item dated before today, it starts on the item's date. Claude gets it after the cached part, Ollama at the end of the instructions. Every other request gets only today's date | 21 days |
 | Claude's prompt cache (imports) | The instructions and the open tasks, projects, and people come first and are marked for Claude to cache for 5 minutes; the calendar and the item come after. An Outlook or Apple Mail run builds the tasks, projects, and people once and sends the same ones with every conversation, so changes made during the run (such as an earlier conversation's AI priority change) are sent from the next run on. Answers are still checked against the current tasks. | Writing to the cache costs 1.25× the input price, reading it 0.05× (Opus and Sonnet 5.5) or 0.1× (Haiku 5.5) |
 
 ## Imports (Import screen, Outlook mail)
@@ -41,7 +41,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | Rule | Detail |
 |---|---|
 | ✅ When | When the user imports or re-runs an item, or clicks Read for Outlook mail. Mail is never read on a schedule. |
-| ✅ Sent | The item, plus all open tasks (title, status, due date, project, who asked, waiting on, score and any AI change, and updates), active projects, and all people. |
+| ✅ Sent | The item, plus all open tasks (title, status, due date, project, who asked, waiting on, score and any AI change, and updates), every project that isn't archived (overview, latest updates, and standing instructions), and all people. |
 | ✅ Output | Suggestions go to Review: new task, needs reply, status update, mark done, waiting on, new project, new person, context. |
 | ✅ Status cards | Where it stands and the next step, for each open task the item is about, shown on the task's card. None for tasks it proposes to mark done. |
 | ✅ Priority adjustment | For open tasks the item is about, not ones it proposes to mark done. See Priority adjustment below. |
@@ -60,7 +60,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ Sent | The top **25 open tasks** by priority (every overdue task, even past 25), **20 waiting-on items**, and what's new since the last briefing. |
 | ✅ Output | Short wording: a summary under **20 words**, notes and next steps under **10**. A one-line summary; **3 to 5** top priorities (every overdue task, first, even if the AI skipped it); up to **3** waiting-on nudges; up to **8** new items, plus a Review line. |
 | ✅ Status cards | Where it stands and the next step for each top priority (the next step is also shown under the item), saved on the task's card. |
-| ✅ Priority adjustment | For any of the tasks it was sent, listed or not. See Priority adjustment below. |
+| ✅ Priority adjustment | For any open task it was sent, listed or not (not waiting items). See Priority adjustment below. |
 | ✅ Kept | Every briefing; the AI log for the newest **5**. |
 | ✅ Claude settings | Low effort. |
 

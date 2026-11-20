@@ -61,7 +61,7 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Done lists | Newest first, up to 200. Waiting's Done list holds items that were waiting on someone when they were finished. | `src/main/services/tasks.ts` · `listDone` |
 | Search | Tasks and Waiting search the title, notes, and who an item waits (or waited) on. Projects search the name and overview. People search the name, role, company, and brief. | `src/main/services/tasks.ts` · `listActive` |
 | Project chips | One line above Tasks and Waiting: All, then each project with items in the list (most items first, ties by name), then No project, each with its count. The chips filter on screen, so every count is right. | `src/renderer/src/components/ProjectChips.tsx` |
-| Today | Four counts (Urgent, Waiting on, Overdue, Open), the daily briefing, Focus (the 7 highest open tasks), and Waiting (the 5 longest waits). | `src/renderer/src/screens/TodayScreen.tsx` |
+| Today | Four counts (Urgent, Waiting on, Overdue, Open), the daily briefing, Focus (the 7 highest open tasks), Meetings, and Waiting (the 5 longest waits). | `src/renderer/src/screens/TodayScreen.tsx` |
 
 ## Waiting on and follow-ups
 
@@ -107,7 +107,7 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | Activity | A read-only log of each task's changes, newest first: created; status; due date set, moved, or removed; project; asked by; title; priority set by hand; follow-ups; AI priority changes; draft replies saved or opened; merges. Not recorded: notes, subtasks, updates, and the score's recalculation. | `src/main/services/task-events.ts` · `taskChanges` |
 | Merged Activity | A merge adds "Merged in “…”", then a line per field it changed. The removed item's lines move over and end with "on “its title”". | `src/main/services/task-merge.ts` · `merge`; `src/shared/events.ts` · `eventOn` |
 | Who | Every Activity line says who made the change: "by you", "from “Import”, accepted in Review", or "by the AI, daily briefing" (or the import's name). | `src/shared/events.ts` · `eventWho` |
-| As it read then | Activity stores names, not ids, so renaming a project doesn't rewrite history. Tasks older than the log say "Changes before … weren't recorded." | `src/main/services/task-events.ts` |
+| As it read then | Activity stores names, not ids, so renaming a project doesn't rewrite history. Tasks older than the log show only when they were created. | `src/main/services/task-events.ts` |
 
 ## Import and Review
 
@@ -253,18 +253,18 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 
 ## Open questions (found while documenting)
 
-Places where the code and the docs disagree, or where the code does something that may not be intended. Nothing was changed. Each needs a decision: change the code, or change the docs. Remove a row once it's settled.
+Places where the code does something that may not be intended. The rules above describe what the code does today. Each needs a decision: change the code, or keep it. Remove a row once it's settled.
 
 | Question | What the code does | Where |
 |---|---|---|
-| Should every AI request be in the AI log? | AI-RULES.md says every request is logged. Person briefs, status cards written with Write, and draft replies are only counted in AI spending; their request and response aren't kept, and with Ollama or Basic nothing is recorded. | `src/main/index.ts` |
+| Should every AI request be in the AI log? | Person briefs, status cards written with Write, and draft replies are only counted in AI spending; their request and response aren't kept, and with Ollama or Basic nothing is recorded. | `src/main/index.ts` |
 | Should a failed briefing still count its cost? | A paid daily briefing or weekly reflection whose answer fails the app's checks (for example an empty summary) isn't counted in AI spending or logged. | `src/main/services/briefings.ts` · `writeNow` |
-| Should the AI's details become Notes? | AGENTS.md says the AI never writes Notes, but accepting a new task copies the AI's details into the task's Notes. | `src/main/services/suggestions.ts` · `createTask` |
+| Should the AI's details become Notes? | Notes are meant to be the user's own, but accepting a new task copies the AI's details into the task's Notes. | `src/main/services/suggestions.ts` · `createTask` |
 | Should impossible dates be dropped? | A date like 2026-02-30 is accepted and rolls over to March. Unknown task or project ids and bad dates are cleared without a "dropped" line in the AI log. | `src/main/ai/schema.ts` · `validDate` |
 | Should "tasks the item is about" be checked? | Imports may write a status card and priority change for any open task that was sent, not only ones the item is about; only the prompt asks for that. | `src/main/services/sources.ts` · `extract` |
-| Should every prompt get the calendar? | AI-RULES.md says every prompt has the three-week calendar. Only import requests do; the briefing, weekly, status card, and reply prompts get only today's date. | `src/main/ai/context.ts` |
-| Which projects should imports send? | AI-RULES.md says active projects. Imports send every project that isn't archived, including on hold and completed ones, with their standing instructions. | `src/main/ai/context.ts` · `buildExtractionContext` |
-| Should the briefing adjust waiting items? | AI-RULES.md says any task it was sent. Only open tasks can get an AI priority change from a briefing; waiting items can't. | `src/main/ai/briefing.ts` · `assembleBriefing` |
+| Should every prompt get the calendar? | Only import requests get the three-week calendar; the briefing, weekly, status card, and reply prompts get only today's date. | `src/main/ai/context.ts` |
+| Should imports send finished projects? | Imports send every project that isn't archived, including on hold and completed ones. | `src/main/ai/context.ts` · `buildExtractionContext` |
+| Should the briefing adjust waiting items? | Only open tasks can get an AI priority change from a briefing; waiting items it was sent can't. | `src/main/ai/briefing.ts` · `assembleBriefing` |
 | Should an overdue waiting item count as Slipping? | Slipping's overdue part only counts open tasks, so an overdue waiting item never appears there. | `src/main/services/weekly.ts` · `lists` |
 | Should a saved week be an exact snapshot? | An ended week is worked out when it's saved, from task dates as of Saturday midnight, but titles, projects, and due dates changed after Saturday show as they are at saving time. | `src/main/services/weekly.ts` · `saveEndedWeeks` |
 | Should deleting an import keep its history? | Deleting an import deletes its accepted suggestions too, so Weekly's New list shows "Added by you" for tasks that came from it. | `src/main/services/sources.ts` · `delete` |
