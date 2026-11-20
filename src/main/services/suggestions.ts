@@ -130,9 +130,9 @@ export class SuggestionService {
           break
         }
         case 'mark_done': {
+          // details is the resolution; an empty one keeps any the task already has.
           const task = this.requireTask(p.taskId)
-          if (p.details) this.addUpdate(task.id, p.details, sourceTitle)
-          this.tasks.save({ ...this.requireTask(task.id), status: 'done' }, by)
+          this.tasks.save({ ...task, status: 'done', resolution: p.details.trim() || task.resolution }, by)
           taskId = task.id
           break
         }

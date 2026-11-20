@@ -23,6 +23,7 @@ Every rule the app follows, on one page: how tasks are scored and listed, what R
 | Projects are optional | A task with no project shows no label and a neutral stripe. | `src/shared/types.ts` · `NO_PROJECT_COLOR` |
 | Entering Waiting on | Records who it waits on and when the wait started: now, or when the user sent the email for an item from mail. Staying in Waiting on keeps the first start time. Leaving it clears both. | `src/main/services/tasks.ts` · `save` |
 | Entering Done | Records when it was finished and, if it was waiting, who it was waiting on, so Done lists and Reopen know where it came from. | `src/main/services/tasks.ts` · `save` |
+| Resolution | Mark done (the editor's button, or E on Tasks and Waiting) first asks for a resolution: how the task was closed. It's optional; Cancel, Esc, or a click outside leaves the task open. Choosing Done in the Status menu shows the Resolution box in the editor instead. A done task's resolution stays editable above its Notes, and is kept when it's reopened (the next Mark done starts from it). Not recorded in Activity or Updates. | `src/renderer/src/components/MarkDoneDialog.tsx`; `src/main/services/tasks.ts` · `save` |
 | Reopen | A finished item goes back where it came from: Waiting (on the same person) if it was waiting, otherwise Tasks. | `src/main/services/tasks.ts` · `reopen` |
 | Every save | Updates the task's last activity, recomputes its score, and records each changed field in Activity. | `src/main/services/tasks.ts` · `save` |
 | Subtasks | A checklist in order. Empty ones are dropped on save. Subtask changes aren't recorded in Activity. | `src/main/services/tasks.ts` · `syncSubtasks` |
@@ -127,7 +128,7 @@ The score runs from 0 to 100 and is worked out by the app from three signals. Th
 | New task, Needs reply | Creates an open task with the title, due date, project, and who asked; the AI's details become its Notes. | `src/main/services/suggestions.ts` · `createTask` |
 | Waiting on | Puts an existing task in Waiting on (on "someone" if no name is given), or creates a waiting task. A task already waiting keeps its start time. | `src/main/services/suggestions.ts` · `accept` |
 | Status update | Adds a dated update to the task, and changes the due date if the update gave a new one. | `src/main/services/suggestions.ts` · `accept` |
-| Looks done | Adds the update, if there is one, then marks the task done. | `src/main/services/suggestions.ts` · `accept` |
+| Looks done | Marks the task done, with the suggestion's text (editable before accepting) as its resolution. An empty text keeps any resolution the task already has. | `src/main/services/suggestions.ts` · `accept` |
 | Context | Adds a dated update to the project, person, or task. For a person it can also fill in their role and company. | `src/main/services/suggestions.ts` · `accept` |
 | New project, New person | Creates it, or reuses one with the same name (ignoring case), with the details as its first update. New people start at 1★. | `src/main/services/suggestions.ts` · `accept` |
 | Reject | Marks it rejected. Nothing else changes. | `src/main/services/suggestions.ts` · `reject` |

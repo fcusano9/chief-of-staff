@@ -8,6 +8,7 @@ Mockups are a record of what was approved at the time and aren't updated afterwa
 
 | Mockup | Added | Status |
 |---|---|---|
+| [task-resolution](task-resolution.html) | Nov 20 | Partly: the Review card shows the resolution as text, edited with Enter, not in an open box |
 | [model-test](model-test.html) | Nov 19 | Current: model tests and Effort (Developer Tools) |
 | [reply-all](reply-all.html) | Nov 18 | Current |
 | [merge-tasks](merge-tasks.html) | Nov 17 | Current |

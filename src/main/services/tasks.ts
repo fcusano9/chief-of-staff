@@ -84,6 +84,7 @@ function toTask(row: Row): Task {
     createdAt: String(row.created_at),
     lastActivityAt: String(row.last_activity_at),
     completedAt: (row.completed_at as string) ?? null,
+    resolution: (row.resolution as string) ?? null,
     subtasks: [],
     linkedSources: [],
     project,
@@ -199,6 +200,7 @@ export class TaskService {
         waitingSince: input.status !== 'waiting_on' ? null : enteringWaiting ? (input.waitingSince ?? now) : (existing?.waitingSince ?? now),
         completedAt: input.status !== 'done' ? null : enteringDone ? now : (existing?.completedAt ?? now),
         waitedOn: input.status !== 'done' ? null : enteringDone ? (existing?.status === 'waiting_on' ? existing.waitingOn : null) : (existing?.waitedOn ?? null),
+        resolution: input.resolution === undefined ? (existing?.resolution ?? null) : input.resolution?.trim() || null,
         now,
       }
 
@@ -208,7 +210,7 @@ export class TaskService {
           .prepare(
             `UPDATE work_items SET title=$title, notes=$notes, status=$status, due_date=$dueDate, project_id=$projectId,
                requester_id=$requesterId, priority_override=$priorityOverride, follow_up_count=$followUpCount,
-               waiting_on=$waitingOn, waiting_since=$waitingSince, waited_on=$waitedOn, completed_at=$completedAt, last_activity_at=$now
+               waiting_on=$waitingOn, waiting_since=$waitingSince, waited_on=$waitedOn, completed_at=$completedAt, resolution=$resolution, last_activity_at=$now
              WHERE id=$id`,
           )
           .run({ ...values, id: existing.id })
@@ -217,9 +219,9 @@ export class TaskService {
         const result = this.db
           .prepare(
             `INSERT INTO work_items (title, notes, status, due_date, project_id, requester_id, priority_override,
-               follow_up_count, waiting_on, waiting_since, waited_on, completed_at, created_at, last_activity_at)
+               follow_up_count, waiting_on, waiting_since, waited_on, completed_at, resolution, created_at, last_activity_at)
              VALUES ($title, $notes, $status, $dueDate, $projectId, $requesterId, $priorityOverride,
-               $followUpCount, $waitingOn, $waitingSince, $waitedOn, $completedAt, $now, $now)`,
+               $followUpCount, $waitingOn, $waitingSince, $waitedOn, $completedAt, $resolution, $now, $now)`,
           )
           .run(values)
         taskId = Number(result.lastInsertRowid)
@@ -233,10 +235,11 @@ export class TaskService {
     return this.get(id)!
   }
 
-  setStatus(id: number, status: TaskStatus, by: ChangeBy = BY_USER): Task {
+  /** Changes the status; a resolution given with it replaces the task's (left out: kept). */
+  setStatus(id: number, status: TaskStatus, by: ChangeBy = BY_USER, resolution?: string | null): Task {
     const task = this.get(id)
     if (!task) throw new Error(`Task ${id} not found`)
-    return this.save({ ...task, status }, by)
+    return this.save({ ...task, status, ...(resolution === undefined ? {} : { resolution }) }, by)
   }
 
   delete(id: number): void {

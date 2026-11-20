@@ -75,4 +75,19 @@ describe('Tasks, Waiting and Done lists', () => {
     const done = tasks.setStatus(w.id, 'done')
     expect(tasks.save({ ...done, notes: 'Got two quotes' }).waitedOn).toBe('Alex Rivera')
   })
+
+  it('saves a resolution with done, keeps it through edits and reopening, and lets it be changed', () => {
+    const t = tasks.save(input({ title: 'Pricing deck' }))
+    expect(t.resolution).toBeNull()
+    const done = tasks.setStatus(t.id, 'done', undefined, '  Sent to the pricing committee.  ')
+    expect(done).toMatchObject({ status: 'done', resolution: 'Sent to the pricing committee.' })
+    // A TaskInput without a resolution (older callers) leaves it as it is.
+    const { resolution: _, ...withoutResolution } = done
+    expect(tasks.save({ ...withoutResolution, notes: 'Three tiers' }).resolution).toBe('Sent to the pricing committee.')
+    expect(tasks.reopen(t.id).resolution).toBe('Sent to the pricing committee.')
+    expect(tasks.setStatus(t.id, 'done').resolution).toBe('Sent to the pricing committee.')
+    expect(tasks.save({ ...tasks.get(t.id)!, resolution: 'Dana approved the three tiers.' }).resolution).toBe('Dana approved the three tiers.')
+    // Marking done with an empty box saves no resolution.
+    expect(tasks.save({ ...tasks.get(t.id)!, resolution: '   ' }).resolution).toBeNull()
+  })
 })

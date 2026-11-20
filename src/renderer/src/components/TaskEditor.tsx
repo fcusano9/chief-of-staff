@@ -10,6 +10,7 @@ import { StatusCard } from './StatusCard'
 import { LatestUpdate, UpdatesButton, UpdatesWindow } from './UpdatesWindow'
 import { idsFor, NextMeeting } from './NextMeeting'
 import { MergeDialog, useMergeRequests } from './MergeDialog'
+import { MarkDoneDialog } from './MarkDoneDialog'
 
 const EDITABLE_STATUSES: TaskStatus[] = ['open', 'waiting_on', 'done']
 
@@ -29,6 +30,7 @@ const emptyInput = (projectId: number | null = null, waiting = false): TaskInput
   priorityOverride: null,
   followUpCount: 0,
   waitingOn: null,
+  resolution: null,
   subtasks: [],
 })
 
@@ -43,6 +45,7 @@ const toInput = (t: Task): TaskInput => ({
   priorityOverride: t.priorityOverride,
   followUpCount: t.followUpCount,
   waitingOn: t.waitingOn,
+  resolution: t.resolution,
   subtasks: t.subtasks,
 })
 
@@ -82,6 +85,8 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
   const titleRef = useRef<HTMLInputElement>(null)
   // The task being merged into (saved first), while the merge dialog is open.
   const [merging, setMerging] = useState<Task | null>(null)
+  // Mark done asks for a resolution first.
+  const [askingDone, setAskingDone] = useState(false)
   const startMergeRef = useRef(() => {})
   useMergeRequests(() => startMergeRef.current())
 
@@ -141,6 +146,18 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
   const ai = task?.aiAdjustment ?? null
   const byHand = form.input.priorityOverride != null
 
+  /** Shows the task as saved, with no pending edits. */
+  const show = (saved: Task) => {
+    const savedForm: Form = { input: toInput(saved) }
+    // Mark clean right away: the parent may unmount this editor before React re-renders,
+    // and the unmount autosave must not save (or create) the task a second time.
+    latest.current = { form: savedForm, dirty: false }
+    setTask(saved)
+    setForm(savedForm)
+    setSnapshot(JSON.stringify(savedForm))
+    return saved
+  }
+
   const save = async (patch: Partial<TaskInput> = {}) => {
     const next: Form = { ...form, input: { ...form.input, ...patch } }
     if (!next.input.title.trim()) {
@@ -149,15 +166,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
       return null
     }
     try {
-      const saved = await persist(next)
-      const savedForm: Form = { input: toInput(saved) }
-      // Mark clean right away: the parent may unmount this editor before React re-renders,
-      // and the unmount autosave must not save (or create) the task a second time.
-      latest.current = { form: savedForm, dirty: false }
-      setTask(saved)
-      setForm(savedForm)
-      setSnapshot(JSON.stringify(savedForm))
-      return saved
+      return show(await persist(next))
     } catch (err) {
       toast(errorMessage(err), true)
       return null
@@ -216,6 +225,19 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
 
         <div className="dgrid">
           <div>
+            {form.input.status === 'done' && (
+              <>
+                <div className="label" style={{ margin: '0 0 4px' }}>Resolution</div>
+                <textarea
+                  className="inp"
+                  aria-label="Resolution"
+                  style={{ minHeight: 64, marginBottom: 12 }}
+                  value={form.input.resolution ?? ''}
+                  onChange={(e) => set({ resolution: e.target.value })}
+                  placeholder="How it was resolved"
+                />
+              </>
+            )}
             {!isNew && form.input.status !== 'done' && <NextMeeting personIds={idsFor(form.input.requesterId, form.input.waitingOn, people)} />}
             <StatusCard scope="task" id={isNew ? null : form.input.id} done={form.input.status === 'done'} />
             <ReplyCard taskId={isNew ? null : form.input.id} onSaved={() => setActivityKey((k) => k + 1)} />
@@ -428,7 +450,7 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
             </button>
           )}
           {!isNew && form.input.status !== 'done' && (
-            <button className="btn" data-action="done" onClick={() => void save({ status: 'done' }).then((t) => t && onDone(t))}>
+            <button className="btn" data-action="done" onClick={() => setAskingDone(true)}>
               Mark done
             </button>
           )}
@@ -439,7 +461,8 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
               onClick={() =>
                 void save()
                   .then((t) => (t ? cos['tasks.reopen'](t.id) : null))
-                  .then((t) => t && (toast(t.status === 'waiting_on' ? 'Reopened on Waiting' : 'Reopened on Tasks'), onSaved(t)))
+                  // The editor stays open on the reopened task, so it shows it as reopened.
+                  .then((t) => t && (show(t), toast(t.status === 'waiting_on' ? 'Reopened on Waiting' : 'Reopened on Tasks'), onSaved(t)))
                   .catch((err) => toast(errorMessage(err), true))
               }
             >
@@ -451,6 +474,17 @@ export function TaskEditor({ taskId, defaultProjectId = null, defaultWaiting = f
           </button>
         </div>
       </div>
+      {askingDone && (
+        <MarkDoneDialog
+          title={form.input.title}
+          initial={form.input.resolution ?? ''}
+          onCancel={() => setAskingDone(false)}
+          onDone={(resolution) => {
+            setAskingDone(false)
+            void save({ status: 'done', resolution }).then((t) => t && onDone(t))
+          }}
+        />
+      )}
       {merging && (
         <MergeDialog
           keep={merging}

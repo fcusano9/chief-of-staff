@@ -43,6 +43,7 @@ Status: ✅ built · 🟡 approved, not built yet
 | ✅ When | When the user imports or re-runs an item, or clicks Read for Outlook mail. Mail is never read on a schedule. |
 | ✅ Sent | The item, plus all open tasks (title, status, due date, project, who asked, waiting on, score and any AI change, and updates), every project that isn't archived (overview, latest updates, and standing instructions), and all people. |
 | ✅ Output | Suggestions go to Review: new task, needs reply, status update, mark done, waiting on, new project, new person, context. |
+| ✅ Resolution | A mark done suggestion's text is how the task was resolved (what was delivered or decided, by whom, and when), and becomes the task's resolution when accepted. |
 | ✅ Status cards | Where it stands and the next step, for each open task the item is about, shown on the task's card. None for tasks it proposes to mark done. |
 | ✅ Priority adjustment | For open tasks the item is about, not ones it proposes to mark done. See Priority adjustment below. |
 | ✅ Relative dates | Count from the item's date (the date on the Import card, an email's date, or a Copilot answer's end), not today. |

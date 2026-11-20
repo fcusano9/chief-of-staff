@@ -251,9 +251,10 @@ function NewProjectChip({ s }: { s: Suggestion }) {
 }
 
 /** The body under a suggestion's title: smaller, grey, and two lines at most (hover for all of it). */
-function Details({ text }: { text: string }) {
+function Details({ text, label }: { text: string; label?: string }) {
   return text ? (
     <div className="s-details" title={text}>
+      {label && <span className="faint">{label}: </span>}
       {text}
     </div>
   ) : null
@@ -337,7 +338,7 @@ function Summary({ s, pending, onOpenTask }: { s: Suggestion; pending: Suggestio
         {createsTask(s.kind, p) ? <span className="s-title">{p.title}</span> : taskLink}
         {newProject && !project ? <NewProjectChip s={newProject} /> : <ProjectChip project={project} />}
       </div>
-      <Details text={p.details} />
+      <Details text={p.details} label={s.kind === 'mark_done' ? 'Resolution' : undefined} />
       {meta.length > 0 && (
         <div className="faint" style={{ fontSize: 'var(--fs-sm)', marginTop: 3 }}>
           {meta.join(' · ')}
@@ -411,7 +412,7 @@ function Editor({ kind, draft, setDraft, pending }: { kind: Suggestion['kind']; 
   return (
     <div className="grid" style={{ gap: 6 }}>
       {creates && <input className="inp" autoFocus value={draft.title} placeholder="Task title" onChange={(e) => set({ title: e.target.value })} />}
-      <textarea className="inp" style={{ minHeight: 48 }} value={draft.details} placeholder={kind === 'new_task' || kind === 'needs_reply' ? 'Notes (optional)' : 'Text'} onChange={(e) => set({ details: e.target.value })} />
+      <textarea className="inp" style={{ minHeight: 48 }} value={draft.details} placeholder={kind === 'new_task' || kind === 'needs_reply' ? 'Notes (optional)' : kind === 'mark_done' ? 'Resolution (optional)' : 'Text'} onChange={(e) => set({ details: e.target.value })} />
       {(creates || kind === 'status_update') && (
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <input className="inp" style={{ width: 150 }} type="date" value={draft.dueDate ?? ''} onChange={(e) => set({ dueDate: e.target.value || null })} />

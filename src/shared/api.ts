@@ -70,7 +70,7 @@ export interface Api {
   'tasks.listForPerson': (personId: number) => Task[]
   'tasks.get': (id: number) => Task | null
   'tasks.save': (input: TaskInput) => Task
-  'tasks.setStatus': (id: number, status: TaskStatus) => Task
+  'tasks.setStatus': (id: number, status: TaskStatus, resolution?: string | null) => Task
   'tasks.delete': (id: number) => void
   'tasks.summary': () => TodaySummary
   /** The task's card (where it stands and the next step), or null if none has been written. */
