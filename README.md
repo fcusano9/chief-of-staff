@@ -31,18 +31,44 @@ Download the latest version from [Releases](https://github.com/fcusano9/chief-of
 
 ### Build from source
 
-You need [Node.js](https://nodejs.org) (current LTS) and [Git](https://git-scm.com). Close the app first, then:
+You need [Node.js](https://nodejs.org) (current LTS) and [Git](https://git-scm.com). Clone the repository once:
 
 ```bash
 git clone https://github.com/fcusano9/chief-of-staff.git
-cd chief-of-staff
-npm install
 ```
 
-- **Windows:** `npm run install:win` builds the app into `%LOCALAPPDATA%\Programs\Chief of Staff (build)`. The first time, pin `win-unpacked\Chief of Staff.exe` from that folder to Start; later builds replace it in place. Run it from a normal PowerShell window, not from Claude Desktop, which redirects `%LOCALAPPDATA%` to a private copy. `npm run package:win` makes an installer in `release\` instead.
-- **Mac:** `npm run package:mac` makes a `.dmg` in `release/`. Open it and drag the app to Applications.
+#### Windows
 
-To update later, run `git pull` and `npm install`, then the same build command.
+Run these in a normal PowerShell window, not from Claude Desktop: Claude Desktop redirects `%LOCALAPPDATA%` to a private copy, so the app would be installed there instead.
+
+1. Close Chief of Staff if it's running.
+2. Get the latest code:
+
+   ```powershell
+   cd chief-of-staff
+   git switch main
+   git pull
+   npm install
+   ```
+
+3. Build it one of two ways:
+   - **Install in place:** `npm run install:win` builds the app into `%LOCALAPPDATA%\Programs\Chief of Staff (build)`. The first time, pin `win-unpacked\Chief of Staff.exe` from that folder to Start. Later builds replace the files, so the shortcut keeps working.
+   - **Make an installer:** `npm run package:win` writes `Chief-of-Staff-<version>-Setup.exe` to `release\`. Run it to install, or copy it to another PC. It isn't signed, so Windows may warn before it runs.
+
+#### Mac
+
+1. Quit Chief of Staff if it's running.
+2. Get the latest code and build the disk image:
+
+   ```bash
+   cd chief-of-staff
+   git switch main
+   git pull
+   npm install
+   npm run package:mac
+   ```
+
+3. Open the `.dmg` in `release/` and drag Chief of Staff to Applications, replacing the old copy.
 
 ## Development
 
